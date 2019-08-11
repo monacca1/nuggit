@@ -1,0 +1,17 @@
+Nuggit Development Status:
+
+nuggit_env.sh            - done
+nuggit_clone.pl          - done
+nuggit_find_root_repo.pl - done
+list_submodules.pl       - done
+list_all_submodules.pl   - done
+nuggit_checkout.pl       - done???
+        - TBD - should you put some meta data into the .nuggit?
+
+nuggit_branch.pl
+nuggit_add.pl
+nuggit_commit.pl
+nuggit_pull.pl
+nuggit_push.pl
+nuggit_start    ??? do we want this?
+nuggit_status.pl
