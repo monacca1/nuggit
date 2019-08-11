@@ -1,0 +1,11 @@
+
+mkdir .nuggit
+
+echo .nuggit >> .gitignore
+echo .nuggit/* >> .gitignore
+
+cd .nuggit
+
+
+
+
