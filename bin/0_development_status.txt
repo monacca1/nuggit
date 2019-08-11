@@ -9,6 +9,8 @@ nuggit_checkout.pl       - done???
         - TBD - should you put some meta data into the .nuggit?
 
 nuggit_branch.pl
+        - started - needs to be finished
+
 nuggit_add.pl
 nuggit_commit.pl
 nuggit_pull.pl

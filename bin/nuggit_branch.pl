@@ -16,3 +16,22 @@
 
 print "nuggit_branch.pl --- to do\n";
 
+
+my $root_repo_branches;
+my $selected_branch;
+
+$root_repo_branches = `git branch`;
+$selected_branch = $root_repo_branches;
+$selected_branch =~ m/\*.*/;
+$selected_branch = $&;
+
+print "Root repo is on branch: \n";
+print $selected_branch . "\n";
+print "Full list of root rebo branches is: \n";
+print $root_repo_branches . "\n";
+
+# --------------------------------------------------------------------------------------
+# TO DO --------------------------------------------------------------------------------
+# now check each submodule to see if it is on the selected branch
+# for any submodules that are not on the selected branch, display them
+# show the command to set each submodule to the same branch as root repo

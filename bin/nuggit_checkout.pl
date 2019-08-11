@@ -156,7 +156,7 @@ sub create_branch_where_needed($)
 }
 
 
-
+# check of the branch exists in the current repo (based on the current directory)
 sub does_branch_exist_here($)
 {
   my $branch = $_[0];
