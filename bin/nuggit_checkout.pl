@@ -24,28 +24,31 @@ my $create_branch = 0;
 sub does_branch_exist_throughout($);
 sub create_branch_where_needed($);
 sub does_branch_exist_at_root($);
+sub does_branch_exist_here($);
 
+# the -b argument means to create the branch just like in git
 if($ARGV[0] eq "-b")
 { 
-  print "creating new branch\n";
   $branch=$ARGV[1];
   $create_branch = 1;
+
+  print "Creating new branch -  $branch\n";  
 }
 else
 {
-  print "not creating a branch - using existing\n";
   $branch=$ARGV[0];
+  print "Switch to existing branch - $branch\n";
 }
 
-print "branch = $branch\n";
+#print "branch = $branch\n";
 
 $root_dir = `nuggit_find_root.pl`;
 chomp $root_dir;
 
 print "nuggit root dir is: $root_dir\n";
-print "nuggit cwd is $cwd\n";
+#print "nuggit cwd is $cwd\n";
 
-print "changing directory to root: $root_dir\n";
+#print "changing directory to root: $root_dir\n";
 chdir $root_dir;
 
 if($create_branch == 0)
@@ -56,16 +59,19 @@ if($create_branch == 0)
     
     if(does_branch_exist_throughout($branch))
     {
+#      print "branch exists throughout\n";
       system("git submodule foreach --recursive git checkout $branch");
     }
     else
     {
+#      print "branch did not exist throughout\n";
+      chdir $root_dir;
       create_branch_where_needed($branch);
     }
   }
   else
   {
-    print "Branch does not exist\n";
+    print "Branch \"$branch\" does not exist in root repo\n";
   }
 }
 else
@@ -82,35 +88,82 @@ else
 # check all submodules to see if the branch exists
 sub does_branch_exist_throughout($)
 {
+  my $root_dir = getcwd();
   my $branch = $_[0];
+  
+  # get a list of all of the submodules
   my $submodules = `list_all_submodules.pl`;
   
-  print $submodules;
+  # put each submodule entry into its own array entry
+  my @submodules = split /\n/, $submodules;
 
-  print "Does branch exit throughout?\n";
-  return 0;
-}
+#  print "Does branch exist throughout?\n";
+    
+  foreach (@submodules)
+  {
+    # switch directory into the sumbodule
+    chdir $_;
+    
+    if(does_branch_exist_here($branch) == 0)
+    {
+#      print "branch does not exist here: $_\n";
+      return 0;
+    }
+    
+    # return to root directory
+    chdir $root_dir;
+  }
 
-
-
-# find any submodules where the branch does not exist and create it
-sub create_branch_where_needed($)
-{
-  my $branch = $_[0];
-  print "Create branch where needed.\n";
   return 1;
 }
 
 
 
-# check to see if the specified branch already exists at the root level
-sub does_branch_exist_at_root($)
+# find any submodules where the branch does not exist and create it
+# note this will also switch to the existing branch where it already exists
+sub create_branch_where_needed($)
+{
+  my $branch = $_[0];
+  my $root_dir = getcwd();
+#  print "Create branch where needed. called from $root_dir\n";
+  
+  # get a list of all of the submodules
+  my $submodules = `list_all_submodules.pl`;
+  
+  # put each submodule entry into its own array entry
+  my @submodules = split /\n/, $submodules;
+   
+  foreach (@submodules)
+  {
+    # switch directory into the sumbodule
+    chdir $_;
+    
+#    print "Current working directory is: " . getcwd() . "\n";
+    
+    if(does_branch_exist_here($branch) == 0)
+    {
+      # to do - create the branch here
+      system("git checkout -b $branch");
+    }
+    else
+    {
+      system("git checkout $branch");
+    }
+    
+    # return to root directory
+    chdir $root_dir;
+  }  
+}
+
+
+
+sub does_branch_exist_here($)
 {
   my $branch = $_[0];
   my $branches;
   my @branches;
   
-  print "Does branch exit at root?\n";
+#  print "Does branch exist here?\n";
   
   # execute git branch and grep the output for branch
   $branches = `git branch | grep $branch\$`;
@@ -136,4 +189,16 @@ sub does_branch_exist_at_root($)
 
   # did not find the branch - return false
   return 0;
+}
+
+
+
+# check to see if the specified branch already exists at the root level
+sub does_branch_exist_at_root($)
+{
+  my $branch = $_[0];
+
+#  print "Does branch exist at root?\n";
+
+  return does_branch_exist_here($branch);
 }
