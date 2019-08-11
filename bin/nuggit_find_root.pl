@@ -32,8 +32,8 @@ for($i = 0; $i < $max_depth; $i = $i+1)
   }
   chdir "../";
   
-  $cwd = getcwd();
-  print "$i, $max_depth - cwd = " . $cwd . "\n";
+#  $cwd = getcwd();
+#  print "$i, $max_depth - cwd = " . $cwd . "\n";
   
 }
 
