@@ -80,8 +80,9 @@ else
 
 
 # check all submodules to see if the branch exists
-sub does_branch_exist_throughout($branch)
+sub does_branch_exist_throughout($)
 {
+  my $branch = $_[0];
   my $submodules = `list_all_submodules.pl`;
   
   print $submodules;
@@ -93,8 +94,9 @@ sub does_branch_exist_throughout($branch)
 
 
 # find any submodules where the branch does not exist and create it
-sub create_branch_where_needed($branch)
+sub create_branch_where_needed($)
 {
+  my $branch = $_[0];
   print "Create branch where needed.\n";
   return 1;
 }
@@ -102,8 +104,9 @@ sub create_branch_where_needed($branch)
 
 
 # check to see if the specified branch already exists at the root level
-sub does_branch_exist_at_root($branch)
+sub does_branch_exist_at_root($)
 {
+  my $branch = $_[0];
   my $branches;
   my @branches;
   

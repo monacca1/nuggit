@@ -19,7 +19,7 @@ my $nuggit_root;
 my $max_depth = 10;
 my $i = 0;
 
-for($i = 0, $i < $max_depth, $i = $i+1)
+for($i = 0; $i < $max_depth; $i = $i+1)
 {
   if(-e ".nuggit") 
   {
@@ -31,6 +31,10 @@ for($i = 0, $i < $max_depth, $i = $i+1)
      exit();
   }
   chdir "../";
+  
+  $cwd = getcwd();
+  print "$i, $max_depth - cwd = " . $cwd . "\n";
+  
 }
 
 print "ERROR - could not find .nuggit\n";
