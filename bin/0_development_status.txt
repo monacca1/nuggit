@@ -7,7 +7,13 @@ list_submodules.pl       - done
 list_all_submodules.pl   - done
 nuggit_checkout.pl       - done???
         - TBD - should you put some meta data into the .nuggit?
-nuggit_branch.pl         - done
+
+nuggit_branch.pl        
+        - display branches - done
+        - to do - add support for creating a new branch
+                nuggit_branch.pl <new branch>
+        - to do - add support for deleting a branch across all submodules
+                nuggit_branch.pl -d <branch>
 
 
 nuggit_add.pl

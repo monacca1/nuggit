@@ -3,32 +3,41 @@
 use strict;
 use warnings;
 
+use Getopt::Long;
 use Cwd qw(getcwd);
 
 
 # usage: 
 #
-# to create a branch
-#/homes/monacca1/git-stuff/nuggit/bin/nuggit_branch.pl <branch_name>
-# 
 # to view all branches just use:
 # nuggit_branch.pl
+#     This will also check to see if all submodules are on the same branch and warn you if there are any that are not.
 #
-# If you are on the same branch across all submodules, just indicate the branch
-# If you are on different branches across the submodules... if any submodule is 
-# on a different branch, show it, and complain, recommend the nuggit_checkout command
-# to switch branches to be consistent
+# to create a branch
+# nuggit_branch.pl <branch_name>
+#
+# to delete a branch across all submodules
+# nuggit_branch.pl -d <branch_name> 
+#
 
+sub ParseArgs();
 sub get_selected_branch($);
 sub is_branch_selected_here($);
 sub is_branch_selected_throughout($);
+sub delete_branch($);
+sub create_new_branch($);
 
 my $root_dir;
 my $cwd = getcwd();
 my $root_repo_branches;
 my $selected_branch;
+my $display_branches = 0;
+my $create_branch    = 0;
+my $delete_branch    = undef;
 
 # print "nuggit_branch.pl\n";
+
+ParseArgs();
 
 $root_dir = `nuggit_find_root.pl`;
 chomp $root_dir;
@@ -39,26 +48,76 @@ print "nuggit root directory is: $root_dir\n";
 #print "changing directory to root: $root_dir\n";
 chdir $root_dir;
 
-$root_repo_branches = `git branch`;
-$selected_branch    = get_selected_branch($root_repo_branches);
 
-print "Root repo is on branch: \n";
-print "* ".  $selected_branch . "\n";
-print "\n";
-print "Full list of root repo branches is: \n";
-print $root_repo_branches . "\n";
+if($delete_branch)
+{
+  print "Deleting branch across all submodules: " . $delete_branch . "\n";
+  delete_branch($delete_branch);
+}
+else
+{
+  my $argc = @ARGV;  # get the number of arguments.
+                     # if there is only one argument 
+                     #   - assume this is a branch name for 
+                     #     a branch to create
+                     # if there are zero arguments
+                     #   - the caller just wants to check
+                     #     which branches exist and if
+                     #     the entire repo is on the same
+                     #     branch
+  
+  if($argc == 1)
+  {
+    $create_branch = 1;
+  }
+  elsif($argc == 0)
+  {
+    $display_branches = 1;
+  }
+}
 
-# --------------------------------------------------------------------------------------
-# now check each submodule to see if it is on the selected branch
-# for any submodules that are not on the selected branch, display them
-# show the command to set each submodule to the same branch as root repo
-# --------------------------------------------------------------------------------------
+
+if($display_branches)
+{
+  $root_repo_branches = `git branch`;
+  $selected_branch    = get_selected_branch($root_repo_branches);
+
+  print "Root repo is on branch: \n";
+  print "* ".  $selected_branch . "\n";
+  print "\n";
+  print "Full list of root repo branches is: \n";
+  print $root_repo_branches . "\n";
+
+  # --------------------------------------------------------------------------------------
+  # now check each submodule to see if it is on the selected branch
+  # for any submodules that are not on the selected branch, display them
+  # show the command to set each submodule to the same branch as root repo
+  # --------------------------------------------------------------------------------------
+
+  is_branch_selected_throughout($selected_branch);
+}
+
+if($create_branch)
+{
+  create_new_branch($ARGV[0]);
+}
 
 
-is_branch_selected_throughout($selected_branch);
+sub ParseArgs()
+{
+  Getopt::Long::GetOptions(
+     "d=s"  => \$delete_branch
+     );
+}
 
-
-
+sub create_new_branch($)
+{
+  my $new_branch = $_[0];
+ 
+  # create a new branch everywhere but do not switch to it.
+  
+  print "TO DO - CREATE NEW BRANCH: $_[0]\n";
+}
 
 sub get_selected_branch($)
 {
@@ -139,4 +198,10 @@ sub is_branch_selected_here($)
     return 0;
   }
   
+}
+
+
+sub delete_branch($)
+{
+  print "TO DO - DELETE BRANCH $_[0]\n";
 }
