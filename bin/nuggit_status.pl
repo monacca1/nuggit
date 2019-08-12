@@ -14,13 +14,22 @@ sub git_status_of_all_submodules();
 sub get_selected_branch($);
 
 my $root_dir;
+my $relative_path_to_root;
 
 
 $root_dir = `nuggit_find_root.pl`;
 chomp $root_dir;
 
+# the relative path to root is used in the output.
+# it is used before each file in each submodule with a status change.
+# this is done so the user can copy the entire path and call
+# nuggit_add.pl or nuggit_diff.pl on that path and it is valid
+$relative_path_to_root = `nuggit_get_path_relation_to_root.pl`;
+chomp $relative_path_to_root;
+
 #print "nuggit root dir is: $root_dir\n";
 #print "nuggit cwd is $cwd\n";
+#print $relative_path_to_root . "\n";
 
 #print "changing directory to root: $root_dir\n";
 chdir $root_dir;
@@ -63,6 +72,9 @@ sub git_status_of_all_submodules()
     print "  Root dir: $root_dir \n";
     print "  Branch: $root_repo_branch\n";
 #    print "\n";
+
+    # add the repo path to the output from git that just shows the file
+    $status =~ s/^(...)/$1$relative_path_to_root/mg;
     print $status;
 
     #===========================================================================================
@@ -98,7 +110,7 @@ sub git_status_of_all_submodules()
 #      print "\n";
       
       # add the repo path to the output from git that just shows the file
-      $status =~ s/^(...)/$1$_\//mg;
+      $status =~ s/^(...)/$1$relative_path_to_root$_\//mg;
       
       print $status;
       
