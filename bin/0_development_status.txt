@@ -60,10 +60,10 @@ nuggit_add.pl
                 */*/*.c
         adding a file or files using this command will be restricted to one repo or submodule at a time. 
                 to explain to a user, this would be covered if the user sticks to one directory at a time
-        TO DO - need to decide how the user specifies the file??? relative to the root repo or relative to here? 
+        - user specifies the file using relative to the file from the current location. This is the same as 
+                the output of nuggit_status.pl 
+
         
-
-
 nuggit_commit.pl
 
 nuggit_pull.pl
