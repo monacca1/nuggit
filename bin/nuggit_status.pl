@@ -61,8 +61,8 @@ sub git_status_of_all_submodules()
     print "=================================\n";
     print "Root repo with changes:\n";
     print "  Root dir: $root_dir \n";
-    print "  checkout branch: $root_repo_branch\n";
-    print "\n";
+    print "  Branch: $root_repo_branch\n";
+#    print "\n";
     print $status;
 
     #===========================================================================================
@@ -78,20 +78,27 @@ sub git_status_of_all_submodules()
     # switch directory into the sumbodule
     chdir $_;
 
-    $branches = `git branch`;
-    $submodule_branch = get_selected_branch($branches);
-    if($submodule_branch ne $root_repo_branch)
-    {
-      print "submodule $_ on branch $submodule_branch, root repo on branch $root_repo_branch\n";
-    }
-
     $status = `git status -s`;
     if($status ne "")
     {
       print "=================================\n";
-      print "Submodule with local changes:\n";
-      print "  Submodule: $_\n";
-      print "\n";
+#      print "Submodule with local changes:\n";
+      print "Submodule: $_\n";
+
+      $branches = `git branch`;
+      $submodule_branch = get_selected_branch($branches);
+      if($submodule_branch ne $root_repo_branch)
+      {
+        print "Submodule on branch $submodule_branch, root repo on branch $root_repo_branch\n";
+      }      
+      else
+      {
+        print "Submodule and root repo on same branch: $root_repo_branch\n";
+      }
+#      print "\n";
+      
+      $status =~ s/^(...)/$1$_\//mg;
+      
       print $status;
       
       #===========================================================================================
@@ -113,7 +120,8 @@ sub git_status_of_all_submodules()
     # fully consitent across all submodules
     # - show any commits on the remote that are not here.
     # =============================================================================
-    print "TO DO - SHOW ANY COMMITS ON THE REMOTE THAT ARE NOT HERE\n";    
+#    print "TO DO - SHOW ANY COMMITS ON THE REMOTE THAT ARE NOT HERE ??? or make this a seperate command?\n";
+    
 
 
     # return to root directory
