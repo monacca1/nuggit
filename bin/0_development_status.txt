@@ -8,7 +8,9 @@ list_all_submodules.pl   - done
 
 nuggit_checkout.pl       - almost done???
         - TBD - should you put some meta data into the .nuggit?
-        - this will checkout the same branch in each submodule as the root... 
+        - **** master is a special case - checkout master at the root and then run
+              git submodule update --recursive
+        - Otherwise this will checkout the same branch in each submodule as the root... 
         - this is not the generic git behavior and may result in a repo that appears 
           to have changes in it as soon as you check it out. There are two reasons for this
           (1) that the repo may be checked in such that all submodules are not on the same branch
@@ -21,6 +23,8 @@ nuggit_checkout.pl       - almost done???
                 git submodule update --recursive
                 and when we should use
                 git submodule update --recursive --remote
+                * if we follow the nuggit workflow, these two commands will be equivalent.  So
+                  Use the first one and maybe use a nuggit_status to show where there are deviations.
 
 nuggit_branch.pl        
         - display branches - done

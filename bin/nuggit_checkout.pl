@@ -53,14 +53,15 @@ chdir $root_dir;
 
 if($create_branch == 0)
 {
+  print `git checkout $branch`;
+
   if(does_branch_exist_at_root($branch))
   {
-    system("git checkout $branch");
+#    system("git checkout $branch");
     
     if(does_branch_exist_throughout($branch))
     {
 #      print "branch exists throughout\n";
-      system("git submodule foreach --recursive git checkout $branch");
     }
     else
     {
@@ -68,6 +69,10 @@ if($create_branch == 0)
       chdir $root_dir;
       create_branch_where_needed($branch);
     }
+    
+    `git checkout $branch`;
+    `git submodule update --recursive`;
+    
   }
   else
   {
