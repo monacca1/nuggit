@@ -44,9 +44,8 @@ nuggit_status.pl
                 and the jhuapl branch becomes master?
                 - or is there some other way to cope with this?
                 - do we allow branch non-uniformity when on master branch?
-        #########
-        - to do - consider adding a --cached option to list the files that have been added to the staging area
-        #########
+        - option "--cached" will list the files that have been added to the staging area
+
 
 
 nuggit_add.pl
