@@ -16,8 +16,9 @@ use Cwd qw(getcwd);
 # to create a branch
 # nuggit_branch.pl <branch_name>
 #
-# to delete a branch across all submodules
+# to delete fully merged branch across all submodules
 # nuggit_branch.pl -d <branch_name> 
+#     TO DO - DO YOU NEED TO CHECK THAT ALL BRANCHES ARE MERGED ACROSS ALL SUBMODULES BEFORE DELETING ANY OF THE BRANCHES IN ANY SUBMODULES???????
 #
 
 sub ParseArgs();
