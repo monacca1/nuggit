@@ -1,10 +1,11 @@
 Nuggit Development Status:
 
-nuggit_env.sh            - done
-nuggit_clone.pl          - done
-nuggit_find_root_repo.pl - done
-list_submodules.pl       - done
-list_all_submodules.pl   - done
+nuggit_env.sh                       - done
+nuggit_clone.pl                     - done
+nuggit_find_root_repo.pl            - done
+nuggit_get_path_relation_to_root.pl - done
+list_submodules.pl                  - done
+list_all_submodules.pl              - done
 
 nuggit_checkout.pl       - almost done???
         - TBD - should you put some meta data into the .nuggit?
@@ -45,6 +46,20 @@ nuggit_status.pl
                 - do we allow branch non-uniformity when on master branch?
 
 nuggit_add.pl
+        need to support 
+                specific file name
+                explicit path with use of wild card in filename
+                        i.e. dir/dir/file.* 
+                        or
+                        dir/dir/*.c
+                -A
+        do not allow wild card use in the directory.  expect this to be problematic
+                */*/*.c
+        adding a file or files using this command will be restricted to one repo or submodule at a time. 
+                to explain to a user, this would be covered if the user sticks to one directory at a time
+        TO DO - need to decide how the user specifies the file??? relative to the root repo or relative to here? 
+        
+
 
 nuggit_commit.pl
 
@@ -55,3 +70,5 @@ nuggit_push.pl
 nuggit_diff.pl  ??? do we need this?
 
 nuggit_start    ??? do we want this?
+
+nuggit_rm.pl - need to create this file, no placeholder currently exists

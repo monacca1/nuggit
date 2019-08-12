@@ -97,6 +97,7 @@ sub git_status_of_all_submodules()
       }
 #      print "\n";
       
+      # add the repo path to the output from git that just shows the file
       $status =~ s/^(...)/$1$_\//mg;
       
       print $status;
