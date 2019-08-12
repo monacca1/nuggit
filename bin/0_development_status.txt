@@ -5,8 +5,18 @@ nuggit_clone.pl          - done
 nuggit_find_root_repo.pl - done
 list_submodules.pl       - done
 list_all_submodules.pl   - done
-nuggit_checkout.pl       - done???
+
+nuggit_checkout.pl       - almost done???
         - TBD - should you put some meta data into the .nuggit?
+        - this will checkout the same branch in each submodule as the root... 
+        - this is not the generic git behavior and may result in a repo that appears 
+          to have changes in it as soon as you check it out. There are two reasons for this
+          (1) that the repo may be checked in such that all submodules are not on the same branch
+          and (2) when you checkout the same branch across all submodules you will get the head
+          of each of those branches, and if the repo was not maintained according to the nuggit
+          workflow, the parent repo may be pointing to an older commit in the same branch as the
+          submodule, but when you checked out the branch of the submodule, it will get the head
+          of that branch in the submodule.
 
 nuggit_branch.pl        
         - display branches - done
@@ -15,8 +25,16 @@ nuggit_branch.pl
         - to do - add support for deleting a branch across all submodules
                 nuggit_branch.pl -d <branch>
 
-
 nuggit_status.pl
+        - When you checkout master and update all submodules, you may get 
+          configuration where you are not on the same branch everywhere.
+          for example, mission may be master, but embedded is cfe_nasa 
+          and that is on branch jhuapl, which is our master
+                - Need to figure out how to cope with this.
+                - do we rebrand the master branch of cfe_nasa to be cfe_master?
+                and the jhuapl branch becomes master?
+                - or is there some other way to cope with this?
+                - do we allow branch non-uniformity when on master branch?
 
 nuggit_add.pl
 
@@ -26,5 +44,6 @@ nuggit_pull.pl
 
 nuggit_push.pl
 
-nuggit_start    ??? do we want this?
+nuggit_diff.pl  ??? do we need this?
 
+nuggit_start    ??? do we want this?
