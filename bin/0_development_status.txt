@@ -16,9 +16,15 @@ nuggit_branch.pl
                 nuggit_branch.pl -d <branch>
 
 
-nuggit_add.pl
-nuggit_commit.pl
-nuggit_pull.pl
-nuggit_push.pl
-nuggit_start    ??? do we want this?
 nuggit_status.pl
+
+nuggit_add.pl
+
+nuggit_commit.pl
+
+nuggit_pull.pl
+
+nuggit_push.pl
+
+nuggit_start    ??? do we want this?
+
