@@ -15,7 +15,7 @@ sub get_selected_branch($);
 
 my $root_dir;
 my $relative_path_to_root;
-
+my $git_status_cmd = "git status --porcelain --ignore-submodules";
 
 $root_dir = `nuggit_find_root.pl`;
 chomp $root_dir;
@@ -63,7 +63,7 @@ sub git_status_of_all_submodules()
   $branches = `git branch`;
   $root_repo_branch = get_selected_branch($branches);
 
-  $status = `git status -s`;
+  $status = `$git_status_cmd`;
   
   if($status ne "")
   {
@@ -90,7 +90,7 @@ sub git_status_of_all_submodules()
     # switch directory into the sumbodule
     chdir $_;
 
-    $status = `git status -s`;
+    $status = `$git_status_cmd`;
     if($status ne "")
     {
       print "=================================\n";
