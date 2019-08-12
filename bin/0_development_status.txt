@@ -17,6 +17,10 @@ nuggit_checkout.pl       - almost done???
           workflow, the parent repo may be pointing to an older commit in the same branch as the
           submodule, but when you checked out the branch of the submodule, it will get the head
           of that branch in the submodule.
+        - need to figure out when we should use 
+                git submodule update --recursive
+                and when we should use
+                git submodule update --recursive --remote
 
 nuggit_branch.pl        
         - display branches - done
