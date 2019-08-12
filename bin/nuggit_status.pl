@@ -200,7 +200,7 @@ sub git_diff_cached_of_all_submodules()
 #    print "\n";
 
     # add the repo path to the output from git that just shows the file
-    $status =~ s/^(.)/   $relative_path_to_root$_\/$1/mg;
+    $status =~ s/^(.)/   $relative_path_to_root$1/mg;
     print $status;
   }
     
@@ -227,7 +227,7 @@ sub git_diff_cached_of_all_submodules()
         print "Submodule and root repo on same branch: $root_repo_branch\n";
       }
 #      print "\n";
-      
+
       # add the repo path to the output from git that just shows the file
       $status =~ s/^(.)/   $relative_path_to_root$_\/$1/mg;
       
