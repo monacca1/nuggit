@@ -5,13 +5,17 @@ use warnings;
 
 use Cwd qw(getcwd);
 
+# prints the root directory of the nuggit or 0
+
 # usage: 
 #
-#/homes/monacca1/git-stuff/nuggit/bin/nuggit_find_root.pl
+# nuggit_find_root.pl
 #
 
 # find the .nuggit. This script will only search
 # in the current directory and 10 directories up and then give up
+
+
 
 my $cwd = getcwd();
 my $nuggit_root;
@@ -37,4 +41,4 @@ for($i = 0; $i < $max_depth; $i = $i+1)
   
 }
 
-print "ERROR - could not find .nuggit\n";
+print "-1";

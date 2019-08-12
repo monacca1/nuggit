@@ -3,22 +3,37 @@
 use strict;
 use warnings;
 
+use Getopt::Long;
 use Cwd qw(getcwd);
 
 
 # usage: 
 #
-#/homes/monacca1/git-stuff/nuggit/bin/nuggit_status.pl
+# nuggit_status.pl
+# or
+# nuggit_status.pl --cached
+#       show the files that are in the staging area
+#       that will be committed on the next commit.
 #
+
+sub ParseArgs();
 sub git_status_of_all_submodules();
+sub git_diff_cached_of_all_submodules();
 sub get_selected_branch($);
 
 my $root_dir;
 my $relative_path_to_root;
 my $git_status_cmd = "git status --porcelain --ignore-submodules";
+my $cached_bool;
 
 $root_dir = `nuggit_find_root.pl`;
 chomp $root_dir;
+
+if($root_dir eq "-1")
+{
+  print "Not a nuggit!\n";
+  exit();
+}
 
 # the relative path to root is used in the output.
 # it is used before each file in each submodule with a status change.
@@ -34,13 +49,26 @@ chomp $relative_path_to_root;
 #print "changing directory to root: $root_dir\n";
 chdir $root_dir;
 
+ParseArgs();
 
-git_status_of_all_submodules();
+if($cached_bool)
+{
+  git_diff_cached_of_all_submodules();
+}
+else
+{
+  git_status_of_all_submodules();
+}
 
 
-# need to parse the output and determine if a change is a file or directory
-#  if it is a directory, recurse into it and do the git status again
-#  if the change is a file, display the change
+
+sub ParseArgs()
+{
+  Getopt::Long::GetOptions(
+     "--cached"  => \$cached_bool
+     );
+}
+
 
 
 # check all submodules to see if the branch exists
@@ -76,13 +104,6 @@ sub git_status_of_all_submodules()
     # add the repo path to the output from git that just shows the file
     $status =~ s/^(...)/$1$relative_path_to_root/mg;
     print $status;
-
-    #===========================================================================================
-    # TO DO - FIGURE OUT HOW TO SHOW THE STATUS FOR EACH FILE USING THE RELATIVE PATH FROM
-    # THE LOCATION WHERE nuggit_status.pl WAS EXECUTED.  CURRENTLY IT IS JUST SHOWING THE 
-    # FILENAME WITHOUT ANY PATH AT ALL, i.e. 
-    # M .gitmodules
-    #===========================================================================================    
   }
     
   foreach (@submodules)
@@ -135,13 +156,24 @@ sub git_status_of_all_submodules()
     # =============================================================================
 #    print "TO DO - SHOW ANY COMMITS ON THE REMOTE THAT ARE NOT HERE ??? or make this a seperate command?\n";
     
-
-
     # return to root directory
     chdir $root_dir;
   }
 
+} # end git_status_of_all_submodules()
+
+
+
+# do almost the same thing as git_status_of_all_submodules()
+# except use the command: 
+#   git diff --name-only --cached
+# this will print the the list of files that are in the staging
+# area and ready to be committed
+sub git_diff_cached_of_all_submodules()
+{
+  print "to do - print the list of files in the staging area in the root dir and all submodules\n";
 }
+
 
 
 # get the checked out branch from the list of branches
