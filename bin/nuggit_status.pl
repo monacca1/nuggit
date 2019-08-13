@@ -15,6 +15,31 @@ use Cwd qw(getcwd);
 #       show the files that are in the staging area
 #       that will be committed on the next commit.
 #
+#
+# to help with machine readability each file that is staged is printed on a line beginning with S
+#
+# Example:
+#
+#/project/sie/users/monacc1/root_repo/fsw_core/apps> nuggit_status.pl --cached
+#=============================================
+#Root repo staging area (to be committed):
+#  Root dir: /project/sie/users/monacc1/root_repo 
+#  Branch: jira-xyz
+#S   ../../.gitignore
+#=============================================
+#Submodule staging area (to be committed):
+#Submodule: fsw_core/apps/appx
+#Submodule and root repo on same branch: jira-xyz
+#S   ../../fsw_core/apps/appx/readme_appx
+#=============================================
+#Submodule staging area (to be committed):
+#Submodule: fsw_core/apps/appy
+#Submodule and root repo on same branch: jira-xyz
+#S   ../../fsw_core/apps/appy/readme_appy
+#
+#
+#
+
 
 sub ParseArgs();
 sub git_status_of_all_submodules();
@@ -135,14 +160,7 @@ sub git_status_of_all_submodules()
       $status =~ s/^(...)/$1$relative_path_to_root$_\//mg;
       
       print $status;
-      
-      #===========================================================================================
-      # TO DO - FIGURE OUT HOW TO SHOW THE STATUS FOR EACH FILE USING THE RELATIVE PATH FROM
-      # THE LOCATION WHERE nuggit_status.pl WAS EXECUTED.  CURRENTLY IT IS JUST SHOWING THE 
-      # FILENAME WITHOUT ANY PATH AT ALL, i.e. 
-      # M .gitmodules
-      #===========================================================================================
-      
+     
     }
     else
     {
@@ -193,14 +211,14 @@ sub git_diff_cached_of_all_submodules()
   
   if($status ne "")
   {
-    print "=================================\n";
-    print "Root repo staging area:\n";
+    print "=============================================\n";
+    print "Root repo staging area (to be committed):\n";
     print "  Root dir: $root_dir \n";
     print "  Branch: $root_repo_branch\n";
 #    print "\n";
 
     # add the repo path to the output from git that just shows the file
-    $status =~ s/^(.)/   $relative_path_to_root$1/mg;
+    $status =~ s/^(.)/S   $relative_path_to_root$1/mg;
     print $status;
   }
     
@@ -212,8 +230,8 @@ sub git_diff_cached_of_all_submodules()
     $status = `$git_diff_cmd`;
     if($status ne "")
     {
-      print "=================================\n";
-#      print "Submodule staging area:\n";
+      print "=============================================\n";
+      print "Submodule staging area (to be committed):\n";
       print "Submodule: $_\n";
 
       $branches = `git branch`;
@@ -229,7 +247,7 @@ sub git_diff_cached_of_all_submodules()
 #      print "\n";
 
       # add the repo path to the output from git that just shows the file
-      $status =~ s/^(.)/   $relative_path_to_root$_\/$1/mg;
+      $status =~ s/^(.)/S   $relative_path_to_root$_\/$1/mg;
       
       print $status;
       
