@@ -12,7 +12,7 @@ use Cwd qw(getcwd);
 # nuggit_commit.pl -m "commit message"
 #
 
-print "nuggit_commit.pl --- to do\n";
+print "nuggit_commit.pl\n";
 
 
 
@@ -79,9 +79,6 @@ sub ParseArgs()
      "m=s"  => \$commit_message_string
      );
 }
-
-
-
 
 
 # do almost the same thing as git_status_of_all_submodules()
@@ -184,6 +181,8 @@ sub git_diff_cached_of_all_submodules()
       # and continue to unroll the nest all the way up to the top
       #
       ###################################################
+      print "TO DO - TO DO - TO DO - TO DO - \n";
+      print "need to unroll the submodules and commit up the tree\n";
       
     }
   
