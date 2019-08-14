@@ -81,6 +81,7 @@ $need_to_commit_at_root = recursive_commit("");
 if(($need_to_commit_at_root >= 1) || (staged_changes_exist_here()))
 {
   print "Need to commit at root = $need_to_commit_at_root\n";
+  
   nuggit_commit("root repo");
 }
 else
@@ -159,6 +160,15 @@ sub recursive_commit( $ )
       }
 
       chdir($dir);
+
+      # ==========================================================================================
+      # at this point we are back in the parent directory.
+      # TO DO - if the submodule we just recursed into caused a commit
+      # we need to "git add" this submodule here.  When this function returns
+      # it will get committed
+      # ==========================================================================================
+      print "TO DO - if the submodule caused a commit, we need to 'git add <submodule>' here\n";
+      # ==========================================================================================
     
     } # end while
     
