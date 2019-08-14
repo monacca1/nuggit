@@ -104,10 +104,19 @@ sub add_file($)
     $path = $path . $_ . "/";
   }
   
+#  print getcwd() . "\n";
 #  print "path is: $path\n";  
 #  print "file is $file\n";  
 
-  chdir $path;
+  # if the file is in the current directory, we do not need to chdir
+  if($path ne "")
+  {
+    chdir $path;
+  }
+  else
+  {
+#    print "path is null\n";
+  }
   print `git add $file`;
   
 }

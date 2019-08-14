@@ -33,8 +33,8 @@ sub ParseArgs();
 sub git_diff_cached_of_all_submodules();
 sub get_selected_branch($);
 sub recursive_commit( $ );
-
-
+sub staged_changes_exist_here();
+sub nuggit_commit($);
 
 my $root_dir;
 my $relative_path_to_root;
@@ -42,7 +42,9 @@ my $git_diff_cmd   = "git diff --name-only --cached";
 my $cached_bool;
 my $commit_message_string;
 my $inhibit_commit_bool = 1;
-
+my $need_to_commit_at_root = 0;
+my $branches;
+my $root_repo_branch;
 
 $root_dir = `nuggit_find_root.pl`;
 chomp $root_dir;
@@ -69,10 +71,24 @@ chdir $root_dir;
 
 ParseArgs();
 
-#git_diff_cached_of_all_submodules();
-recursive_commit("");
+$branches = `git branch`;
+$root_repo_branch = get_selected_branch($branches);
 
-#print $commit_message_string . "\n";
+
+#git_diff_cached_of_all_submodules();
+$need_to_commit_at_root = recursive_commit("");
+
+if(($need_to_commit_at_root >= 1) || (staged_changes_exist_here()))
+{
+  print "Need to commit at root = $need_to_commit_at_root\n";
+  nuggit_commit("root repo");
+}
+else
+{
+  print "No need to commit at root\n";
+}
+
+
 
 
 sub ParseArgs()
@@ -86,13 +102,15 @@ sub ParseArgs()
 
 sub recursive_commit( $ )
 {
+  my $status;
   my $submodule;
   my $submodule_list;
   my @submodule_array;
   my $dir;
   my $submodule_dir;
   my $location = $_[0];
-  my $tmp;  
+  my $tmp;
+  my $need_to_commit_here = 0;
 
   # use the "location" the build up the relative path of the submodule... relative to the root repo.
   if($location ne "")
@@ -103,7 +121,7 @@ sub recursive_commit( $ )
     # of the path, but remove it for the printing
     $tmp = $location;
     $tmp =~ s/\/$//;
-    print $tmp . "\n"
+#    print $tmp . "\n"
   }
   
   # check if there are any submodules in this repo or if this is a leaf repo
@@ -113,7 +131,7 @@ sub recursive_commit( $ )
 
     @submodule_array = split /\n/, $submodule_list;
 
-    $dir = `pwd`;
+    $dir = getcwd();
     chomp($dir);
 
     while($submodule=shift(@submodule_array))
@@ -131,24 +149,31 @@ sub recursive_commit( $ )
     
 #      print "At level $i - recursing\n";
 #      $i = $i + 1;
-       recursive_commit( $location . $submodule . "/" );
+       $need_to_commit_here += recursive_commit( $location . $submodule . "/" );
 #      $i = $i - 1;
 #      print "POP back to level $i\n";
+    
+      if($need_to_commit_here >= 1)
+      {
+        print "Need to commit here: $need_to_commit_here at $submodule_dir\n";
+      }
 
       chdir($dir);
     
     } # end while
     
   } # end if(-e ".gitmodules")
-  else
+  
+  
+  if(staged_changes_exist_here())
   {
-#    print "There are NO submodules!!!\n";
-    $submodule_list = "";
-    
-    # TO DO - COMMIT STAGED CHANGES, IF ANY AND RETURN COMMIT BOOL
-    
-  }  
+    $need_to_commit_here = 1;
 
+    nuggit_commit($submodule);
+  }
+
+  return $need_to_commit_here;
+    
 
 
 
@@ -173,12 +198,32 @@ sub recursive_commit( $ )
 
 
 
+sub staged_changes_exist_here()
+{
+  my $status;
+  my $dir;
+  my $need_to_commit_here;
+
+  $status = `$git_diff_cmd`;
+  
+  if($status ne "")
+  {
+    $dir = getcwd();
+    print "Files staged to commit here at ($dir)\n";
+    $need_to_commit_here = 1;
+  }
+}
 
 
-
-
-
-
+sub nuggit_commit($)
+{
+   my $commit_status;
+   my $repo = $_[0];
+   
+   $commit_status = `git commit -m "N: Branch $root_repo_branch, $commit_message_string"`;
+   print "Commit status in repo $repo: \n";
+   print $commit_status . "\n";
+}
 
 
 
