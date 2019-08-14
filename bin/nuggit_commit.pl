@@ -14,8 +14,6 @@ use Cwd qw(getcwd);
 
 print "nuggit_commit.pl\n";
 
-
-
 # to get a list of files that have been staged to commit (by the user) use:
 #   git diff --name-only --cached
 # use this inside each submodule to see if we need to commit in that submodule.
@@ -34,6 +32,9 @@ print "nuggit_commit.pl\n";
 sub ParseArgs();
 sub git_diff_cached_of_all_submodules();
 sub get_selected_branch($);
+sub recursive_commit( $ );
+
+
 
 my $root_dir;
 my $relative_path_to_root;
@@ -68,7 +69,8 @@ chdir $root_dir;
 
 ParseArgs();
 
-git_diff_cached_of_all_submodules();
+#git_diff_cached_of_all_submodules();
+recursive_commit("");
 
 #print $commit_message_string . "\n";
 
@@ -79,6 +81,111 @@ sub ParseArgs()
      "m=s"  => \$commit_message_string
      );
 }
+
+
+
+sub recursive_commit( $ )
+{
+  my $submodule;
+  my $submodule_list;
+  my @submodule_array;
+  my $dir;
+  my $submodule_dir;
+  my $location = $_[0];
+  my $tmp;  
+
+  # use the "location" the build up the relative path of the submodule... relative to the root repo.
+  if($location ne "")
+  {
+    #print "LOCATION: " . $location . "\n";
+    
+    # The trailing slash needs to be there for the recursive buildup 
+    # of the path, but remove it for the printing
+    $tmp = $location;
+    $tmp =~ s/\/$//;
+    print $tmp . "\n"
+  }
+  
+  # check if there are any submodules in this repo or if this is a leaf repo
+  if(-e ".gitmodules")
+  {
+    $submodule_list = `list_submodules.sh`;    
+
+    @submodule_array = split /\n/, $submodule_list;
+
+    $dir = `pwd`;
+    chomp($dir);
+
+    while($submodule=shift(@submodule_array))
+    {
+#      print "===============================\n";
+#      print "Root: " . $dir . "\n";
+
+      chomp($submodule);
+      
+      $submodule_dir = $dir . "/" . $submodule;
+  
+#      print "SUBMODULE: " . $submodule . " SUBMODULE DIR: " . $submodule_dir . "\n";
+  
+      chdir($submodule_dir);
+    
+#      print "At level $i - recursing\n";
+#      $i = $i + 1;
+       recursive_commit( $location . $submodule . "/" );
+#      $i = $i - 1;
+#      print "POP back to level $i\n";
+
+      chdir($dir);
+    
+    } # end while
+    
+  } # end if(-e ".gitmodules")
+  else
+  {
+#    print "There are NO submodules!!!\n";
+    $submodule_list = "";
+    
+    # TO DO - COMMIT STAGED CHANGES, IF ANY AND RETURN COMMIT BOOL
+    
+  }  
+
+
+
+
+  
+  # current path is passed in
+  
+  # this location should be a repository (or submodule)
+  
+  # get the list of submodules
+  #   recurse into each submodule
+  #   determine if any of the submodule recursions performed a commit.  If so, then we
+  #   definitely need to commit at this level
+  
+  # determine if any files have changed at this level, ignoring any submodule changes
+  
+  # IF either (any files at this level have changed) OR (any of the submodule recursions
+  #   resulted in a commit) 
+  # THEN we need to commit at this level
+  
+  # return (true/1) if a commit occurred at this level (either due to a file that changed or a submodule reference commit)
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 # do almost the same thing as git_status_of_all_submodules()
