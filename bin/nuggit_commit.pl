@@ -163,11 +163,12 @@ sub recursive_commit( $ )
 
       # ==========================================================================================
       # at this point we are back in the parent directory.
-      # TO DO - if the submodule we just recursed into caused a commit
+      # if the submodule we just recursed into caused a commit
       # we need to "git add" this submodule here.  When this function returns
       # it will get committed
       # ==========================================================================================
-      print "TO DO - if the submodule caused a commit, we need to 'git add <submodule>' here\n";
+      print "The submodule caused a commit, we need to 'git add $submodule' here:\n";
+      print `git add $submodule`;
       # ==========================================================================================
     
     } # end while
@@ -179,7 +180,9 @@ sub recursive_commit( $ )
   {
     $need_to_commit_here = 1;
 
-    nuggit_commit($submodule);
+    print "staged changes exist here in submodule: $submodule\n";
+
+    nuggit_commit($location);
   }
 
   return $need_to_commit_here;
