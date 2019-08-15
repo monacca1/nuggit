@@ -84,8 +84,8 @@ else
   # we shouldn't need to do this with the planned workflow but 
   # keep it for general workflow where command line tool is used 
   # to create the branch
-  system("git checkout -b $branch");
-  system("git submodule foreach --recursive git checkout -b $branch");
+  print `git checkout -b $branch`;
+  print `git submodule foreach --recursive git checkout -b $branch`;
 }
 
 
