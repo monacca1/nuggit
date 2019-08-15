@@ -68,6 +68,9 @@ nuggit_commit.pl
         - implemented the commit at the root of files and the commit in each submodule of files.
         - to do - need to unnest submodules one level at a time and commit up.
 
+nuggit_fetch.pl
+        - started - may not be done
+
 nuggit_pull.pl
         - started - may not be done
 
