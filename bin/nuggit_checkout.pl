@@ -70,8 +70,19 @@ if($create_branch == 0)
       create_branch_where_needed($branch);
     }
     
+    ##########################################################################
+    ##### TO DO - NEED TO RESOLVE WHICH TYPE OF CHECKOUT????
+    ##### TO DO - SHOULD WE CHECKOUT MASTER USING 
+    #####                git submodule update --recursive
+    #####     OR
+    #####                git submodule update --recursive --remote
+    ##### 
+    #####     AND when we checkout any other non-master branch?
+    #####
+    #####                git submodule foreach --recursive checkout $branch
     print `git checkout $branch`;
-    print `git submodule update --recursive`;
+#    print `git submodule update --recursive`;
+    print `git submodule foreach --recursive git checkout $branch`;
     
   }
   else
