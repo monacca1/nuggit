@@ -21,4 +21,9 @@ use Cwd qw(getcwd);
 # git status
 
 
+print "TO DO - DO THIS AT THE ROOT REPO AND RECURSIVELY AND PUT INTO NICE FORMAT\n";
+
+print "remote  local\n";
+print "commits commits\n";
+print "|       |\n";
 print `git rev-list --left-right --count origin/master...master`;
