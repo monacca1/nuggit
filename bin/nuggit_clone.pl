@@ -35,7 +35,7 @@ print "repo name is: $repo\n";
 
 
 # clone the repository
-system ("git clone $ARGV[0] --recursive");
+print `git clone $ARGV[0] --recursive`;
 
 # initialize the nuggit meta data directory structure
-system ("cd $repo; nuggit_init");
+print `cd $repo; nuggit_init`;

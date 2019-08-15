@@ -21,9 +21,18 @@ use Cwd qw(getcwd);
 # git status
 
 
-print "TO DO - DO THIS AT THE ROOT REPO AND RECURSIVELY AND PUT INTO NICE FORMAT\n";
+my $branch;
 
+#$branch = "jira-111";
+$branch = "master";
+
+print "TO DO - NEED TO FIX THIS API... IT SHOULD BE MORE SIMILAR TO THE GIT DIFF COMMAND\n";
+print "TO DO - DO THIS AT THE ROOT REPO AND RECURSIVELY AND PUT INTO NICE FORMAT\n\n";
+
+print "diff between remote and local for branch $branch\n";
 print "remote  local\n";
 print "commits commits\n";
 print "|       |\n";
-print `git rev-list --left-right --count origin/master...master`;
+print `git rev-list --left-right --count origin/$branch...$branch`;
+
+

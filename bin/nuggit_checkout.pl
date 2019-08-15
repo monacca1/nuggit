@@ -2,7 +2,7 @@
 
 use strict;
 use warnings;
-
+use Getopt::Long;
 use Cwd qw(getcwd);
 
 # usage: 
@@ -21,6 +21,7 @@ my $cwd = getcwd();
 my $create_branch = 0;
 
 
+sub ParseArgs();
 sub does_branch_exist_throughout($);
 sub create_branch_where_needed($);
 sub does_branch_exist_at_root($);
@@ -30,7 +31,12 @@ sub does_branch_exist_here($);
 if($ARGV[0] eq "-b")
 { 
   $branch=$ARGV[1];
-  $create_branch = 1;
+#  $create_branch = 1;
+
+######################################################################################################
+# TO DO - THIS IS IN TRANSITION... WOULD LIKE TO USE GETOPT TO GET THE BRANCH NAME... BUT RIGHT NOW
+# WE HAVE THE GETOPT GETTING THE -b FLAG BUT NOT THE BRANCH NAME WHICH IS HAPPENING HERE
+######################################################################################################
 
   print "Creating new branch -  $branch\n";  
 }
@@ -41,6 +47,9 @@ else
 }
 
 #print "branch = $branch\n";
+
+ParseArgs();
+
 
 $root_dir = `nuggit_find_root.pl`;
 chomp $root_dir;
@@ -97,6 +106,22 @@ else
   # to create the branch
   print `git checkout -b $branch`;
   print `git submodule foreach --recursive git checkout -b $branch`;
+}
+
+
+
+sub ParseArgs()
+{
+  ######################################################################################################
+  #
+  # TO DO - WOULD LIKE TO ALSO CREATE A FLAG --follow-branch
+  # which would recursively checkout the branch so that you are on the same branch in all submodules
+  # the default checkout should be git submodule update --recursive
+  #
+  ######################################################################################################
+  Getopt::Long::GetOptions(
+     "-b"  => \$create_branch
+     );
 }
 
 
