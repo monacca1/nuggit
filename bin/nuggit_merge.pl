@@ -33,8 +33,15 @@ use Cwd qw(getcwd);
 #
 #
 
+
+# git checkout master
+# git merge <branch>
+#    I tried this on a clean merge and it resulted in a fast forward merge... no commit
+#    you can either try to force a commit.  I think there is an argument to pass to git merge... mabye --no-ff ?
+#    you will have to do this recursively in each repo, and then add and commit as you go up the tree.
+
+
 my $root_dir;
-my $cached_bool;
 
 $root_dir = `nuggit_find_root.pl`;
 chomp $root_dir;
@@ -44,7 +51,6 @@ if($root_dir eq "-1")
   print "Not a nuggit!\n";
   exit();
 }
-
 
 print "nuggit_merge.pl - TO DO\n";
 
