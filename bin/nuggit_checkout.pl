@@ -80,8 +80,10 @@ if($create_branch_name eq "")
         chdir $root_dir;
         create_branch_where_needed($branch);
       }
-    
+
+      print `git submodule update --recursive`;   
       print `git submodule foreach --recursive git checkout $branch`;
+
     }
     elsif($follow_commit_bool)
     {

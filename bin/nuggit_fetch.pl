@@ -8,5 +8,5 @@ use Cwd qw(getcwd);
 # to do
 
 
-print `git fetch`;
-print `git submodule foreach --recursive git fetch`;
+print `git fetch --all`;
+print `git submodule foreach --recursive git fetch --all`;

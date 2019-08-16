@@ -13,9 +13,9 @@ sub get_selected_branch_here();
 
 my $branch = get_selected_branch_here();
 
+print "nuggit_push.pl\n";
 
-print "nuggit_push.pl --- to do\n";
-print "to do - to do - to do\n";
+print "TO DO - NEED TO MAKE SURE THE REPO IS ON THE SAME BRANCH THROUGHOUT ALL SUBMODULES\n";
 
 print `git submodule foreach --recursive git push --set-upstream origin $branch`;
 print `git push --set-upstream origin $branch`;
