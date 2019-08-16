@@ -34,11 +34,14 @@ use Cwd qw(getcwd);
 #
 
 
+# ------------------------------------------------------------------------------------------------------------------
 # git checkout master
 # git merge <branch>
 #    I tried this on a clean merge and it resulted in a fast forward merge... no commit
-#    you can either try to force a commit.  I think there is an argument to pass to git merge... mabye --no-ff ?
+#    you can either try to force a commit.  There is an argument to pass to git merge --no-ff 
+#    you can pass in a -m to git merge and
 #    you will have to do this recursively in each repo, and then add and commit as you go up the tree.
+# ------------------------------------------------------------------------------------------------------------------
 
 
 my $root_dir;
