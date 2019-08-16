@@ -27,6 +27,7 @@ sub is_branch_selected_here($);
 sub is_branch_selected_throughout($);
 sub delete_branch($);
 sub create_new_branch($);
+sub get_selected_branch_here();
 
 my $root_dir;
 my $cwd = getcwd();
@@ -120,6 +121,8 @@ sub create_new_branch($)
   print "TO DO - CREATE NEW BRANCH: $_[0]\n";
 }
 
+
+
 sub get_selected_branch($)
 {
   my $root_repo_branches = $_[0];
@@ -139,6 +142,7 @@ sub is_branch_selected_throughout($)
 {
   my $root_dir = getcwd();
   my $branch = $_[0];
+  my $branch_consistent_throughout = 1;
   
   # get a list of all of the submodules
   my $submodules = `list_all_submodules.pl`;
@@ -155,28 +159,31 @@ sub is_branch_selected_throughout($)
     
     if(is_branch_selected_here($branch) == 0)
     {
-      print "**** branch $branch is not selected in submodule: $_\n";
-      print "**** Please run:\n";
-      print "****       nuggit checkout [branch]\n";
+      print "**** Branch discrepancy\n";
+      print "****  Branch $branch is not selected in submodule: $_\n";
+      print "****     Selected branch in submodule is: " . get_selected_branch_here() . "\n";
+      print "****  Please run:\n";
+      print "****       nuggit checkout $branch\n";
       print "\n";
       
-      return 0;
+      $branch_consistent_throughout = 0;
     }
     
     # return to root directory
     chdir $root_dir;
   }
 
-  print "All submodules are are the same branch\n";
-
-  return 1;
+  if($branch_consistent_throughout == 1)
+  {
+    print "All submodules are are the same branch\n";
+  }
+  
+  return $branch_consistent_throughout;
 }
 
 
-# check of the branch exists in the current repo (based on the current directory)
-sub is_branch_selected_here($)
+sub get_selected_branch_here()
 {
-  my $branch = $_[0];
   my $branches;
   my $selected_branch;
   
@@ -185,7 +192,19 @@ sub is_branch_selected_here($)
   # execute git branch
   $branches = `git branch`;
 
-  $selected_branch = get_selected_branch($branches);
+  $selected_branch = get_selected_branch($branches);  
+}
+
+
+# check of the branch exists in the current repo (based on the current directory)
+sub is_branch_selected_here($)
+{
+  my $branch = $_[0];
+  my $selected_branch;
+  
+#  print "Is branch selected here?\n";
+  
+  $selected_branch = get_selected_branch_here();
   
   if($selected_branch eq $branch)
   {
@@ -194,8 +213,8 @@ sub is_branch_selected_here($)
   }
   else
   {
-    print "**** Branch discrepancy, please correct.\n";
-    print "**** checked out branch is $selected_branch, expected branch $branch to be checked out\n";  
+#    print "**** Branch discrepancy\n";
+#    print "**** checked out branch is $selected_branch, root repo is on branch $branch\n";
     return 0;
   }
   

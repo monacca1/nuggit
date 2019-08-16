@@ -18,7 +18,10 @@ my $num_args;
 my $branch;
 my $root_dir;
 my $cwd = getcwd();
-my $create_branch = 0;
+my $existing_branch_name = "";
+my $create_branch_name = "";
+my $follow_branch_bool = 0;
+my $follow_commit_bool = 0;
 
 
 sub ParseArgs();
@@ -27,28 +30,14 @@ sub create_branch_where_needed($);
 sub does_branch_exist_at_root($);
 sub does_branch_exist_here($);
 
-# the -b argument means to create the branch just like in git
-if($ARGV[0] eq "-b")
-{ 
-  $branch=$ARGV[1];
-#  $create_branch = 1;
-
-######################################################################################################
-# TO DO - THIS IS IN TRANSITION... WOULD LIKE TO USE GETOPT TO GET THE BRANCH NAME... BUT RIGHT NOW
-# WE HAVE THE GETOPT GETTING THE -b FLAG BUT NOT THE BRANCH NAME WHICH IS HAPPENING HERE
-######################################################################################################
-
-  print "Creating new branch -  $branch\n";  
-}
-else
-{
-  $branch=$ARGV[0];
-  print "Switch to existing branch - $branch\n";
-}
-
-#print "branch = $branch\n";
-
 ParseArgs();
+
+if( ($follow_branch_bool == 0) && ($follow_commit_bool == 0))
+{
+  print "default behavior is to follow the branch\n";
+  $follow_branch_bool = 1;
+  $follow_commit_bool = 0;
+}
 
 
 $root_dir = `nuggit_find_root.pl`;
@@ -60,38 +49,54 @@ print "nuggit root dir is: $root_dir\n";
 #print "changing directory to root: $root_dir\n";
 chdir $root_dir;
 
-if($create_branch == 0)
+
+if($create_branch_name eq "")
 {
+  # Not creating a new branch (attempt to use an 
+  # existing branch) but will need to create it in 
+  # submodules if it does not exist everywhere
+  
 #  print `git checkout $branch`;
 
   if(does_branch_exist_at_root($branch))
   {
-#    system("git checkout $branch");
-    
-    if(does_branch_exist_throughout($branch))
-    {
-#      print "branch exists throughout\n";
-    }
-    else
-    {
-#      print "branch did not exist throughout\n";
-      chdir $root_dir;
-      create_branch_where_needed($branch);
-    }
-    
-    ##########################################################################
-    ##### TO DO - NEED TO RESOLVE WHICH TYPE OF CHECKOUT????
-    ##### TO DO - SHOULD WE CHECKOUT MASTER USING 
-    #####                git submodule update --recursive
-    #####     OR
-    #####                git submodule update --recursive --remote
-    ##### 
-    #####     AND when we checkout any other non-master branch?
-    #####
-    #####                git submodule foreach --recursive checkout $branch
+
+    # checkout the branch at the root
     print `git checkout $branch`;
-#    print `git submodule update --recursive`;
-    print `git submodule foreach --recursive git checkout $branch`;
+
+    
+    if($follow_branch_bool)
+    {
+      print "follow branch\n";
+      # follow the branch recursively... not the explicity commit 
+      # from the parent repo
+      if(does_branch_exist_throughout($branch))
+      {
+  #      print "branch exists throughout\n";
+      }
+      else
+      {
+  #      print "branch did not exist throughout\n";
+        chdir $root_dir;
+        create_branch_where_needed($branch);
+      }
+    
+      print `git submodule foreach --recursive git checkout $branch`;
+    }
+    elsif($follow_commit_bool)
+    {
+      print "follow commit\n";
+      # checkout the branch in the root repo (already done)
+      # and update each submodule 
+      print `git submodule update --recursive`;
+      
+      ############################################################################################
+      # SHOULD NOT NEED TO DO THIS WITH THE DESIRED WORKFLOW, BUT IT COULD PROBABLY HAPPEN
+      # TO DO - MAYBE INCLUDE THE OPTION --REMOTE TO 
+      # UPDATE EACH SUBMODULE WITH THE LATEST OF EACH OF THEIR TRACKING BRANCHES???
+      ############################################################################################
+      
+    }
     
   }
   else
@@ -101,9 +106,7 @@ if($create_branch == 0)
 }
 else
 {
-  # we shouldn't need to do this with the planned workflow but 
-  # keep it for general workflow where command line tool is used 
-  # to create the branch
+  # Creating a branch. Create it recursively in all submodules
   print `git checkout -b $branch`;
   print `git submodule foreach --recursive git checkout -b $branch`;
 }
@@ -112,6 +115,10 @@ else
 
 sub ParseArgs()
 {
+  my $arg_count = @ARGV;
+
+#  print "Number of arguments $arg_count \n";
+  
   ######################################################################################################
   #
   # TO DO - WOULD LIKE TO ALSO CREATE A FLAG --follow-branch
@@ -120,8 +127,32 @@ sub ParseArgs()
   #
   ######################################################################################################
   Getopt::Long::GetOptions(
-     "-b"  => \$create_branch
+     "b=s"            => \$create_branch_name,
+     "follow-branch"  => \$follow_branch_bool,
+     "follow-commit"  => \$follow_commit_bool
      );
+
+  if($follow_branch_bool == 1)
+  {
+    print "Follow branch flag provided\n";
+  }
+
+  # the -b argument means to create the branch just like in git
+  if($create_branch_name ne "")
+  { 
+    $branch=$create_branch_name;
+
+    print "Creating new branch -  $branch\n";  
+  }
+  else
+  { 
+    # Use existing branch
+    $branch=$ARGV[0];
+    print "Switch to existing branch - $branch\n";
+  }
+
+  #print "branch = $branch\n";
+
 }
 
 

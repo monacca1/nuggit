@@ -153,11 +153,6 @@ sub recursive_commit( $ )
        $need_to_commit_here += recursive_commit( $location . $submodule . "/" );
 #      $i = $i - 1;
 #      print "POP back to level $i\n";
-    
-      if($need_to_commit_here >= 1)
-      {
-        print "Need to commit here: $need_to_commit_here at $submodule_dir\n";
-      }
 
       chdir($dir);
 
@@ -167,8 +162,12 @@ sub recursive_commit( $ )
       # we need to "git add" this submodule here.  When this function returns
       # it will get committed
       # ==========================================================================================
-      print "The submodule caused a commit, we need to 'git add $submodule' here:\n";
-      print `git add $submodule`;
+      if($need_to_commit_here >= 1)
+      {
+        print "Need to commit here: $need_to_commit_here at $submodule_dir\n";
+        print "The submodule caused a commit, we need to 'git add $submodule' here:\n";
+        print `git add $submodule`;
+      }
       # ==========================================================================================
     
     } # end while

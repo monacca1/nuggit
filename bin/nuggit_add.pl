@@ -20,7 +20,7 @@ my $cwd = getcwd();
 my $add_all_bool = 0;
 
 
-print "nuggit_add.pl --- IN PROGRESS\n";
+print "nuggit_add.pl\n";
 
 
 # TO DO - MAKE SURE BRANCH IS CONSISTENT AT ROOT AND THROUGHOUT
