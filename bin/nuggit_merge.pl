@@ -1,5 +1,10 @@
+#!/usr/bin/perl -w
 
+use strict;
+use warnings;
 
+use Getopt::Long;
+use Cwd qw(getcwd);
 
 
 #
@@ -27,3 +32,20 @@
 # git submodule update --remote --rebase
 #
 #
+
+my $root_dir;
+my $cached_bool;
+
+$root_dir = `nuggit_find_root.pl`;
+chomp $root_dir;
+
+if($root_dir eq "-1")
+{
+  print "Not a nuggit!\n";
+  exit();
+}
+
+
+print "nuggit_merge.pl - TO DO\n";
+
+
