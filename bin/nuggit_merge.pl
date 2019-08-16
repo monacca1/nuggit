@@ -35,6 +35,11 @@ use Cwd qw(getcwd);
 
 
 # ------------------------------------------------------------------------------------------------------------------
+# the following assumes you want to merge the branch into master at the command line
+# and then push to master... this is not allowed in some workflows.  In those workflows
+# you have to push to a remote branch and then use a pull request on the server to 
+# perform the merge
+#
 # git checkout master
 # git merge <branch>
 #    I tried this on a clean merge and it resulted in a fast forward merge... no commit
