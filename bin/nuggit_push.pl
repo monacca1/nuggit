@@ -6,9 +6,26 @@
 #/homes/monacca1/git-stuff/nuggit/bin/nuggit_push.pl 
 #
 
+use strict;
+use warnings;
+use Getopt::Long;
+use Cwd qw(getcwd);
+
 sub get_selected_branch($);
 sub get_selected_branch_here();
 
+my $root_dir;
+my $cwd = getcwd();
+
+
+$root_dir = `nuggit_find_root.pl`;
+chomp $root_dir;
+
+print "nuggit root dir is: $root_dir\n";
+#print "nuggit cwd is $cwd\n";
+
+#print "changing directory to root: $root_dir\n";
+chdir $root_dir;
 
 
 my $branch = get_selected_branch_here();
