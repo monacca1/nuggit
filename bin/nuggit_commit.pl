@@ -76,20 +76,7 @@ $root_repo_branch = get_selected_branch($branches);
 
 
 #git_diff_cached_of_all_submodules();
-$need_to_commit_at_root = recursive_commit("");
-
-if(($need_to_commit_at_root >= 1) || (staged_changes_exist_here()))
-{
-  print "Need to commit at root = $need_to_commit_at_root\n";
-  
-  nuggit_commit("root repo");
-}
-else
-{
-  print "No need to commit at root\n";
-}
-
-
+recursive_commit("");
 
 
 sub ParseArgs()
@@ -104,7 +91,7 @@ sub ParseArgs()
 sub recursive_commit( $ )
 {
   my $status;
-  my $submodule;
+  my $submodule = "";
   my $submodule_list;
   my @submodule_array;
   my $dir;
@@ -166,7 +153,13 @@ sub recursive_commit( $ )
       {
         print "Need to commit here: $need_to_commit_here at $submodule_dir\n";
         print "The submodule caused a commit, we need to 'git add $submodule' here:\n";
+        print "in directory: " . getcwd() . "\n";
+        print "about to execute: git add $submodule\n";
         print `git add $submodule`;
+      }
+      else
+      {
+        print "Submodule $submodule did not cause a commit\n";
       }
       # ==========================================================================================
     
@@ -179,7 +172,7 @@ sub recursive_commit( $ )
   {
     $need_to_commit_here = 1;
 
-    print "staged changes exist here in submodule: $submodule\n";
+    print "staged changes exist here in submodule: $submodule, location $location\n";
 
     nuggit_commit($location);
   }

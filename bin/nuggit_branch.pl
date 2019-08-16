@@ -121,7 +121,18 @@ sub create_new_branch($)
   print "TO DO - CREATE NEW BRANCH: $_[0]\n";
 }
 
+sub get_selected_branch_here()
+{
+  my $branches;
+  my $selected_branch;
+  
+#  print "Is branch selected here?\n";
+  
+  # execute git branch
+  $branches = `git branch`;
 
+  $selected_branch = get_selected_branch($branches);  
+}
 
 sub get_selected_branch($)
 {
@@ -179,20 +190,6 @@ sub is_branch_selected_throughout($)
   }
   
   return $branch_consistent_throughout;
-}
-
-
-sub get_selected_branch_here()
-{
-  my $branches;
-  my $selected_branch;
-  
-#  print "Is branch selected here?\n";
-  
-  # execute git branch
-  $branches = `git branch`;
-
-  $selected_branch = get_selected_branch($branches);  
 }
 
 
