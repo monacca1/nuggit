@@ -58,6 +58,16 @@ if($create_branch_name eq "")
   
 #  print `git checkout $branch`;
 
+  if(does_branch_exist_at_root($branch) == 0)
+  {
+    print "It might be a new branch to this repo, but it exists on the remote\n";
+    print "we need to handle this\n";
+    
+    # if the remote branch was fetched and exists here as a remote branch, then we will
+    # be able to checkout it out even though there is no local branch
+    print `git checkout $branch`;
+  }
+
   if(does_branch_exist_at_root($branch))
   {
 
@@ -240,7 +250,7 @@ sub does_branch_exist_here($)
 #  print "Does branch exist here?\n";
   
   # execute git branch and grep the output for branch
-  $branches = `git branch | grep $branch\$`;
+  $branches = `git branch -a | grep $branch\$`;
   
   # the branch name may be a substring or may be the selected branch
   # the selected branch will have a * at the beginning, remove that 
