@@ -75,9 +75,17 @@ nuggit_pull.pl
         - started - may not be done
 
 nuggit_push.pl
+        - started - may not be done
 
 nuggit_diff.pl  ??? do we need this?
+        - started, but definitely needs work
+
+nuggit_merge.pl
+        - to do
 
 nuggit_start    ??? do we want this?
 
 nuggit_rm.pl - need to create this file, no placeholder currently exists
+
+graph:
+  git log --oneline --decorate --graph --all

@@ -11,6 +11,8 @@ use Cwd qw(getcwd);
 # git branch -a
 # git diff  origin/master master --name-status
 # git diff origin/master master --stat
+# git diff --submodule
+# git diff --cached --submodule
 
 
 # shows how many commits are on each side since the common ancestor?
