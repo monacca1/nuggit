@@ -49,6 +49,11 @@ print "nuggit root dir is: $root_dir\n";
 #print "changing directory to root: $root_dir\n";
 chdir $root_dir;
 
+if($root_dir eq "-1")
+{
+  print "Not a nuggit!\n";
+  exit();
+}
 
 if($create_branch_name eq "")
 {
