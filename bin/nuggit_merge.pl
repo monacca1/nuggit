@@ -48,7 +48,7 @@ use Cwd qw(getcwd);
 #    you will have to do this recursively in each repo, and then add and commit as you go up the tree.
 # ------------------------------------------------------------------------------------------------------------------
 
-sub merge_recursive();
+sub merge_recursive($);
 sub get_selected_branch_here();
 sub get_selected_branch($);
 
@@ -57,6 +57,7 @@ my $argc;
 my $source_branch = "";
 my $destination_branch;
 my $branch = "";
+my $commit_message = "Nuggit: this is an automated merge commit";
 
 $root_dir = `nuggit_find_root.pl`;
 chomp $root_dir;
@@ -69,8 +70,7 @@ if($root_dir eq "-1")
 
 print "nuggit_merge.pl\n";
 
-#print "changing directory to root: $root_dir\n";
-chdir $root_dir;
+
 
 
 $argc = @ARGV;  # get the number of arguments.
@@ -89,16 +89,72 @@ else
 
 
 
+#print "changing directory to root: $root_dir\n";
+chdir $root_dir;
+merge_recursive($root_dir);
+#print "changing directory to root: $root_dir\n";
+chdir $root_dir;
 
-merge_recursive();
 
-
-
-sub merge_recursive()
+# check all submodules to see if the branch exists
+sub merge_recursive($)
 {
-  print "merge recursive\n";
-}
+  my $dir = $_[0];
+  my $cwd;
+  my $submodules;  
+ 
+  chdir $dir;
 
+  
+  print "==============  Current directory $dir =================== \n";
+
+  # get a list of the submodules  
+  if(-e ".gitmodules")
+  {
+    my $submodules = `list_submodules.sh`;
+  
+    # put each submodule entry into its own array entry
+    my @submodules = split /\n/, $submodules;
+
+    print "------------merge recursive in dir $dir----------------\n";
+    
+    foreach (@submodules)
+    {
+      # switch directory into the sumbodule
+      chdir $_;
+
+      ##########################################################
+      merge_recursive($_);
+      ##########################################################    
+      
+      print "merge_recurse() returned\n";
+
+      # return to the original dir    
+      chdir $dir;
+      
+      $cwd = getcwd();
+      
+      print "cwd $cwd\n";
+      print "dir $dir\n";
+      print "git status: \n";
+      print `git status`;
+      print "git add: $_\n";
+      print `git add $_`;
+    }
+  }
+  else
+  {
+    print "Current dir ($dir) has no submodules\n";
+  }
+
+  print "Do the git merge here in dir $dir\n";
+  $cwd = getcwd();  
+  print "cwd $cwd\n";
+  print `git merge $source_branch --no-ff -m "$commit_message"`;
+  
+  print `git commit -m "$commit_message"`;
+
+}
 
 
 
