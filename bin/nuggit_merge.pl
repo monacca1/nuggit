@@ -48,7 +48,7 @@ use Cwd qw(getcwd);
 #    you will have to do this recursively in each repo, and then add and commit as you go up the tree.
 # ------------------------------------------------------------------------------------------------------------------
 
-sub merge_recursive($);
+sub merge_recursive($$);
 sub get_selected_branch_here();
 sub get_selected_branch($);
 
@@ -91,22 +91,95 @@ else
 
 #print "changing directory to root: $root_dir\n";
 chdir $root_dir;
-merge_recursive($root_dir);
+merge_recursive($root_dir, 0);
 #print "changing directory to root: $root_dir\n";
 chdir $root_dir;
 
 
-# check all submodules to see if the branch exists
-sub merge_recursive($)
+
+sub indent($)
+{
+  my $i = 0;
+  my $limit = $_[0];
+  for($i = 0; $i < $limit; $i = $i + 1)
+  {
+    print "  ";
+  }
+}
+
+
+
+sub merge_recursive($$)
 {
   my $dir = $_[0];
-  my $cwd;
+  my $cwdir;
+  my $submodules; 
+  my $depth = $_[1]; 
+ 
+  chdir $dir;
+
+  print indent($depth) . "========PUSH======  Current directory $dir =================== \n";
+
+  # get a list of the submodules  
+  if(-e ".gitmodules")
+  {
+    my $submodules = `list_submodules.sh`;
+  
+    # put each submodule entry into its own array entry
+    my @submodules = split /\n/, $submodules;
+
+    print indent($depth) . "------------merge recursive in dir $dir----------------\n";
+    
+    foreach (@submodules)
+    {
+      # switch directory into the sumbodule
+      chdir $_;
+
+      ##########################################################
+      merge_recursive($_, $depth+1);
+      ##########################################################    
+      
+      print indent($depth) . "merge_recurse() returned\n";
+
+      # return to the original dir    
+      chdir $dir;
+      
+      $cwdir = getcwd() or die;
+      
+      print indent($depth) . "cwdir $cwdir\n";
+      print indent($depth) . "dir $dir\n";
+      print indent($depth) . "git status: \n";
+      print indent($depth) . "git add: $_\n";
+
+    }
+  }
+  else
+  {
+    print indent($depth) . "Current dir ($dir) has no submodules\n";
+  }
+
+  print indent($depth) . "Do the git merge here in dir $dir\n";
+  $cwdir = getcwd();  
+  print indent($depth) . "cwdir $cwdir\n";
+  
+  print indent($depth) . "====POP=========================================================\n";
+
+}
+
+
+
+
+
+sub merge_recursive_BROKEN($)
+{
+  my $dir = $_[0];
+  my $cwdir;
   my $submodules;  
  
   chdir $dir;
 
   
-  print "==============  Current directory $dir =================== \n";
+  print "========PUSH======  Current directory $dir =================== \n";
 
   # get a list of the submodules  
   if(-e ".gitmodules")
@@ -124,7 +197,7 @@ sub merge_recursive($)
       chdir $_;
 
       ##########################################################
-      merge_recursive($_);
+#      merge_recursive($_);
       ##########################################################    
       
       print "merge_recurse() returned\n";
@@ -132,9 +205,9 @@ sub merge_recursive($)
       # return to the original dir    
       chdir $dir;
       
-      $cwd = getcwd();
+      $cwdir = getcwd() or die;
       
-      print "cwd $cwd\n";
+      print "cwdir $cwdir\n";
       print "dir $dir\n";
       print "git status: \n";
       print `git status`;
@@ -148,11 +221,13 @@ sub merge_recursive($)
   }
 
   print "Do the git merge here in dir $dir\n";
-  $cwd = getcwd();  
-  print "cwd $cwd\n";
+  $cwdir = getcwd();  
+  print "cwdir $cwdir\n";
   print `git merge $source_branch --no-ff -m "$commit_message"`;
   
   print `git commit -m "$commit_message"`;
+  
+  print "====POP=========================================================\n";
 
 }
 
