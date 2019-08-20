@@ -172,7 +172,7 @@ sub recursive_commit( $ )
   {
     $need_to_commit_here = 1;
 
-    if($submodule ne "")
+    if(defined $submodule)
     {
       print "Staged changes exist here in submodule: $submodule, location $location\n";
     }
