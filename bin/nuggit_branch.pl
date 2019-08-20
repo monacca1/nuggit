@@ -220,5 +220,11 @@ sub is_branch_selected_here($)
 
 sub delete_branch($)
 {
-  print "TO DO - DELETE BRANCH $_[0]\n";
+  my $branch;
+  $branch = $_[0];
+  
+#  print "TO DO - DELETE BRANCH $_[0]\n";
+
+  print `git submodule foreach --recursive git branch -d $branch`;
+  print `git branch -d $branch`;
 }
