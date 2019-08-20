@@ -18,13 +18,10 @@ sub get_selected_branch_here();
 
 print "nuggit_pull.pl\n";
 
-print "TO DO - NEED TO MAKE SURE THERE ARE NO UNCOMMITTED LOCAL CHANGES\n";
-
-
 my $root_dir;
 my $relative_path_to_root;
 my $selected_branch = "";
-
+my $nuggit_status = "";
 
 $root_dir = `nuggit_find_root.pl`;
 chomp $root_dir;
@@ -48,6 +45,30 @@ chomp $relative_path_to_root;
 
 #print "changing directory to root: $root_dir\n";
 chdir $root_dir;
+
+
+
+print "Checking for local changes\n";
+$nuggit_status = `nuggit_status.pl`;
+if(defined $nuggit_status)
+{
+  if($nuggit_status eq "")
+  {
+#    print "nuggit_status.pl returned empty string\n";
+  }
+  else
+  {
+    print "Local changes exists, please commit (or otherwise address) them before pulling\n";
+    print "nuggit_status.pl returned the following:\n";
+    print "$nuggit_status\n";
+    exit();
+  }
+}
+else
+{
+  print "nuggit_status.pl returned nothing\n";
+}
+
 
 
 #print "I think you may need to do the following when pulling a new-to-you branch\n";
