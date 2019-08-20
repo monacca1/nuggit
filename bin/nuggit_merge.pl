@@ -7,6 +7,12 @@ use Getopt::Long;
 use Cwd qw(getcwd);
 
 
+# nuggit_merg.pl master -m "commit message"
+
+# TO DO - GET THE COMMIT MESSAGE
+
+
+
 #
 #
 # in the submodule directory
@@ -48,6 +54,7 @@ use Cwd qw(getcwd);
 #    you will have to do this recursively in each repo, and then add and commit as you go up the tree.
 # ------------------------------------------------------------------------------------------------------------------
 
+
 sub merge_recursive($$);
 sub get_selected_branch_here();
 sub get_selected_branch($);
@@ -58,6 +65,14 @@ my $source_branch = "";
 my $destination_branch;
 my $branch = "";
 my $commit_message = "Nuggit: this is an automated merge commit";
+my $inhibit_commit = 0;
+my $local_time;
+
+
+$local_time = localtime();
+#print "Local time is: $local_time\n";
+$commit_message = "$commit_message, $local_time";
+
 
 $root_dir = `nuggit_find_root.pl`;
 chomp $root_dir;
@@ -80,7 +95,7 @@ if($argc == 1)
   $destination_branch = get_selected_branch_here();
   
   print "Source branch is: $source_branch\n";
-  print "destination branch is the current branch: $destination_branch\n";
+  print "Destination branch is the current branch: $destination_branch\n";
 }
 else
 {
@@ -88,11 +103,9 @@ else
 }
 
 
-
-#print "changing directory to root: $root_dir\n";
-chdir $root_dir;
 merge_recursive($root_dir, 0);
 #print "changing directory to root: $root_dir\n";
+#print "chdir to $root_dir\n";
 chdir $root_dir;
 
 
@@ -112,74 +125,17 @@ sub indent($)
 sub merge_recursive($$)
 {
   my $dir = $_[0];
-  my $cwdir;
+  my $cwd;
   my $submodules; 
   my $depth = $_[1]; 
- 
-  chdir $dir;
+  my $base_dir;
 
-  print indent($depth) . "========PUSH======  Current directory $dir =================== \n";
+  $cwd = getcwd(); 
+  $base_dir = $dir;
+#  print indent($depth) . "chdir 1 to $dir, base dir = $base_dir\n";
+  chdir $base_dir;
 
-  # get a list of the submodules  
-  if(-e ".gitmodules")
-  {
-    my $submodules = `list_submodules.sh`;
-  
-    # put each submodule entry into its own array entry
-    my @submodules = split /\n/, $submodules;
-
-    print indent($depth) . "------------merge recursive in dir $dir----------------\n";
-    
-    foreach (@submodules)
-    {
-      # switch directory into the sumbodule
-      chdir $_;
-
-      ##########################################################
-      merge_recursive($_, $depth+1);
-      ##########################################################    
-      
-      print indent($depth) . "merge_recurse() returned\n";
-
-      # return to the original dir    
-      chdir $dir;
-      
-      $cwdir = getcwd() or die;
-      
-      print indent($depth) . "cwdir $cwdir\n";
-      print indent($depth) . "dir $dir\n";
-      print indent($depth) . "git status: \n";
-      print indent($depth) . "git add: $_\n";
-
-    }
-  }
-  else
-  {
-    print indent($depth) . "Current dir ($dir) has no submodules\n";
-  }
-
-  print indent($depth) . "Do the git merge here in dir $dir\n";
-  $cwdir = getcwd();  
-  print indent($depth) . "cwdir $cwdir\n";
-  
-  print indent($depth) . "====POP=========================================================\n";
-
-}
-
-
-
-
-
-sub merge_recursive_BROKEN($)
-{
-  my $dir = $_[0];
-  my $cwdir;
-  my $submodules;  
- 
-  chdir $dir;
-
-  
-  print "========PUSH======  Current directory $dir =================== \n";
+#  print indent($depth) . "========PUSH======  Current directory $base_dir =================== \n";
 
   # get a list of the submodules  
   if(-e ".gitmodules")
@@ -189,47 +145,71 @@ sub merge_recursive_BROKEN($)
     # put each submodule entry into its own array entry
     my @submodules = split /\n/, $submodules;
 
-    print "------------merge recursive in dir $dir----------------\n";
+#    print indent($depth) . "------------merge recursive in dir $base_dir----------------\n";
     
     foreach (@submodules)
     {
       # switch directory into the sumbodule
+#      print indent($depth) . "(in foreach) chdir 2 to $_\n";
       chdir $_;
 
       ##########################################################
-#      merge_recursive($_);
+      merge_recursive($base_dir . "/" . $_, $depth+1);
       ##########################################################    
       
-      print "merge_recurse() returned\n";
+#      print indent($depth) . "merge_recurse() returned\n";
 
       # return to the original dir    
-      chdir $dir;
+#      print indent($depth) . "chdir 3 to $base_dir\n";
+      chdir $base_dir;
+      $cwd = getcwd() or die;
+#      print indent($depth) . "cwd $cwd\n";
+#      print indent($depth) . "dir $base_dir\n";
+#      print indent($depth) . "git status: \n";
+#      print indent($depth) . "git add: $_\n";
       
-      $cwdir = getcwd() or die;
-      
-      print "cwdir $cwdir\n";
-      print "dir $dir\n";
-      print "git status: \n";
-      print `git status`;
-      print "git add: $_\n";
-      print `git add $_`;
+      if($inhibit_commit == 0)
+      {
+        print `git status`;
+        print `git add $_`;
+      }
+      else
+      {
+        print indent($depth) . "Inhibit commit\n";
+        print indent($depth) . "git status";
+        print indent($depth) . "git add $_";        
+      }
+
     }
   }
   else
   {
-    print "Current dir ($dir) has no submodules\n";
+#    print indent($depth) . "Current dir ($base_dir) has no submodules\n";
   }
 
-  print "Do the git merge here in dir $dir\n";
-  $cwdir = getcwd();  
-  print "cwdir $cwdir\n";
-  print `git merge $source_branch --no-ff -m "$commit_message"`;
-  
-  print `git commit -m "$commit_message"`;
-  
-  print "====POP=========================================================\n";
+#  print indent($depth) . "Do the git merge here in dir $base_dir\n";
+  $cwd = getcwd();  
+#  print indent($depth) . "cwd $cwd\n";
+
+
+  if($inhibit_commit == 0)
+  {
+    print `git merge $source_branch --no-ff -m "$commit_message"`;
+    print `git commit -m "$commit_message"`;  
+  }
+  else
+  {
+    print indent($depth) . "Inhibit commit\n";
+    print indent($depth) . "git merge $source_branch --no-ff -m \"$commit_message\"\n";
+    print indent($depth) . "git commit -m \"$commit_message\"\n";  
+  }
+       
+#  print indent($depth) . "====POP=========================================================\n";
 
 }
+
+
+
 
 
 
@@ -245,6 +225,7 @@ sub get_selected_branch_here()
 
   $selected_branch = get_selected_branch($branches);  
 }
+
 
 sub get_selected_branch($)
 {
