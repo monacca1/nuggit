@@ -172,33 +172,22 @@ sub recursive_commit( $ )
   {
     $need_to_commit_here = 1;
 
-    print "staged changes exist here in submodule: $submodule, location $location\n";
+    if($submodule ne "")
+    {
+      print "Staged changes exist here in submodule: $submodule, location $location\n";
+    }
+    else
+    {
+      print "Staged changes exist here at root\n";
+    }
+
+
 
     nuggit_commit($location);
   }
 
   return $need_to_commit_here;
-    
 
-
-
-  
-  # current path is passed in
-  
-  # this location should be a repository (or submodule)
-  
-  # get the list of submodules
-  #   recurse into each submodule
-  #   determine if any of the submodule recursions performed a commit.  If so, then we
-  #   definitely need to commit at this level
-  
-  # determine if any files have changed at this level, ignoring any submodule changes
-  
-  # IF either (any files at this level have changed) OR (any of the submodule recursions
-  #   resulted in a commit) 
-  # THEN we need to commit at this level
-  
-  # return (true/1) if a commit occurred at this level (either due to a file that changed or a submodule reference commit)
 }
 
 
