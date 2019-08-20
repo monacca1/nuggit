@@ -7,7 +7,7 @@ use Getopt::Long;
 use Cwd qw(getcwd);
 
 
-# nuggit_merg.pl master -m "commit message"
+# nuggit_merge.pl master -m "commit message"
 
 # TO DO - GET THE COMMIT MESSAGE
 

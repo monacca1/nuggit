@@ -33,6 +33,7 @@ my $branch = get_selected_branch_here();
 print "nuggit_push.pl\n";
 
 print "TO DO - NEED TO MAKE SURE THE REPO IS ON THE SAME BRANCH THROUGHOUT ALL SUBMODULES\n";
+print "TO DO - MAY WANT TO ENFORCE A FETCH or PULL BEFORE THE PUSH\n";
 
 print `git submodule foreach --recursive git push --set-upstream origin $branch`;
 print `git push --set-upstream origin $branch`;

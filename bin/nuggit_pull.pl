@@ -58,10 +58,9 @@ if(defined $nuggit_status)
   }
   else
   {
-    print "Local changes exists, please commit (or otherwise address) them before pulling\n";
+    print "Local changes exists!!! The pull may not have occurred or completed!!!\n";
     print "nuggit_status.pl returned the following:\n";
     print "$nuggit_status\n";
-    exit();
   }
 }
 else
