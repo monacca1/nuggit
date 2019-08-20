@@ -18,12 +18,12 @@ sub get_selected_branch_here();
 
 print "nuggit_pull.pl\n";
 
+print "TO DO - NEED TO MAKE SURE THERE ARE NO UNCOMMITTED LOCAL CHANGES\n";
+
 
 my $root_dir;
 my $relative_path_to_root;
 my $selected_branch = "";
-
-
 
 
 $root_dir = `nuggit_find_root.pl`;
