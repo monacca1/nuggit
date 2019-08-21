@@ -1,4 +1,7 @@
-nuggit:
+nuggit (incomplete prototype status):
+
+  push, pull and merge need work
+
   Nuggit is a wrapper for git that makes repositories consisting of submodules (or nested submodules) 
 work more like mono-repositories.  This is, in part, achieved by doing work on the same branc across
 all submodules and taking the approproate action when submodules are modified, added, pushed, pulled
@@ -9,6 +12,14 @@ driver script "nuggit" that would identify the command and then call the appropr
         i.e. nuggit checkout would call nuggit_checkout.pl
 Again, this is a prototype, the implementation of any of the individual scripts could probably be 
 significantly improved from the perspecives of: design, error handling, git commands, documentation, etc
+
+
+
+nuggit_env.sh 
+        - the nuggit scripts path needs to be added to your path, right now I have
+        the nuggit_env.sh (bash script) hard coded with my (c. monaco) path to my nuggit
+        scripts.  This obviously needs work.
+
 
 nuggit prototype scripts:
 
