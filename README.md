@@ -15,16 +15,27 @@ significantly improved from the perspecives of: design, error handling, git comm
 
 
 #########################################################################################################
-# TO DO ####
-Handling of merging, in particular when merging to master 
-*** In a mono-repo, when merging your working branch to master that operation is consistent
+# TO DO #### TO DO #
+####################
+
+*** Handling of merging, in particular when merging to master 
+  * In a mono-repo, when merging your working branch to master that operation is consistent
     throughout the mono-repository. Merging to master and pushing is also conceptually the same as 
     merging to the "remote tracking branch".  When working with submodules, the remote "tracking branch"
     for may not be the same across all submodules and the root repository.  It may not be appropriate to 
     merge to master across all submodules.
   * Maybe we need to abstract merging to master to be "merge with tracking branch" and the tool will
     automagically identify the tracking branch.
+    
+*** Addressing submodule inconsistences
+  * If any submodules get inconsistent... meaning the parent repo is on branch X and is pointing to 
+    a certain commit in a submodule that is also on branch X, but the submodule has additional commits on
+    branch X, this is an inconsistency in the nuggit workflow.  Consider a "nuggit_check.pl" that will
+    check for this occurance and maybe a "nuggit_fix.pl" (???) that will repoint the submodule references
+    to the latest commit in each of the submodules for that working branch.
+    
 #########################################################################################################
+
 
 
 
