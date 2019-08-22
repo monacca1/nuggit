@@ -52,7 +52,7 @@ sub checkout_default_branch_recursively($)
   
   print "Entering directory $current_dir\n";
   chdir $current_dir;
-  my    $current_dir = getcwd();   # We do this because this will get us the full path
+        $current_dir = getcwd();   # We do this because this will get us the full path
                                    # when entering this function $current_dir was just
                                    # a relative path and after changing the directory into 
                                    # this folder, $current_dir must be converted to
