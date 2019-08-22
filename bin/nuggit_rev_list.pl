@@ -5,63 +5,91 @@ use warnings;
 
 use Cwd qw(getcwd);
 
-# to do
-
-# Notes
-# git branch -a
-# git diff  origin/master master --name-status
-# git diff origin/master master --stat
-# git diff --submodule
-# git diff --cached --submodule
+sub git_rev_list_recurse();
 
 
 # shows how many commits are on each side since the common ancestor?
 #bash-4.2$ git rev-list --left-right --count origin/master...master
 #0       2
 
-# git fetch
-# git status
-
-sub get_selected_branch($);
+sub get_working_branch();
 
 my $root_dir;
-my $branches;
-my $root_repo_branch;
-
 $root_dir = `nuggit_find_root.pl`;
 chomp $root_dir;
+
+if($root_dir eq "-1")
+{
+  print "Not a nuggit!\n";
+  exit();
+}
 
 print "nuggit root directory is: $root_dir\n";
 #print "nuggit cwd is $cwd\n";
 
 #print "changing directory to root: $root_dir\n";
 chdir $root_dir;
+git_rev_list_recurse();
 
 
-$branches = `git branch`;
-$root_repo_branch = get_selected_branch($branches);
 
+sub git_rev_list_recurse()
+{
+  my $dir;
+  my $submodule = "";
+  my $submodule_list;
+  my $working_branch;
+  my @submodule_array;  
+  my $submodule_dir;
+  
+  $working_branch = get_working_branch();
+  
+  $dir = getcwd();
+  chomp($dir);
+    
+  print "Dir: $dir\n";
+  print "diff between remote and local for branch: $working_branch\n";
+  print "origin  local\n";
+  print `git rev-list --left-right --count origin/$working_branch...$working_branch`;
+  
+  # check if there are any submodules in this repo or if this is a leaf repo
+  if(-e ".gitmodules")
+  {
+    $submodule_list = `list_submodules.sh`;    
 
-print "TO DO - NEED TO FIX THIS API... IT SHOULD BE MORE SIMILAR TO THE GIT DIFF COMMAND\n";
-print "TO DO - DO THIS AT THE ROOT REPO AND RECURSIVELY AND PUT INTO NICE FORMAT\n\n";
+    @submodule_array = split /\n/, $submodule_list;
 
-print "Root\n";
-print "diff between remote and local for branch $root_repo_branch\n";
-print "origin  local\n";
-print "commits commits\n";
-print "|       |\n";
-print `git rev-list --left-right --count origin/$root_repo_branch...$root_repo_branch`;
-print `git submodule foreach --recursive git rev-list --left-right --count origin/$root_repo_branch...$root_repo_branch`;
+    while($submodule=shift(@submodule_array))
+    {
+
+      chomp($submodule);
+      
+      $submodule_dir = $dir . "/" . $submodule;
+  
+      chdir($submodule_dir);
+
+      git_rev_list_recurse();
+      
+      chdir($dir);
+    
+    } # end while
+    
+  } # end if(-e ".gitmodules")
+
+}
+
 
 
 # get the checked out branch from the list of branches
 # The input is the output of git branch (list of branches)
-sub get_selected_branch($)
+sub get_working_branch()
 {
-  my $root_repo_branches = $_[0];
+  my $branches;
   my $selected_branch;
 
-  $selected_branch = $root_repo_branches;
+  $branches = `git branch`;
+  
+  $selected_branch = $branches;
   $selected_branch =~ m/\*.*/;
   $selected_branch = $&;
   $selected_branch =~ s/\* //;  
