@@ -14,6 +14,19 @@ Again, this is a prototype, the implementation of any of the individual scripts 
 significantly improved from the perspecives of: design, error handling, git commands, documentation, etc
 
 
+#########################################################################################################
+# TO DO ####
+Handling of merging, in particular when merging to master 
+*** In a mono-repo, when merging your working branch to master that operation is consistent
+    throughout the mono-repository. Merging to master and pushing is also conceptually the same as 
+    merging to the "remote tracking branch".  When working with submodules, the remote "tracking branch"
+    for may not be the same across all submodules and the root repository.  It may not be appropriate to 
+    merge to master across all submodules.
+  * Maybe we need to abstract merging to master to be "merge with tracking branch" and the tool will
+    automagically identify the tracking branch.
+#########################################################################################################
+
+
 
 nuggit_env.sh 
         - the nuggit scripts path needs to be added to your path, right now I have
@@ -52,8 +65,7 @@ nuggit_checkout.pl
         nggit_checkout <branch> --follow-commit
 
 nuggit_diff.pl
-        - do a git diff in the root repository
-        - do a git diff in each submodule 
+        - do a git diff in the root repository and do a git diff in each submodule 
         - any arguments passed in to nuggit_diff.pl will be forwarded to the git diff commands that execute.
         i.e. 
         nuggit_diff.pl --name-only
