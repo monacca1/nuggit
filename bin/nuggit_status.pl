@@ -137,34 +137,25 @@ sub git_status_of_all_submodules()
     # switch directory into the sumbodule
     chdir $_;
 
+    $branches = `git branch`;
+    $submodule_branch = get_selected_branch($branches);
+
     $status = `$git_status_cmd`;
-    if($status ne "")
+    if(($status ne "") || ($submodule_branch ne $root_repo_branch))
     {
       print "=================================\n";
-#      print "Submodule with local changes:\n";
       print "Submodule: $_\n";
+      print "Submodule on branch $submodule_branch, root repo on branch $root_repo_branch\n";
+    }
 
-      $branches = `git branch`;
-      $submodule_branch = get_selected_branch($branches);
-      if($submodule_branch ne $root_repo_branch)
-      {
-        print "Submodule on branch $submodule_branch, root repo on branch $root_repo_branch\n";
-      }      
-      else
-      {
-        print "Submodule and root repo on same branch: $root_repo_branch\n";
-      }
-#      print "\n";
+    if($status ne "")
+    {
       
       # add the repo path to the output from git that just shows the file
       $status =~ s/^(...)/$1$relative_path_to_root$_\//mg;
       
       print $status;
      
-    }
-    else
-    {
-#      print "submodule with no changes: $_\n";
     }
 
     # =============================================================================
