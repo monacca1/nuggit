@@ -50,6 +50,29 @@ nuggit_checkout.pl
         nuggit_checkout.pl -b <branch_name>
                 - create a brand new branch and check it out in the root repository and all nested submodules
         nggit_checkout <branch> --follow-commit
+
+nuggit_diff.pl
+        - not yet implemented
+        
+nuggit_rev_list.pl
+        - show the differences in between the origin branch and the local branch.  If there are non-zer
+        numbers in both columns, the repository needs to be merged.
+        - i.e.
+        bash-4.2$ nuggit_rev_list.pl 
+
+                Root
+                diff between remote and local for branch jira-401
+                origin  local
+                commits commits
+                |       |
+                0       1
+                Entering 'fsw_core'
+                0       3
+                Entering 'fsw_core/apps/appx'
+                1       4
+                Entering 'fsw_core/apps/appy'
+                0       0
+
         
 nuggit_fetch.pl
         -fetches everything in the root and submodules recursively.
