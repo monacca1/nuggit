@@ -48,7 +48,8 @@ sub get_selected_branch($);
 
 my $root_dir;
 my $relative_path_to_root;
-my $git_status_cmd = "git status --porcelain --ignore-submodules";
+#my $git_status_cmd = "git status --porcelain --ignore-submodules";
+my $git_status_cmd = "git status --porcelain";
 my $git_diff_cmd   = "git diff --name-only --cached";
 my $cached_bool;
 
