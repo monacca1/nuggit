@@ -61,6 +61,12 @@ nuggit_branch.pl
         - view the branches that exist and display if the same branch is checked out across all
         submodules or if there is a branch discrepancy
 
+nuggit_checkout_default.pl
+        - this will recursively checkout the default branch, starting in the root repo and recursing
+        down into each submodule.  Note that the default branch of a submodule may be different from
+        the default branch of the root repo.  The default branch in one submodule may be different 
+        from the default branch in another submodule.
+
 nuggit_checkout.pl
         - checkout a branch.  There are some variations described here:
         nuggit_checkout.pl <branch_name>
