@@ -22,19 +22,37 @@ use Cwd qw(getcwd);
 # git fetch
 # git status
 
+sub get_selected_branch($);
 
-my $branch;
+my $branches;
+my $root_repo_branch;
 
-#$branch = "jira-111";
-$branch = "master";
+$branches = `git branch`;
+$root_repo_branch = get_selected_branch($branches);
+
 
 print "TO DO - NEED TO FIX THIS API... IT SHOULD BE MORE SIMILAR TO THE GIT DIFF COMMAND\n";
 print "TO DO - DO THIS AT THE ROOT REPO AND RECURSIVELY AND PUT INTO NICE FORMAT\n\n";
 
-print "diff between remote and local for branch $branch\n";
-print "remote  local\n";
+print "diff between remote and local for branch $root_repo_branch\n";
+print "origin  local\n";
 print "commits commits\n";
 print "|       |\n";
-print `git rev-list --left-right --count origin/$branch...$branch`;
+print `git rev-list --left-right --count origin/$root_repo_branch...$root_repo_branch`;
 
+
+# get the checked out branch from the list of branches
+# The input is the output of git branch (list of branches)
+sub get_selected_branch($)
+{
+  my $root_repo_branches = $_[0];
+  my $selected_branch;
+
+  $selected_branch = $root_repo_branches;
+  $selected_branch =~ m/\*.*/;
+  $selected_branch = $&;
+  $selected_branch =~ s/\* //;  
+  
+  return $selected_branch;
+}
 
