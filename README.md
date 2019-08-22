@@ -52,7 +52,12 @@ nuggit_checkout.pl
         nggit_checkout <branch> --follow-commit
 
 nuggit_diff.pl
-        - not yet implemented
+        - do a git diff in the root repository
+        - do a git diff in each submodule 
+        - any arguments passed in to nuggit_diff.pl will be forwarded to the git diff commands that execute.
+        i.e. 
+        nuggit_diff.pl --name-only
+        
         
 nuggit_rev_list.pl
         - show the differences in between the origin branch and the local branch.  If there are non-zer

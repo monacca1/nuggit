@@ -24,8 +24,19 @@ use Cwd qw(getcwd);
 
 sub get_selected_branch($);
 
+my $root_dir;
 my $branches;
 my $root_repo_branch;
+
+$root_dir = `nuggit_find_root.pl`;
+chomp $root_dir;
+
+print "nuggit root directory is: $root_dir\n";
+#print "nuggit cwd is $cwd\n";
+
+#print "changing directory to root: $root_dir\n";
+chdir $root_dir;
+
 
 $branches = `git branch`;
 $root_repo_branch = get_selected_branch($branches);
