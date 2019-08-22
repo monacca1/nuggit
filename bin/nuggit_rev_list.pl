@@ -30,9 +30,17 @@ my $root_repo_branch;
 $branches = `git branch`;
 $root_repo_branch = get_selected_branch($branches);
 
+
 print "TO DO - NEED TO FIX THIS API... IT SHOULD BE MORE SIMILAR TO THE GIT DIFF COMMAND\n";
 print "TO DO - DO THIS AT THE ROOT REPO AND RECURSIVELY AND PUT INTO NICE FORMAT\n\n";
-print "TO DO - The checked out branch is $root_repo_branch\n";
+
+print "Root\n";
+print "diff between remote and local for branch $root_repo_branch\n";
+print "origin  local\n";
+print "commits commits\n";
+print "|       |\n";
+print `git rev-list --left-right --count origin/$root_repo_branch...$root_repo_branch`;
+print `git submodule foreach --recursive git rev-list --left-right --count origin/$root_repo_branch...$root_repo_branch`;
 
 
 # get the checked out branch from the list of branches
