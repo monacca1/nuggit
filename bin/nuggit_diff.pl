@@ -32,7 +32,12 @@ $root_repo_branch = get_selected_branch($branches);
 
 print "TO DO - NEED TO FIX THIS API... IT SHOULD BE MORE SIMILAR TO THE GIT DIFF COMMAND\n";
 print "TO DO - DO THIS AT THE ROOT REPO AND RECURSIVELY AND PUT INTO NICE FORMAT\n\n";
-print "TO DO - The checked out branch is $root_repo_branch\n";
+
+print "TO DO - The checked out branch is $root_repo_branch\n\n";
+
+print `git diff @ARGV`;
+print `git submodule foreach --recursive git diff @ARGV`;
+
 
 
 # get the checked out branch from the list of branches
