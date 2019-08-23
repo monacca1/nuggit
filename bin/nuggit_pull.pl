@@ -26,14 +26,7 @@ my $relative_path_to_root;
 my $selected_branch = "";
 my $nuggit_status = "";
 
-$root_dir = `$FindBin:Bin/nuggit_find_root.pl`;
-chomp $root_dir;
-
-if($root_dir eq "-1")
-{
-  print "Not a nuggit!\n";
-  exit();
-}
+$root_dir = find_root_dir() || die("Not a nuggit!\n");
 
 # the relative path to root is used in the output.
 # it is used before each file in each submodule with a status change.
