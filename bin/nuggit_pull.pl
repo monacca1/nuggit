@@ -5,6 +5,9 @@ use warnings;
 
 use Getopt::Long;
 use Cwd qw(getcwd);
+use FindBin;
+use lib $FindBin::Bin.'/../lib'; # Add local lib to path
+require "nuggit.pm";
 
 sub get_selected_branch($);
 sub get_selected_branch_here();
@@ -23,7 +26,7 @@ my $relative_path_to_root;
 my $selected_branch = "";
 my $nuggit_status = "";
 
-$root_dir = `nuggit_find_root.pl`;
+$root_dir = `$FindBin:Bin/nuggit_find_root.pl`;
 chomp $root_dir;
 
 if($root_dir eq "-1")
@@ -80,7 +83,8 @@ $selected_branch = get_selected_branch_here();
 
 print `git pull origin $selected_branch`;
 print `git submodule foreach --recursive git pull origin $selected_branch`;
-
+print `git submodule init`;
+print `git submodule foreach --recursive git submodule init`;
 
 
 

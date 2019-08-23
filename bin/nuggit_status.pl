@@ -5,6 +5,9 @@ use warnings;
 
 use Getopt::Long;
 use Cwd qw(getcwd);
+use FindBin;
+use lib $FindBin::Bin.'/../lib'; # Add local lib to path
+require "nuggit.pm";
 
 
 # usage: 
@@ -48,19 +51,9 @@ sub get_selected_branch($);
 
 my $root_dir;
 my $relative_path_to_root;
-#my $git_status_cmd = "git status --porcelain --ignore-submodules";
-my $git_status_cmd = "git status --porcelain";
-my $git_diff_cmd   = "git diff --name-only --cached";
 my $cached_bool;
 
-$root_dir = `nuggit_find_root.pl`;
-chomp $root_dir;
-
-if($root_dir eq "-1")
-{
-  print "Not a nuggit!\n";
-  exit();
-}
+$root_dir = find_root_dir() || die("Not a nuggit!\n");
 
 # the relative path to root is used in the output.
 # it is used before each file in each submodule with a status change.
@@ -80,11 +73,11 @@ ParseArgs();
 
 if($cached_bool)
 {
-  git_diff_cached_of_all_submodules();
+  git_submodule_status("cached");
 }
 else
 {
-  git_status_of_all_submodules();
+  git_submodule_status("status");
 }
 
 
@@ -99,26 +92,28 @@ sub ParseArgs()
 
 
 # check all submodules to see if the branch exists
-sub git_status_of_all_submodules()
+sub git_submodule_status
 {
   my $status;
+  my $status_cmd_mode = shift;
+  my $status_cmd;
   my $root_dir = getcwd();
   my $branches;
   my $root_repo_branch;
   my $submodule_branch;
   
-  # get a list of all of the submodules
-  my $submodules = `list_all_submodules.pl`;
-  
-  # put each submodule entry into its own array entry
-  my @submodules = split /\n/, $submodules;
 
   # identify the checked out branch of root repo
   # execute git branch
   $branches = `git branch`;
   $root_repo_branch = get_selected_branch($branches);
 
-  $status = `$git_status_cmd`;
+  if ($status_cmd_mode eq "cached") {
+      $status_cmd = "git diff --name-only --cached";
+  } else {
+      $status_cmd = "git status --porcelain";
+  }
+  $status = `$status_cmd`;
   
   if($status ne "")
   {
@@ -129,31 +124,39 @@ sub git_status_of_all_submodules()
 #    print "\n";
 
     # add the repo path to the output from git that just shows the file
-    $status =~ s/^(...)/$1$relative_path_to_root/mg;
+    if ($status_cmd_mode eq "cached") {
+        $status =~ s/^(.)/S   $relative_path_to_root$1/mg;
+    } else {
+        $status =~ s/^(...)/$1$relative_path_to_root/mg;
+    }
+    
     print $status;
   }
-    
-  foreach (@submodules)
-  {
-    # switch directory into the sumbodule
-    chdir $_;
 
+  submodule_foreach(sub {
+    my ($parent, $name, $substatus, $hash, $label) = (@_);
+    my $subpath = $parent . '/' . $name .'/';
     $branches = `git branch`;
     $submodule_branch = get_selected_branch($branches);
 
-    $status = `$git_status_cmd`;
+    $status = `$status_cmd`;
     if(($status ne "") || ($submodule_branch ne $root_repo_branch))
     {
       print "=================================\n";
-      print "Submodule: $_\n";
+      print "Submodule: $name\n";
       print "Submodule on branch $submodule_branch, root repo on branch $root_repo_branch\n";
+      print "Submodule at $hash with parent reference status of ".(($substatus) ? "modified" : "unmodified")."\n";
     }
 
     if($status ne "")
     {
       
-      # add the repo path to the output from git that just shows the file
-      $status =~ s/^(...)/$1$relative_path_to_root$_\//mg;
+        # add the repo path to the output from git that just shows the file
+        if ($status_cmd_mode eq "cached") {
+            $status =~ s/^(.)/S   $relative_path_to_root$subpath$1/mg;
+        } else {
+            $status =~ s/^(...)/$1$relative_path_to_root$subpath/mg;
+        }
       
       print $status;
      
@@ -167,108 +170,9 @@ sub git_status_of_all_submodules()
     # =============================================================================
 #    print "TO DO - SHOW ANY COMMITS ON THE REMOTE THAT ARE NOT HERE ??? or make this a seperate command?\n";
     
-    # return to root directory
-    chdir $root_dir;
-  }
+  });
 
 } # end git_status_of_all_submodules()
-
-
-
-# do almost the same thing as git_status_of_all_submodules()
-# except use the command: 
-#   git diff --name-only --cached
-# this will print the the list of files that are in the staging
-# area and ready to be committed
-sub git_diff_cached_of_all_submodules()
-{
-  my $status;
-  my $root_dir = getcwd();
-  my $branches;
-  my $root_repo_branch;
-  my $submodule_branch;
-  
-  # get a list of all of the submodules
-  my $submodules = `list_all_submodules.pl`;
-  
-  # put each submodule entry into its own array entry
-  my @submodules = split /\n/, $submodules;
-
-  # identify the checked out branch of root repo
-  # execute git branch
-  $branches = `git branch`;
-  $root_repo_branch = get_selected_branch($branches);
-
-  $status = `$git_diff_cmd`;
-  
-  if($status ne "")
-  {
-    print "=============================================\n";
-    print "Root repo staging area (to be committed):\n";
-    print "  Root dir: $root_dir \n";
-    print "  Branch: $root_repo_branch\n";
-#    print "\n";
-
-    # add the repo path to the output from git that just shows the file
-    $status =~ s/^(.)/S   $relative_path_to_root$1/mg;
-    print $status;
-  }
-    
-  foreach (@submodules)
-  {
-    # switch directory into the sumbodule
-    chdir $_;
-
-    $status = `$git_diff_cmd`;
-    if($status ne "")
-    {
-      print "=============================================\n";
-      print "Submodule staging area (to be committed):\n";
-      print "Submodule: $_\n";
-
-      $branches = `git branch`;
-      $submodule_branch = get_selected_branch($branches);
-      if($submodule_branch ne $root_repo_branch)
-      {
-        print "Submodule on branch $submodule_branch, root repo on branch $root_repo_branch\n";
-      }      
-      else
-      {
-        print "Submodule and root repo on same branch: $root_repo_branch\n";
-      }
-#      print "\n";
-
-      # add the repo path to the output from git that just shows the file
-      $status =~ s/^(.)/S   $relative_path_to_root$_\/$1/mg;
-      
-      print $status;
-      
-      #===========================================================================================
-      # TO DO - FIGURE OUT HOW TO SHOW THE STATUS FOR EACH FILE USING THE RELATIVE PATH FROM
-      # THE LOCATION WHERE nuggit_status.pl WAS EXECUTED.  CURRENTLY IT IS JUST SHOWING THE 
-      # FILENAME WITHOUT ANY PATH AT ALL, i.e. 
-      # M .gitmodules
-      #===========================================================================================
-      
-    }
-    else
-    {
-#      print "submodule with no changes: $_\n";
-    }
-
-    # =============================================================================
-    # to do - detect if there are any remote changes
-    # with this workflow you should be keeping the remote branch up to date and 
-    # fully consitent across all submodules
-    # - show any commits on the remote that are not here.
-    # =============================================================================
-#    print "TO DO - SHOW ANY COMMITS ON THE REMOTE THAT ARE NOT HERE ??? or make this a seperate command?\n";
-    
-    # return to root directory
-    chdir $root_dir;
-  }
-
-}
 
 
 

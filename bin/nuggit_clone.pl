@@ -1,5 +1,6 @@
 #!/usr/bin/perl -w
-
+use strict;
+use warnings;
 
 # usage: 
 #
@@ -9,13 +10,13 @@
 
 
 # (1) quit unless we have the correct number of command-line args
-$num_args = $#ARGV + 1;
+my $num_args = $#ARGV + 1;
 if ($num_args != 1) {
     print "\nUsage: nuggit_clone.pl url/repo.git\n";
     exit;
 }
 
-$url=$ARGV[0];
+my $url=$ARGV[0];
 
 
 print "repo url is: $url\n";
@@ -25,8 +26,8 @@ print "repo url is: $url\n";
 #i.e.
 #nuggit_clone ssh://git@sd-bitbucket.jhuapl.edu:7999/fswsys/mission.git
 
-$repo = $url;
-$repo =~ m/\/([a-z\-\_A-Z0-9]*)\.git/;
+my $repo = $url;
+$repo =~ m/\/([a-z\-\_A-Z0-9]*)(\.git)?$/;
 $repo = $1;
 
 # now remove beginning / and ending .git
@@ -35,7 +36,9 @@ print "repo name is: $repo\n";
 
 
 # clone the repository
-print `git clone $ARGV[0] --recursive`;
+print `git clone $url --recursive`;
 
 # initialize the nuggit meta data directory structure
-print `cd $repo; nuggit_init`;
+chdir($repo) || die "Can't enter cloned repo ($repo)";
+print `nuggit_init`;
+
