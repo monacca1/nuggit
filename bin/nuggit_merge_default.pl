@@ -27,3 +27,11 @@ require "nuggit.pm";
 
 print "nuggit_merge_default.pl\n";
 
+my $root_dir;
+my $root_repo_branch;
+
+
+$root_dir = find_root_dir() || die("Not a nuggit!\n");
+
+
+
