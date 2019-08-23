@@ -49,9 +49,17 @@ sub git_status_of_all_submodules();
 sub git_diff_cached_of_all_submodules();
 sub get_selected_branch($);
 
+
+
 my $root_dir;
 my $relative_path_to_root;
 my $cached_bool;
+
+
+my $status_cmd;
+my $root_repo_branch;
+my $status_cmd_mode;
+
 
 $root_dir = find_root_dir() || die("Not a nuggit!\n");
 
@@ -70,6 +78,8 @@ chomp $relative_path_to_root;
 chdir $root_dir;
 
 ParseArgs();
+
+
 
 if($cached_bool)
 {
@@ -95,22 +105,23 @@ sub ParseArgs()
 sub git_submodule_status
 {
   my $status;
-  my $status_cmd_mode = shift;
-  my $status_cmd;
   my $root_dir = getcwd();
   my $branches;
-  my $root_repo_branch;
   my $submodule_branch;
-  
+
+  $status_cmd_mode = shift;  
 
   # identify the checked out branch of root repo
   # execute git branch
   $branches = `git branch`;
   $root_repo_branch = get_selected_branch($branches);
 
-  if ($status_cmd_mode eq "cached") {
+  if ($status_cmd_mode eq "cached") 
+  {
       $status_cmd = "git diff --name-only --cached";
-  } else {
+  } 
+  else 
+  {
       $status_cmd = "git status --porcelain";
   }
   $status = `$status_cmd`;
@@ -124,55 +135,21 @@ sub git_submodule_status
 #    print "\n";
 
     # add the repo path to the output from git that just shows the file
-    if ($status_cmd_mode eq "cached") {
+    if ($status_cmd_mode eq "cached") 
+    {
         $status =~ s/^(.)/S   $relative_path_to_root$1/mg;
-    } else {
+    } else 
+    {
         $status =~ s/^(...)/$1$relative_path_to_root/mg;
     }
     
     print $status;
   }
 
-  submodule_foreach(sub {
-    my ($parent, $name, $substatus, $hash, $label) = (@_);
-    my $subpath = $parent . '/' . $name .'/';
-    $branches = `git branch`;
-    $submodule_branch = get_selected_branch($branches);
-
-    $status = `$status_cmd`;
-    if(($status ne "") || ($submodule_branch ne $root_repo_branch))
-    {
-      print "=================================\n";
-      print "Submodule: $name\n";
-      print "Submodule on branch $submodule_branch, root repo on branch $root_repo_branch\n";
-      print "Submodule at $hash with parent reference status of ".(($substatus) ? "modified" : "unmodified")."\n";
-    }
-
-    if($status ne "")
-    {
-      
-        # add the repo path to the output from git that just shows the file
-        if ($status_cmd_mode eq "cached") {
-            $status =~ s/^(.)/S   $relative_path_to_root$subpath$1/mg;
-        } else {
-            $status =~ s/^(...)/$1$relative_path_to_root$subpath/mg;
-        }
-      
-      print $status;
-     
-    }
-
-    # =============================================================================
-    # to do - detect if there are any remote changes
-    # with this workflow you should be keeping the remote branch up to date and 
-    # fully consitent across all submodules
-    # - show any commits on the remote that are not here.
-    # =============================================================================
-#    print "TO DO - SHOW ANY COMMITS ON THE REMOTE THAT ARE NOT HERE ??? or make this a seperate command?\n";
-    
-  });
+  submodule_foreach(\&get_status);
 
 } # end git_status_of_all_submodules()
+
 
 
 
@@ -189,4 +166,55 @@ sub get_selected_branch($)
   $selected_branch =~ s/\* //;  
   
   return $selected_branch;
+}
+
+
+
+sub get_status
+{
+    my ($parent, $name, $substatus, $hash, $label) = (@_);
+    my $subpath = $parent . '/' . $name .'/';
+    
+    my $status;
+    my $branches;
+    my $submodule_branch;
+
+    
+    $branches = `git branch`;
+    $submodule_branch = get_selected_branch($branches);
+
+    $status = `$status_cmd`;
+    if(($status ne "") || ($submodule_branch ne $root_repo_branch))
+    {
+      print "=================================\n";
+      print "Submodule: $name\n";
+      print "Submodule on branch $submodule_branch, root repo on branch $root_repo_branch\n";
+      print "Submodule at $hash with parent reference status of ".(($substatus) ? "modified" : "unmodified")."\n";
+    }
+
+    if($status ne "")
+    {
+      
+        # add the repo path to the output from git that just shows the file
+        if ($status_cmd_mode eq "cached") 
+        {
+            $status =~ s/^(.)/S   $relative_path_to_root$subpath$1/mg;
+        } 
+        else 
+        {
+            $status =~ s/^(...)/$1$relative_path_to_root$subpath/mg;
+        }
+      
+      print $status;
+     
+    }
+
+    # =============================================================================
+    # to do - detect if there are any remote changes
+    # with this workflow you should be keeping the remote branch up to date and 
+    # fully consitent across all submodules
+    # - show any commits on the remote that are not here.
+    # =============================================================================
+#    print "TO DO - SHOW ANY COMMITS ON THE REMOTE THAT ARE NOT HERE ??? or make this a seperate command?\n";
+    
 }
