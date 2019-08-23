@@ -106,7 +106,6 @@ nuggit_rev_list.pl
                 1       4
                 Entering 'fsw_core/apps/appy'
                 0       0
-
         
 nuggit_fetch.pl
         -fetches everything in the root and submodules recursively.
@@ -152,6 +151,16 @@ nuggit_merge.pl
                 - nuggit_merge.pl <branch_name> -m "commit message"
                 - TO DO - RIGHT NOW THE COMMIT MESSAGE IS NOT HONORED.
         
-        
+nuggit_merge_default.pl
+        - merge the default branch into the working branch recursively
+        - no arguments provided.
+        - this script will identify the default branch for the root repo and the
+          submodules individually
+        - this is intended to be done before pushing changes prior to merging the
+          working branch back into the default branch.
+
+nuggit_relink_submodules.pl
+        - This is to be used to correct when the submodule linkages get updated outside
+          of nuggit or to address other potentially inconsistencies.
         
         
