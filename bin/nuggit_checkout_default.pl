@@ -17,12 +17,11 @@ require "nuggit.pm";
 
 my $num_args;
 my $branch;
-my $root_dir;
 my $cwd = getcwd();
 
 
-
-$root_dir = find_root_dir() || die "Not a nuggit!\n";
+my ($root_dir, $relative_path_to_root) = find_root_dir();
+die("Not a nuggit!\n") unless $root_dir;
 
 print "nuggit root dir is: $root_dir\n";
 #print "nuggit cwd is $cwd\n";

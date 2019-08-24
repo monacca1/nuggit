@@ -1,6 +1,10 @@
 #!/usr/bin/perl -w
 use strict;
 use warnings;
+use FindBin;
+use lib $FindBin::Bin.'/../lib'; # Add local lib to path
+require "nuggit.pm";
+
 
 # usage: 
 #
@@ -40,5 +44,5 @@ print `git clone $url --recursive`;
 
 # initialize the nuggit meta data directory structure
 chdir($repo) || die "Can't enter cloned repo ($repo)";
-print `nuggit_init`;
+nuggit_init();
 

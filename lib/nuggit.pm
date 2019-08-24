@@ -29,6 +29,8 @@ Parameters:
 
 Callback function to be called foreach submodule found.  CWD will be at root of current submodule.
 
+Callback will always be called starting from the deepest submodule.
+
 Function will be called with
 
 -parent Relative path from root to parent
@@ -103,14 +105,15 @@ sub submodule_foreach {
       $label = substr($words[2], 1, -1) if defined($words[2]); # Label may not always exist
       #print "DEBUG: $hash, $name, $label, $status\n";
       # Enter submodule
-      chdir($name);
-      
-      # Callback
-      $fn->($parent, $name, $status, $hash, $label);
-      
+      chdir($name);      
+     
       if (!$opts || (exists($opts->{recursive}) && $opts->{recursive})) {
           submodule_foreach($fn, $opts, $name);
       }
+
+      # Callback
+      $fn->($parent, $name, $status, $hash, $label);
+
       
       # Reset Dir
       chdir($cwd);
@@ -129,20 +132,24 @@ sub find_root_dir
 {
     my $cwd = getcwd();
     my $nuggit_root;
+    my $path = "";
 
     my $max_depth = 10;
     my $i = 0;
 
     for($i = 0; $i < $max_depth; $i = $i+1)
     {
-        if(-e ".nuggit") 
+        # .nuggt must exist inside a git repo
+        if(-e ".nuggit" && -e ".git") 
         {
             $nuggit_root = getcwd();
             #     print "starting path was $cwd\n";
             #     print ".nuggit exists at $nuggit_root\n";
-            return $nuggit_root;
+            $path = "./" unless $path;
+            return ($nuggit_root, $path);
         }
         chdir "../";
+        $path = "../".$path;
   
         #  $cwd = getcwd();
         #  print "$i, $max_depth - cwd = " . $cwd . "\n";
@@ -150,6 +157,60 @@ sub find_root_dir
     }
 
     return undef;
+}
+
+=head1 nuggit_init
+
+Initialize Nuggit Repository by creating a .nuggit file at current location.
+
+=cut
+
+sub nuggit_init
+{
+    mkdir(".nuggit");
+    system('echo ".nuggit" >> .git/info/exclude'); # TODO: We should do this the Perl way to remove UNIX requirement
+}
+
+=head2 get_selected_branch_here
+
+?
+
+=cut
+
+sub get_selected_branch_here()
+{
+  my $branches;
+  my $selected_branch;
+  
+#  print "Is branch selected here?\n";
+  
+  # execute git branch
+  $branches = `git branch`;
+
+  $selected_branch = get_selected_branch($branches);  
+}
+
+
+
+
+=head2 get_selected_branch
+
+ get the checked out branch from the list of branches
+ The input is the output of git branch (list of branches)
+
+=cut
+
+sub get_selected_branch($)
+{
+  my $root_repo_branches = $_[0];
+  my $selected_branch;
+
+  $selected_branch = $root_repo_branches;
+  $selected_branch =~ m/\*.*/;
+  $selected_branch = $&;
+  $selected_branch =~ s/\* //;  
+  
+  return $selected_branch;
 }
 
 1;

@@ -45,31 +45,23 @@ require "nuggit.pm";
 
 
 sub ParseArgs();
-sub git_status_of_all_submodules();
-sub git_diff_cached_of_all_submodules();
-sub get_selected_branch($);
 
-my $root_dir;
-my $relative_path_to_root;
+#my $root_dir;
+#my $relative_path_to_root;
 my $cached_bool;
+my $verbose = 0;
 
-$root_dir = find_root_dir() || die("Not a nuggit!\n");
+ParseArgs();
 
-# the relative path to root is used in the output.
-# it is used before each file in each submodule with a status change.
-# this is done so the user can copy the entire path and call
-# nuggit_add.pl or nuggit_diff.pl on that path and it is valid
-$relative_path_to_root = `nuggit_get_path_relation_to_root.pl`;
-chomp $relative_path_to_root;
+my ($root_dir, $relative_path_to_root) = find_root_dir();
+die("Not a nuggit!\n") unless $root_dir;
 
-#print "nuggit root dir is: $root_dir\n";
-#print "nuggit cwd is $cwd\n";
-#print $relative_path_to_root . "\n";
+print "nuggit root dir is: $root_dir\n" if $verbose;
+print "nuggit cwd is ".getcwd()."\n" if $verbose;
+print "nuggit relative_path_to_root is ".$relative_path_to_root . "\n" if $verbose;
 
 #print "changing directory to root: $root_dir\n";
 chdir $root_dir;
-
-ParseArgs();
 
 if($cached_bool)
 {
@@ -85,7 +77,8 @@ else
 sub ParseArgs()
 {
   Getopt::Long::GetOptions(
-     "--cached"  => \$cached_bool
+                           "cached"  => \$cached_bool,
+                           "verbose!" => \$verbose
      );
 }
 
@@ -175,18 +168,3 @@ sub git_submodule_status
 } # end git_status_of_all_submodules()
 
 
-
-# get the checked out branch from the list of branches
-# The input is the output of git branch (list of branches)
-sub get_selected_branch($)
-{
-  my $root_repo_branches = $_[0];
-  my $selected_branch;
-
-  $selected_branch = $root_repo_branches;
-  $selected_branch =~ m/\*.*/;
-  $selected_branch = $&;
-  $selected_branch =~ s/\* //;  
-  
-  return $selected_branch;
-}
