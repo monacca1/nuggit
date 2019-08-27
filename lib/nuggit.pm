@@ -86,6 +86,7 @@ sub submodule_foreach {
       return; # early if there are no submodules (for faster execution)
   }
   my $list = `git submodule`;
+
   # TODO: Consider switchign to IPC::Run3 to check for stderr for better error handling
   if (!$list || $list eq "") {
     return;
@@ -167,6 +168,7 @@ Initialize Nuggit Repository by creating a .nuggit file at current location.
 
 sub nuggit_init
 {
+    die("nuggit_init() must be run from the top level of a git repository") unless -e ".git";
     mkdir(".nuggit");
     system('echo ".nuggit" >> .git/info/exclude'); # TODO: We should do this the Perl way to remove UNIX requirement
 }
