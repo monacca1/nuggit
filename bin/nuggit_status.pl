@@ -141,25 +141,6 @@ sub git_submodule_status
 } # end git_status_of_all_submodules()
 
 
-
-
-# get the checked out branch from the list of branches
-# The input is the output of git branch (list of branches)
-sub get_selected_branch($)
-{
-  my $root_repo_branches = $_[0];
-  my $selected_branch;
-
-  $selected_branch = $root_repo_branches;
-  $selected_branch =~ m/\*.*/;
-  $selected_branch = $&;
-  $selected_branch =~ s/\* //;  
-  
-  return $selected_branch;
-}
-
-
-
 sub get_status
 {
     my ($parent, $name, $substatus, $hash, $label) = (@_);
