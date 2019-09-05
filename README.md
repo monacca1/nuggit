@@ -33,6 +33,14 @@ significantly improved from the perspecives of: design, error handling, git comm
     branch X, this is an inconsistency in the nuggit workflow.  Consider a "nuggit_check.pl" that will
     check for this occurance and maybe a "nuggit_fix.pl" (???) that will repoint the submodule references
     to the latest commit in each of the submodules for that working branch.
+
+*** Add more logging.  
+  * I've already added some logging by the nuggit_add.pl and nuggit_commit.pl which creates log entries
+    into a file in the .nuggit/ directory called nuggit_log.txt
+  * So far the nuggit_log.txt includes all the "git add" and "git commit" activities
+  * consider adding logging to nuggit_push.pl, nuggit_pull.pl, nuggit_fetch.pl, nuggit_checkout.pl
+  
+
     
 #########################################################################################################
 
