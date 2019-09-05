@@ -90,6 +90,7 @@ sub recursive_commit( $ )
   my $submodule_dir;
   my $location = $_[0];
   my $tmp;
+  my $need_to_add_and_commit_submodule = 0;
   my $need_to_commit_here = 0;
 
   # use the "location" the build up the relative path of the submodule... relative to the root repo.
@@ -131,7 +132,8 @@ sub recursive_commit( $ )
     
 #      print "At level $i - recursing\n";
 #      $i = $i + 1;
-       $need_to_commit_here += recursive_commit( $location . $submodule . "/" );
+       $need_to_add_and_commit_submodule = recursive_commit( $location . $submodule . "/" );
+       $need_to_commit_here += $need_to_add_and_commit_submodule;
 #      $i = $i - 1;
 #      print "POP back to level $i\n";
 
@@ -143,7 +145,7 @@ sub recursive_commit( $ )
       # we need to "git add" this submodule here.  When this function returns
       # it will get committed
       # ==========================================================================================
-      if($need_to_commit_here >= 1)
+      if($need_to_add_and_commit_submodule >= 1)
       {
         print "Need to commit here: $need_to_commit_here at $submodule_dir\n";
         print "The submodule caused a commit, we need to 'git add $submodule' here:\n";
@@ -176,8 +178,6 @@ sub recursive_commit( $ )
     {
       print "Staged changes exist here at root\n";
     }
-
-
 
     nuggit_commit($location);
   }
