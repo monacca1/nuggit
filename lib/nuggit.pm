@@ -126,9 +126,13 @@ sub submodule_foreach {
 =head2 find_root_dir
 
 Returns the root directory of the nuggit, or undef if not found
+Also navigate to the nuggit root directory
 
 =cut
 
+# note a side effect is that this will change to the nuggit root directory
+# consider returning to the cwd and making the caller chdir to the root
+# dir if desired.
 sub find_root_dir
 {
     my $cwd = getcwd();

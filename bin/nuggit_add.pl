@@ -5,6 +5,11 @@ use warnings;
 use Getopt::Long;
 use Cwd qw(getcwd);
 
+use FindBin;
+use lib $FindBin::Bin.'/../lib'; # Add local lib to path
+require "nuggit.pm";
+
+
 # usage: 
 #
 # nuggit_add.pl <path_to_file>
@@ -15,7 +20,6 @@ sub add_file($);
 
 my $num_args;
 my $branch;
-my $root_dir;
 my $cwd = getcwd();
 my $add_all_bool = 0;
 
@@ -26,6 +30,23 @@ print "nuggit_add.pl\n";
 # TO DO - MAKE SURE BRANCH IS CONSISTENT AT ROOT AND THROUGHOUT
 
 ParseArgs();
+
+
+
+my $branches;
+my $root_repo_branch;
+my ($root_dir, $relative_path_to_root) = find_root_dir();
+chdir($cwd);
+$branches = `git branch`;
+$root_repo_branch = get_selected_branch($branches);
+
+my $date = `date`;
+chomp($date);
+system("echo ===========================================         >> $root_dir/.nuggit/nuggit_log.txt");
+system("echo nuggit_add.pl, branch = $root_repo_branch, $date    >> $root_dir/.nuggit/nuggit_log.txt");
+
+
+
 
 
 if($add_all_bool)
@@ -79,11 +100,6 @@ sub add_file($)
   my $file = "";
   my $i;
   
-  # TO DO 
-  # get parent directory of file
-  # cd into that directory
-  # git add the file
-  
   print "Adding file $relative_path_and_file\n";
 
   @path_array = split /\//, $relative_path_and_file;
@@ -118,5 +134,8 @@ sub add_file($)
 #    print "path is null\n";
   }
   print `git add $file`;
+
+  my $dir = getcwd();
+  system("echo nuggit_add.pl, directory: $dir, adding file: $file    >> $root_dir/.nuggit/nuggit_log.txt");  
   
 }

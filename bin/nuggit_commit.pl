@@ -62,6 +62,11 @@ $branches = `git branch`;
 $root_repo_branch = get_selected_branch($branches);
 
 
+my $date = `date`;
+chomp($date);
+system("echo ===========================================         >> $root_dir/.nuggit/nuggit_log.txt");
+system("echo nuggit_commit.pl, branch = $root_repo_branch, $date >> $root_dir/.nuggit/nuggit_log.txt");
+system("echo commit message: $commit_message_string              >> $root_dir/.nuggit/nuggit_log.txt");
 recursive_commit("");
 
 
@@ -145,6 +150,8 @@ sub recursive_commit( $ )
         print "in directory: " . getcwd() . "\n";
         print "about to execute: git add $submodule\n";
         print `git add $submodule`;
+        
+        system("echo git add $submodule >> $root_dir/.nuggit/nuggit_log.txt");
       }
       else
       {
@@ -202,6 +209,10 @@ sub nuggit_commit($)
 {
    my $commit_status;
    my $repo = $_[0];
+   my $dir;
+
+   $dir = getcwd();    
+   system("echo in dir $dir, committing in repo $repo >> $root_dir/.nuggit/nuggit_log.txt");
    
    $commit_status = `git commit -m "N: Branch $root_repo_branch, $commit_message_string"`;
    print "Commit status in repo $repo: \n";
