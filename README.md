@@ -140,12 +140,16 @@ nuggit_add.pl
         - add the specified files to the staging area
         - example
                 nuggit_add.pl ./fsw_core/apps/appx/file.c
+        - nuggit_add.pl utilizes the "nuggit_log.txt".  Each file that is "added" to the staging area
+          using nuggit_add.pl will result in a nuggit log entry.  See "nuggit_log"
                 
 nuggit_commit.pl
         - commit all the files that have been added to the staging area across all of the
         repositores (root and nested submodules) into the checked out branch
         - example
                 nuggit_commit.pl -m "required commit message goes here"
+        - nuggit_commit.pl utilizes the "nuggit_log.txt".  Each nuggit_commit issued by the user
+          and each underying commit performed by nuggit_commit.pl will result in a nuggit log entry
         
 nuggit_push.pl
         - identifies the checked out branch at the root repository and pushes the local
@@ -171,4 +175,15 @@ nuggit_relink_submodules.pl
         - This is to be used to correct when the submodule linkages get updated outside
           of nuggit or to address other potentially inconsistencies.
         
-        
+nuggit_log.pl
+        - usage:
+                - Show the entire nuggit log (located at the root of the repository in .nuggit/nuggit_log.txt)
+                   nuggit_log.pl
+                   or
+                   nuggit_log.pl --show-all
+                - show N lines of the nuggit log
+                   nuggit_log.pl --show <n>
+                - clear the nuggit log in your repository (sandbox)
+                   nuggit_log.pl -c
+                
+                        
