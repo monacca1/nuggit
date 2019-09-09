@@ -81,7 +81,7 @@ from the default branch in another submodule.
   - nuggit_checkout.pl -b <branch_name>
     - create a brand new branch and check it out in the root repository and all nested submodules
   - nuggit_checkout <branch> --follow-commit
--end of list
+- end of list
 
 
 ### nuggit_diff.pl
