@@ -81,10 +81,9 @@ from the default branch in another submodule.
   - nuggit_checkout.pl -b <branch_name>
     - create a brand new branch and check it out in the root repository and all nested submodules
   - nuggit_checkout <branch> --follow-commit
+-end of list
 
 
-
-<a/>
 ### nuggit_diff.pl
 - do a git diff in the root repository and do a git diff in each submodule 
 - any arguments passed in to nuggit_diff.pl will be forwarded to the git diff commands that execute.
@@ -92,12 +91,12 @@ from the default branch in another submodule.
     - nuggit_diff.pl --name-only
         
         
-nuggit_rev_list.pl
-        - show the differences in between the origin branch and the local branch.  If there are non-zero
-        numbers in both columns, the repository needs to be merged.
-        - i.e.
-        bash-4.2$ nuggit_rev_list.pl 
+### nuggit_rev_list.pl
+- show the differences in between the origin branch and the local branch.  If there are non-zero
+numbers in both columns, the repository needs to be merged.
+- i.e.
 
+                bash-4.2$ nuggit_rev_list.pl 
                 Root
                 diff between remote and local for branch jira-401
                 origin  local
@@ -111,75 +110,75 @@ nuggit_rev_list.pl
                 Entering 'fsw_core/apps/appy'
                 0       0
         
-nuggit_fetch.pl
-        -fetches everything in the root and submodules recursively.
-        - "git fetch": downloads commits, files, and refs from a remote repository to your local repository. 
-        - Fetching is what yu do when you want to see what everyone else has been working on.
+### nuggit_fetch.pl
+-fetches everything in the root and submodules recursively.
+- "git fetch": downloads commits, files, and refs from a remote repository to your local repository. 
+- Fetching is what yu do when you want to see what everyone else has been working on.
         
-nuggit_pull.pl
-        - pull the checked out branch from origin for the root repository.  Then foreach
-        submodule pull from origin.
-        - Any local, uncommitted changes will trigger a warning and will prevent git from completing
-        the pull
+### nuggit_pull.pl
+- pull the checked out branch from origin for the root repository.  Then foreach
+submodule pull from origin.
+- Any local, uncommitted changes will trigger a warning and will prevent git from completing
+the pull
         
-nuggit_status.pl
-        - two variations: 
-        - nuggit_status.pl
-                - for each submodule show the status 
-        - nuggit_status.pl --cached
-                - show the changes that were added to the staging area that will be committed on the next nuggit commit
-        - the output will show the relative path of each file that has a status.  The 
-        relative path is relative to the nuggit root repository.  This is so the file path and name
-        can be copied and pasted into the command line of the nuggit_add.pl command
+### nuggit_status.pl
+- two variations: 
+- nuggit_status.pl
+  - for each submodule show the status 
+- nuggit_status.pl --cached
+  - show the changes that were added to the staging area that will be committed on the next nuggit commit
+- the output will show the relative path of each file that has a status.  The 
+relative path is relative to the nuggit root repository.  This is so the file path and name
+can be copied and pasted into the command line of the nuggit_add.pl command
         
-nuggit_add.pl
-        - add the specified files to the staging area
-        - example
-                nuggit_add.pl ./fsw_core/apps/appx/file.c
-        - nuggit_add.pl utilizes the "nuggit_log.txt".  Each file that is "added" to the staging area
-          using nuggit_add.pl will result in a nuggit log entry.  See "nuggit_log"
+### nuggit_add.pl
+- add the specified files to the staging area
+- example
+  - nuggit_add.pl ./fsw_core/apps/appx/file.c
+- nuggit_add.pl utilizes the "nuggit_log.txt".  Each file that is "added" to the staging area
+using nuggit_add.pl will result in a nuggit log entry.  See "nuggit_log"
                 
-nuggit_commit.pl
-        - commit all the files that have been added to the staging area across all of the
-        repositores (root and nested submodules) into the checked out branch
-        - example
-                nuggit_commit.pl -m "required commit message goes here"
-        - nuggit_commit.pl utilizes the "nuggit_log.txt".  Each nuggit_commit issued by the user
-          and each underying commit performed by nuggit_commit.pl will result in a nuggit log entry
+### nuggit_commit.pl
+- commit all the files that have been added to the staging area across all of the
+repositores (root and nested submodules) into the checked out branch
+- example
+  - nuggit_commit.pl -m "required commit message goes here"
+- nuggit_commit.pl utilizes the "nuggit_log.txt".  Each nuggit_commit issued by the user
+and each underying commit performed by nuggit_commit.pl will result in a nuggit log entry
         
-nuggit_push.pl
-        - identifies the checked out branch at the root repository and pushes the local
-        branch from the local repository to the origin for each nested submodule recursively
+### nuggit_push.pl
+- identifies the checked out branch at the root repository and pushes the local
+branch from the local repository to the origin for each nested submodule recursively
              
-nuggit_merge.pl
-        - merge the specified branch into the currently checked out branch in the root repository
-        and all nested submodules
-        - TO DO - NOT FINISHED.
-        - example
-                - nuggit_merge.pl <branch_name> -m "commit message"
-                - TO DO - RIGHT NOW THE COMMIT MESSAGE IS NOT HONORED.
+### nuggit_merge.pl
+- merge the specified branch into the currently checked out branch in the root repository
+and all nested submodules
+- TO DO - NOT FINISHED.
+- example
+  - nuggit_merge.pl <branch_name> -m "commit message"
+  - TO DO - RIGHT NOW THE COMMIT MESSAGE IS NOT HONORED.
         
-nuggit_merge_default.pl
-        - merge the default branch into the working branch recursively
-        - no arguments provided.
-        - this script will identify the default branch for the root repo and the
-          submodules individually
-        - this is intended to be done before pushing changes prior to merging the
-          working branch back into the default branch.
+### nuggit_merge_default.pl
+- merge the default branch into the working branch recursively
+- no arguments provided.
+- this script will identify the default branch for the root repo and the
+submodules individually
+- this is intended to be done before pushing changes prior to merging the
+working branch back into the default branch.
 
-nuggit_relink_submodules.pl
-        - This is to be used to correct when the submodule linkages get updated outside
-          of nuggit or to address other potentially inconsistencies.
+### nuggit_relink_submodules.pl
+- This is to be used to correct when the submodule linkages get updated outside
+of nuggit or to address other potentially inconsistencies.
         
-nuggit_log.pl
-        - usage:
-                - Show the entire nuggit log (located at the root of the repository in .nuggit/nuggit_log.txt)
-                   nuggit_log.pl
-                   or
-                   nuggit_log.pl --show-all
-                - show N lines of the nuggit log
-                   nuggit_log.pl --show <n>
-                - clear the nuggit log in your repository (sandbox)
-                   nuggit_log.pl -c
-                
+### nuggit_log.pl
+- usage:
+  - Show the entire nuggit log (located at the root of the repository in .nuggit/nuggit_log.txt)
+  nuggit_log.pl
+  or
+  nuggit_log.pl --show-all
+  - show N lines of the nuggit log
+  nuggit_log.pl --show <n>
+  - clear the nuggit log in your repository (sandbox)
+  nuggit_log.pl -c
+        
                         
