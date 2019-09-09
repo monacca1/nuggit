@@ -40,53 +40,53 @@ significantly improved from the perspecives of: design, error handling, git comm
     
 #########################################################################################################
 
+# nuggit prototype scripts:
+
 ### nuggit_env.sh 
 - the nuggit scripts path needs to be added to your path.  You can either add the instance
 of nuggit to your path using your .cshrc or you can use this nuggit_env.sh script.  To use
 the nuggit_env.sh, you must navigate to the nuggit/bin directory, (be in the bash shell) and
 "source nuggit_env.sh"
 
-# nuggit prototype scripts:
-
-###nuggit_clone.pl
+### nuggit_clone.pl
 - clone a repositoy 
   - i.e. 
     - nuggit_clone.pl ssh://git@sd-bitbucket.jhuapl.edu:7999/fswsys/mission.git
 
-###nuggit_init
+### nuggit_init
 - Install the nuggit data structure to a preexisting repository.  If the repo was cloned
 using the native git clone you will need to "nuggit_init" in the root folder of the 
 git repository
         
-nuggit_branch.pl
+### nuggit_branch.pl
 - view the branches that exist and display if the same branch is checked out across all
 submodules or if there is a branch discrepancy
 
-nuggit_checkout_default.pl
+### nuggit_checkout_default.pl
 - this will recursively checkout the default branch, starting in the root repo and recursing
 down into each submodule.  Note that the default branch of a submodule may be different from
 the default branch of the root repo.  The default branch in one submodule may be different 
 from the default branch in another submodule.
 
-nuggit_checkout.pl
-        - checkout a branch.  There are some variations described here:
-        nuggit_checkout.pl <branch_name>
-                - checkout a branch that already exists OR
-                - checkout a branch that was created remotely and has not previously been locally checked out.
-                - this will create this branch locally in all submodules and check that branch out in the
-                root repository and all submodules
-                - NOTE that if changes were pushed to this branch in a submodule using git directly (not using nuggit)
-                AND the parent reposities were not updated to point to the new submodule commits, this checkout command
-                will result a repository that reports local changes.
-        nuggit_checkout.pl -b <branch_name>
-                - create a brand new branch and check it out in the root repository and all nested submodules
-        nggit_checkout <branch> --follow-commit
+### nuggit_checkout.pl
+- checkout a branch.  There are some variations described here:
+  - nuggit_checkout.pl <branch_name>
+    - checkout a branch that already exists OR
+    - checkout a branch that was created remotely and has not previously been locally checked out.
+    - this will create this branch locally in all submodules and check that branch out in the
+      root repository and all submodules
+    - NOTE that if changes were pushed to this branch in a submodule using git directly (not using nuggit)
+      AND the parent reposities were not updated to point to the new submodule commits, this checkout command
+      will result a repository that reports local changes.
+  - nuggit_checkout.pl -b <branch_name>
+    - create a brand new branch and check it out in the root repository and all nested submodules
+  - nggit_checkout <branch> --follow-commit
 
-nuggit_diff.pl
-        - do a git diff in the root repository and do a git diff in each submodule 
-        - any arguments passed in to nuggit_diff.pl will be forwarded to the git diff commands that execute.
-        i.e. 
-        nuggit_diff.pl --name-only
+### nuggit_diff.pl
+- do a git diff in the root repository and do a git diff in each submodule 
+- any arguments passed in to nuggit_diff.pl will be forwarded to the git diff commands that execute.
+  - i.e. 
+    - nuggit_diff.pl --name-only
         
         
 nuggit_rev_list.pl
