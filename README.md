@@ -56,24 +56,24 @@ scripts.  This obviously needs work.
 nuggit prototype scripts:
 
 nuggit_clone.pl
-        - clone a repositoy 
-        i.e. 
-        nuggit_clone.pl ssh://git@sd-bitbucket.jhuapl.edu:7999/fswsys/mission.git
+- clone a repositoy 
+  - i.e. 
+    - nuggit_clone.pl ssh://git@sd-bitbucket.jhuapl.edu:7999/fswsys/mission.git
 
 nuggit_init
-        - Install the nuggit data structure to a preexisting repository.  If the repo was cloned
-        using the native git clone you will need to "nuggit_init" in the root folder of the 
-        git repository
+- Install the nuggit data structure to a preexisting repository.  If the repo was cloned
+using the native git clone you will need to "nuggit_init" in the root folder of the 
+git repository
         
 nuggit_branch.pl
-        - view the branches that exist and display if the same branch is checked out across all
-        submodules or if there is a branch discrepancy
+- view the branches that exist and display if the same branch is checked out across all
+submodules or if there is a branch discrepancy
 
 nuggit_checkout_default.pl
-        - this will recursively checkout the default branch, starting in the root repo and recursing
-        down into each submodule.  Note that the default branch of a submodule may be different from
-        the default branch of the root repo.  The default branch in one submodule may be different 
-        from the default branch in another submodule.
+- this will recursively checkout the default branch, starting in the root repo and recursing
+down into each submodule.  Note that the default branch of a submodule may be different from
+the default branch of the root repo.  The default branch in one submodule may be different 
+from the default branch in another submodule.
 
 nuggit_checkout.pl
         - checkout a branch.  There are some variations described here:
