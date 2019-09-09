@@ -80,11 +80,11 @@ from the default branch in another submodule.
       will result a repository that reports local changes.
   - nuggit_checkout.pl -b <branch_name>
     - create a brand new branch and check it out in the root repository and all nested submodules
-  - 'nuggit_checkout <branch> --follow-commit'
-- end of list
+  - 'nuggit_checkout.pl <branch> --follow-commit'
 
 
-
+<a/>
+formatting error, this should be a new line, new heading:
 ### nuggit_diff.pl
 - do a git diff in the root repository and do a git diff in each submodule 
 - any arguments passed in to nuggit_diff.pl will be forwarded to the git diff commands that execute.
