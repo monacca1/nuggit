@@ -1,8 +1,7 @@
-nuggit (incomplete prototype status):
+#nuggit
+(incomplete prototype status):
 
-  push, pull and merge need work
-
-  Nuggit is a wrapper for git that makes repositories consisting of submodules (or nested submodules) 
+Nuggit is a wrapper for git that makes repositories consisting of submodules (or nested submodules) 
 work more like mono-repositories.  This is, in part, achieved by doing work on the same branc across
 all submodules and taking the approproate action when submodules are modified, added, pushed, pulled
 etc. without requring the user to do extra magic just for submodules.
@@ -13,10 +12,7 @@ driver script "nuggit" that would identify the command and then call the appropr
 Again, this is a prototype, the implementation of any of the individual scripts could probably be 
 significantly improved from the perspecives of: design, error handling, git commands, documentation, etc
 
-
-#########################################################################################################
-# TO DO #### TO DO #
-####################
+### TO DO
 
 *** Handling of merging, in particular when merging to master 
   * In a mono-repo, when merging your working branch to master that operation is consistent
@@ -44,23 +40,20 @@ significantly improved from the perspecives of: design, error handling, git comm
     
 #########################################################################################################
 
-
-
-
 nuggit_env.sh 
-- the nuggit scripts path needs to be added to your path, right now I have
-the nuggit_env.sh (bash script) hard coded with my (c. monaco) path to my nuggit
-scripts.  This obviously needs work.
+- the nuggit scripts path needs to be added to your path.  You can either add the instance
+of nuggit to your path using your .cshrc or you can use this nuggit_env.sh script.  To use
+the nuggit_env.sh, you must navigate to the nuggit/bin directory, (be in the bash shell) and
+"source nuggit_env.sh"
 
+# nuggit prototype scripts:
 
-nuggit prototype scripts:
-
-nuggit_clone.pl
+###nuggit_clone.pl
 - clone a repositoy 
   - i.e. 
     - nuggit_clone.pl ssh://git@sd-bitbucket.jhuapl.edu:7999/fswsys/mission.git
 
-nuggit_init
+###nuggit_init
 - Install the nuggit data structure to a preexisting repository.  If the repo was cloned
 using the native git clone you will need to "nuggit_init" in the root folder of the 
 git repository
