@@ -124,9 +124,9 @@ the pull
         
 ### nuggit_status.pl
 - two variations: 
-- nuggit_status.pl
+- `nuggit_status.pl`
   - for each submodule show the status 
-- nuggit_status.pl --cached
+- `nuggit_status.pl --cached`
   - show the changes that were added to the staging area that will be committed on the next nuggit commit
 - the output will show the relative path of each file that has a status.  The 
 relative path is relative to the nuggit root repository.  This is so the file path and name
@@ -135,7 +135,7 @@ can be copied and pasted into the command line of the nuggit_add.pl command
 ### nuggit_add.pl
 - add the specified files to the staging area
 - example
-  - nuggit_add.pl ./fsw_core/apps/appx/file.c
+  - `nuggit_add.pl ./fsw_core/apps/appx/file.c`
 - nuggit_add.pl utilizes the "nuggit_log.txt".  Each file that is "added" to the staging area
 using nuggit_add.pl will result in a nuggit log entry.  See "nuggit_log"
                 
@@ -143,7 +143,7 @@ using nuggit_add.pl will result in a nuggit log entry.  See "nuggit_log"
 - commit all the files that have been added to the staging area across all of the
 repositores (root and nested submodules) into the checked out branch
 - example
-  - nuggit_commit.pl -m "required commit message goes here"
+  - `nuggit_commit.pl -m "required commit message goes here"`
 - nuggit_commit.pl utilizes the "nuggit_log.txt".  Each nuggit_commit issued by the user
 and each underying commit performed by nuggit_commit.pl will result in a nuggit log entry
         
@@ -156,7 +156,7 @@ branch from the local repository to the origin for each nested submodule recursi
 and all nested submodules
 - TO DO - NOT FINISHED.
 - example
-  - nuggit_merge.pl <branch_name> -m "commit message"
+  - `nuggit_merge.pl <branch_name> -m "commit message"`
   - TO DO - RIGHT NOW THE COMMIT MESSAGE IS NOT HONORED.
         
 ### nuggit_merge_default.pl
@@ -174,12 +174,12 @@ of nuggit or to address other potentially inconsistencies.
 ### nuggit_log.pl
 - usage:
   - Show the entire nuggit log (located at the root of the repository in .nuggit/nuggit_log.txt)
-  nuggit_log.pl
+  `nuggit_log.pl`
   or
-  nuggit_log.pl --show-all
+  `nuggit_log.pl --show-all`
   - show N lines of the nuggit log
-  nuggit_log.pl --show <n>
+  `nuggit_log.pl --show <n>`
   - clear the nuggit log in your repository (sandbox)
-  nuggit_log.pl -c
+  `nuggit_log.pl -c`
         
                         
