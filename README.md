@@ -97,7 +97,7 @@ Use the relative path as provided by nuggit_status.pl output
 numbers in both columns, the repository needs to be merged.
 - i.e.
 
-`                bash-4.2$ nuggit_rev_list.pl 
+                bash-4.2$ nuggit_rev_list.pl 
                 Root
                 diff between remote and local for branch jira-401
                 origin  local
@@ -109,7 +109,7 @@ numbers in both columns, the repository needs to be merged.
                 Entering 'fsw_core/apps/appx'
                 1       4
                 Entering 'fsw_core/apps/appy'
-                0       0`
+                0       0
         
 ### nuggit_fetch.pl
 -fetches everything in the root and submodules recursively.
