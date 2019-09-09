@@ -84,7 +84,7 @@ from the default branch in another submodule.
 
 
 
-
+<a/>
 ### nuggit_diff.pl
 - do a git diff in the root repository and do a git diff in each submodule 
 - any arguments passed in to nuggit_diff.pl will be forwarded to the git diff commands that execute.
