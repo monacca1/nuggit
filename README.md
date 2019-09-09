@@ -174,12 +174,12 @@ of nuggit or to address other potentially inconsistencies.
 ### nuggit_log.pl
 - usage:
   - Show the entire nuggit log (located at the root of the repository in .nuggit/nuggit_log.txt)
-  `nuggit_log.pl`
-  or
-  `nuggit_log.pl --show-all`
+    - `nuggit_log.pl`
+    - or
+    - `nuggit_log.pl --show-all`
   - show N lines of the nuggit log
-  `nuggit_log.pl --show <n>`
+    - `nuggit_log.pl --show <n>`
   - clear the nuggit log in your repository (sandbox)
-  `nuggit_log.pl -c`
+    - `nuggit_log.pl -c`
         
                         
