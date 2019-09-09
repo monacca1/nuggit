@@ -1,4 +1,4 @@
-#nuggit
+# nuggit
 (incomplete prototype status):
 
 Nuggit is a wrapper for git that makes repositories consisting of submodules (or nested submodules) 
@@ -40,7 +40,7 @@ significantly improved from the perspecives of: design, error handling, git comm
     
 #########################################################################################################
 
-nuggit_env.sh 
+### nuggit_env.sh 
 - the nuggit scripts path needs to be added to your path.  You can either add the instance
 of nuggit to your path using your .cshrc or you can use this nuggit_env.sh script.  To use
 the nuggit_env.sh, you must navigate to the nuggit/bin directory, (be in the bash shell) and
