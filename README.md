@@ -114,7 +114,7 @@ numbers in both columns, the repository needs to be merged.
 ### nuggit_fetch.pl
 -fetches everything in the root and submodules recursively.
 - "git fetch": downloads commits, files, and refs from a remote repository to your local repository. 
-- Fetching is what yu do when you want to see what everyone else has been working on.
+- Fetching is what you do when you want to see what everyone else has been working on.
         
 ### nuggit_pull.pl
 - pull the checked out branch from origin for the root repository.  Then foreach
