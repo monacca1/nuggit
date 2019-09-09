@@ -48,9 +48,9 @@ significantly improved from the perspecives of: design, error handling, git comm
 
 
 nuggit_env.sh 
-        - the nuggit scripts path needs to be added to your path, right now I have
-        the nuggit_env.sh (bash script) hard coded with my (c. monaco) path to my nuggit
-        scripts.  This obviously needs work.
+- the nuggit scripts path needs to be added to your path, right now I have
+the nuggit_env.sh (bash script) hard coded with my (c. monaco) path to my nuggit
+scripts.  This obviously needs work.
 
 
 nuggit prototype scripts:
@@ -97,7 +97,7 @@ nuggit_diff.pl
         
         
 nuggit_rev_list.pl
-        - show the differences in between the origin branch and the local branch.  If there are non-zer
+        - show the differences in between the origin branch and the local branch.  If there are non-zero
         numbers in both columns, the repository needs to be merged.
         - i.e.
         bash-4.2$ nuggit_rev_list.pl 
