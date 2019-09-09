@@ -51,7 +51,7 @@ the nuggit_env.sh, you must navigate to the nuggit/bin directory, (be in the bas
 ### nuggit_clone.pl
 - clone a repositoy 
   - i.e. 
-    - nuggit_clone.pl ssh://git@sd-bitbucket.jhuapl.edu:7999/fswsys/mission.git
+    - `nuggit_clone.pl ssh://git@sd-bitbucket.jhuapl.edu:7999/fswsys/mission.git`
 
 ### nuggit_init
 - Install the nuggit data structure to a preexisting repository.  If the repo was cloned
@@ -70,7 +70,7 @@ from the default branch in another submodule.
 
 ### nuggit_checkout.pl
 - checkout a branch.  There are some variations described here:
-  - nuggit_checkout.pl <branch_name>
+  - `nuggit_checkout.pl <branch_name>`
     - checkout a branch that already exists OR
     - checkout a branch that was created remotely and has not previously been locally checked out.
     - this will create this branch locally in all submodules and check that branch out in the
@@ -83,13 +83,13 @@ from the default branch in another submodule.
   - `nuggit_checkout.pl <branch> --follow-commit`
 
 
-
-formatting error, this should be a new line, new heading:
 ### nuggit_diff.pl
 - do a git diff in the root repository and do a git diff in each submodule 
 - any arguments passed in to nuggit_diff.pl will be forwarded to the git diff commands that execute.
   - i.e. 
-    - nuggit_diff.pl --name-only
+    - `nuggit_diff.pl --name-only`
+- to do - need to update to support specific file names and to show the diffs of just those files.  
+Use the relative path as provided by nuggit_status.pl output
         
         
 ### nuggit_rev_list.pl
@@ -97,7 +97,7 @@ formatting error, this should be a new line, new heading:
 numbers in both columns, the repository needs to be merged.
 - i.e.
 
-                bash-4.2$ nuggit_rev_list.pl 
+`                bash-4.2$ nuggit_rev_list.pl 
                 Root
                 diff between remote and local for branch jira-401
                 origin  local
@@ -109,7 +109,7 @@ numbers in both columns, the repository needs to be merged.
                 Entering 'fsw_core/apps/appx'
                 1       4
                 Entering 'fsw_core/apps/appy'
-                0       0
+                0       0`
         
 ### nuggit_fetch.pl
 -fetches everything in the root and submodules recursively.
