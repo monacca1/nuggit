@@ -76,10 +76,10 @@ Path of Parent Directory. In each recursion, the submodule name will be appended
 =cut
 
 sub submodule_foreach {
-  my $fn = shift;
-  my $opts = shift;
+  my $fn     = shift;
+  my $opts   = shift;
   my $parent = shift || ".";
-  my $cwd = getcwd();
+  my $cwd    = getcwd();
 
   if (!-e '.gitmodules')
   {
@@ -117,6 +117,8 @@ sub submodule_foreach {
 
       
       # Reset Dir
+      #print "**** current dir: " . getcwd() . "\n";
+      #print "**** submodule_foreach() - switching to dir $cwd\n";
       chdir($cwd);
     
   }
@@ -130,9 +132,7 @@ Also navigate to the nuggit root directory
 
 =cut
 
-# note a side effect is that this will change to the nuggit root directory
-# consider returning to the cwd and making the caller chdir to the root
-# dir if desired.
+
 sub find_root_dir
 {
     my $cwd = getcwd();
@@ -144,23 +144,25 @@ sub find_root_dir
 
     for($i = 0; $i < $max_depth; $i = $i+1)
     {
-        # .nuggt must exist inside a git repo
+        # .nuggit must exist inside a git repo
         if(-e ".nuggit" && -e ".git") 
         {
             $nuggit_root = getcwd();
             #     print "starting path was $cwd\n";
             #     print ".nuggit exists at $nuggit_root\n";
             $path = "./" unless $path;
+            
+            # return to the original directory
+            chdir $cwd;
             return ($nuggit_root, $path);
         }
         chdir "../";
         $path = "../".$path;
   
-        #  $cwd = getcwd();
-        #  print "$i, $max_depth - cwd = " . $cwd . "\n";
-  
     }
 
+    chdir $cwd;
+    
     return undef;
 }
 
@@ -218,5 +220,34 @@ sub get_selected_branch($)
   
   return $selected_branch;
 }
+
+
+
+sub get_nuggit_log_file_path()
+{
+  my $nuggit_log_file;
+  my ($root_dir, $relative_path_to_root) = find_root_dir();
+  
+  $nuggit_log_file = $root_dir . "/.nuggit/nuggit_log.txt";
+  
+  return $nuggit_log_file;
+}
+
+sub nuggit_log_entry($$)
+{
+  my $date = `date`;
+  chomp($date);
+  
+  my $log_cmd;
+  my $log_entry_string = $_[0];
+  my $log_file         = $_[1];
+  
+  $log_cmd = "echo $date: $log_entry_string >> $log_file";
+  
+  #print $log_cmd . "\n";
+  system($log_cmd);
+}
+
+
 
 1;
