@@ -62,11 +62,12 @@ $branches = `git branch`;
 $root_repo_branch = get_selected_branch($branches);
 
 
-my $date = `date`;
-chomp($date);
-system("echo ===========================================         >> $root_dir/.nuggit/nuggit_log.txt");
-system("echo nuggit_commit.pl, branch = $root_repo_branch, $date >> $root_dir/.nuggit/nuggit_log.txt");
-system("echo commit message: $commit_message_string              >> $root_dir/.nuggit/nuggit_log.txt");
+my $nuggit_log_file = get_nuggit_log_file_path();
+nuggit_log_entry("=====================================", $nuggit_log_file);
+nuggit_log_entry("nuggit_commit.pl",                      $nuggit_log_file);
+nuggit_log_entry("branch:     $root_repo_branch",         $nuggit_log_file);
+nuggit_log_entry("commit msg: $commit_message_string",    $nuggit_log_file);
+
 recursive_commit("");
 
 
@@ -153,7 +154,7 @@ sub recursive_commit( $ )
         print "about to execute: git add $submodule\n";
         print `git add $submodule`;
         
-        system("echo git add $submodule >> $root_dir/.nuggit/nuggit_log.txt");
+        nuggit_log_entry("git add $submodule", $nuggit_log_file);
       }
       else
       {
@@ -212,7 +213,8 @@ sub nuggit_commit($)
    my $dir;
 
    $dir = getcwd();    
-   system("echo in dir $dir, committing in repo $repo >> $root_dir/.nuggit/nuggit_log.txt");
+   
+   nuggit_log_entry("in dir $dir, committing in repo $repo", $nuggit_log_file);
    
    $commit_status = `git commit -m "N: Branch $root_repo_branch, $commit_message_string"`;
    print "Commit status in repo $repo: \n";

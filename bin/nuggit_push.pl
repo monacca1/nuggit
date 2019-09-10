@@ -10,6 +10,12 @@ use strict;
 use warnings;
 use Getopt::Long;
 use Cwd qw(getcwd);
+use FindBin;
+use lib $FindBin::Bin.'/../lib'; # Add local lib to path
+require "nuggit.pm";
+
+#sub get_nuggit_log_file_path();
+#sub nuggit_log_entry($$);
 
 sub get_selected_branch($);
 sub get_selected_branch_here();
@@ -32,8 +38,16 @@ my $branch = get_selected_branch_here();
 
 print "nuggit_push.pl\n";
 
+
+
 print "TO DO - NEED TO MAKE SURE THE REPO IS ON THE SAME BRANCH THROUGHOUT ALL SUBMODULES\n";
 print "TO DO - MAY WANT TO ENFORCE A FETCH or PULL BEFORE THE PUSH\n";
+
+
+my $nuggit_log_file = get_nuggit_log_file_path();
+nuggit_log_entry("=====================================", $nuggit_log_file);
+nuggit_log_entry("nuggit push", $nuggit_log_file);
+nuggit_log_entry("current branch: $branch", $nuggit_log_file);
 
 print `git submodule foreach --recursive git push --set-upstream origin $branch`;
 print `git push --set-upstream origin $branch`;
@@ -67,3 +81,5 @@ sub get_selected_branch($)
   
   return $selected_branch;
 }
+
+

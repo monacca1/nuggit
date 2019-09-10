@@ -9,6 +9,7 @@ use FindBin;
 use lib $FindBin::Bin.'/../lib'; # Add local lib to path
 require "nuggit.pm";
 
+sub relink($);
 
 # nuggit_relink_submodules.pl - 
 #    when the commit at the head of a branch within a submodules is NOT
@@ -36,6 +37,9 @@ my $submodules;
 
 $root_dir = find_root_dir() || die("Not a nuggit!\n");
 
+my $nuggit_log_file = get_nuggit_log_file_path();
+nuggit_log_entry("=====================================", $nuggit_log_file);
+nuggit_log_entry("nuggit relink submodules", $nuggit_log_file);
 
 relink($root_dir);
 

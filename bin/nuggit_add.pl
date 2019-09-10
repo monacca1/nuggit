@@ -40,12 +40,9 @@ chdir($cwd);
 $branches = `git branch`;
 $root_repo_branch = get_selected_branch($branches);
 
-my $date = `date`;
-chomp($date);
-system("echo ===========================================         >> $root_dir/.nuggit/nuggit_log.txt");
-system("echo nuggit_add.pl, branch = $root_repo_branch, $date    >> $root_dir/.nuggit/nuggit_log.txt");
-
-
+my $nuggit_log_file = get_nuggit_log_file_path();
+nuggit_log_entry("=====================================",      $nuggit_log_file);
+nuggit_log_entry("nuggit_add.pl, branch = $root_repo_branch",  $nuggit_log_file);
 
 
 
@@ -136,6 +133,6 @@ sub add_file($)
   print `git add $file`;
 
   my $dir = getcwd();
-  system("echo nuggit_add.pl, directory: $dir, adding file: $file    >> $root_dir/.nuggit/nuggit_log.txt");  
+  nuggit_log_entry("nuggit_add.pl, directory: $dir, adding file: $file",     $nuggit_log_file);
   
 }

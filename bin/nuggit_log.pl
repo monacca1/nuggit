@@ -33,6 +33,7 @@ chomp($date);
 my $cwd;
 my $root_repo_branch;
 my ($root_dir, $relative_path_to_root) = find_root_dir();
+chdir $root_dir;
 
 ParseArgs();
 

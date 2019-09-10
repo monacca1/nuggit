@@ -38,6 +38,9 @@ my $submodules;
 
 $root_dir = find_root_dir() || die("Not a nuggit!\n");
 
+my $nuggit_log_file = get_nuggit_log_file_path();
+nuggit_log_entry("=====================================", $nuggit_log_file);
+nuggit_log_entry("nuggit merge default", $nuggit_log_file);
 
 merge_default($root_dir);
 

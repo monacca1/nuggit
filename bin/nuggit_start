@@ -1,15 +1,1 @@
-
-# to do
-#make this is the root level
-# there should be a .git folder 
-# and it should already have been 
-# initialized nuggit_init so there should
-# be a .nuggit folder
-
-rm -Rf .nuggit/*
-
-echo branch_name:  $1    >  .nuggit/line.txt
-echo branch_index: 0     >> .nuggit/line.txt
-echo branch_sha:   to_do >> .nuggit/line.txt
-
-cat .nuggit/line.txt
+remove me

@@ -1,10 +1,14 @@
 #!/usr/bin/perl -w
 
+
 use strict;
 use warnings;
 
 use Getopt::Long;
 use Cwd qw(getcwd);
+use FindBin;
+use lib $FindBin::Bin.'/../lib'; # Add local lib to path
+require "nuggit.pm";
 
 
 # nuggit_merge.pl master -m "commit message"
@@ -85,7 +89,9 @@ if($root_dir eq "-1")
 
 print "nuggit_merge.pl\n";
 
-
+my $nuggit_log_file = get_nuggit_log_file_path();
+nuggit_log_entry("=====================================", $nuggit_log_file);
+nuggit_log_entry("nuggit merge", $nuggit_log_file);
 
 
 $argc = @ARGV;  # get the number of arguments.
@@ -102,6 +108,8 @@ else
   print "usage: nuggit_merge.pl <source_branch>\n";
 }
 
+nuggit_log_entry("merge src branch:  $source_branch",      $nuggit_log_file);
+nuggit_log_entry("merge dest branch: $destination_branch", $nuggit_log_file);
 
 merge_recursive($root_dir, 0);
 #print "changing directory to root: $root_dir\n";
@@ -212,30 +220,3 @@ sub merge_recursive($$)
 
 
 
-
-sub get_selected_branch_here()
-{
-  my $branches;
-  my $selected_branch;
-  
-#  print "Is branch selected here?\n";
-  
-  # execute git branch
-  $branches = `git branch`;
-
-  $selected_branch = get_selected_branch($branches);  
-}
-
-
-sub get_selected_branch($)
-{
-  my $root_repo_branches = $_[0];
-  my $selected_branch;
-
-  $selected_branch = $root_repo_branches;
-  $selected_branch =~ m/\*.*/;
-  $selected_branch = $&;
-  $selected_branch =~ s/\* //;  
-  
-  return $selected_branch;
-}

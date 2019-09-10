@@ -65,6 +65,12 @@ else
 
 $selected_branch = get_selected_branch_here();
 
+
+my $nuggit_log_file = get_nuggit_log_file_path();
+nuggit_log_entry("=====================================", $nuggit_log_file);
+nuggit_log_entry("nuggit pull", $nuggit_log_file);
+nuggit_log_entry("current branch: $selected_branch", $nuggit_log_file);
+
 print `git pull origin $selected_branch`;
 print `git submodule foreach --recursive git pull origin $selected_branch`;
 
