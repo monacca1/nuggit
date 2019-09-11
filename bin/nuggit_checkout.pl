@@ -6,7 +6,7 @@ use FindBin;
 use lib $FindBin::Bin.'/../lib'; # Add local lib to path
 require "nuggit.pm";
 
-
+# TO DO - ADD SUPPORT FOR CHECKING OUT INDIVIDUAL FILES 
 
 # usage: 
 #
