@@ -5,12 +5,29 @@ use warnings;
 
 use Cwd qw(getcwd);
 
-# to do
+# Usage
+#
+# nuggit_diff.pl
+#   No arguments - get all the differences between the working copy of 
+#      files and the local repository
+# nuggit_diff.pl ../path/to/file.c
+#   Argument is a particular file, which may be in a submodule (or not) -
+#      get the differences of the specified file between the 
+#      working copy of the file and the local repository
+#
+#  TO DO - ARE THERE USE CASES WHERE WE WANT TO SEE THE DIFFS BETWEEN BRANCHES OR
+#  BETWEEN LOCAL AND REMOTE? TO DO
+#
+
 
 # Notes
+#
 # git branch -a
-# git diff  origin/master master --name-status
+#
+# git diff origin/master master --name-status
 # git diff origin/master master --stat
+#
+# ????
 # git diff --submodule
 # git diff --cached --submodule
 
