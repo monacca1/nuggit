@@ -84,12 +84,20 @@ from the default branch in another submodule.
 
 
 ### nuggit_diff.pl
-- do a git diff in the root repository and do a git diff in each submodule 
-- any arguments passed in to nuggit_diff.pl will be forwarded to the git diff commands that execute.
-  - i.e. 
-    - `nuggit_diff.pl --name-only`
-- to do - need to update to support specific file names and to show the diffs of just those files.  
-Use the relative path as provided by nuggit_status.pl output
+- get the differences between the working directory and the repository (of the entire nuggit repository)
+- get the differences between the working copy of a file and the file in the repository
+- get the differences between the working copy of a directory (or submodule) and the same in the repository
+- (to do) get the differences between two branches
+- usage:
+  - one argument: file with relative path from current directory (as displayed by nuggit status)
+    - i.e.
+      - nuggit_diff.pl ../../../path/to/file.c
+  - one argument: a directory (or submodules directory) with relative path (as displayed by nuggit status)
+    - i.e.
+      - nuggit_diff.pl ../../../path/to/dir
+  - two arguments: two branches (not yet supported)
+    - i.e.
+      - nuggit_diff.pl origin/branch branch
         
         
 ### nuggit_rev_list.pl

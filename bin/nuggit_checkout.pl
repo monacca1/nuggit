@@ -1,5 +1,6 @@
 #!/usr/bin/perl -w
 
+use Getopt::Long;
 use strict;
 use warnings;
 use FindBin;
@@ -138,14 +139,7 @@ sub ParseArgs()
   my $arg_count = @ARGV;
 
 #  print "Number of arguments $arg_count \n";
-  
-  ######################################################################################################
-  #
-  # TO DO - WOULD LIKE TO ALSO CREATE A FLAG --follow-branch
-  # which would recursively checkout the branch so that you are on the same branch in all submodules
-  # the default checkout should be git submodule update --recursive
-  #
-  ######################################################################################################
+
   Getopt::Long::GetOptions(
      "b=s"            => \$create_branch_name,
      "follow-branch"  => \$follow_branch_bool,
