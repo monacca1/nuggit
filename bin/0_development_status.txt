@@ -1,89 +1,18 @@
 Nuggit Development Status:
 
-nuggit_env.sh                       - done
-nuggit_clone.pl                     - done
-nuggit_find_root_repo.pl            - done
-nuggit_get_path_relation_to_root.pl - done
-list_submodules.pl                  - done
-list_all_submodules.pl              - done
-
-nuggit_checkout.pl       - almost done???
-        - TBD - should you put some meta data into the .nuggit?
-        - **** master is a special case - checkout master at the root and then run
-              git submodule update --recursive
-        - Otherwise this will checkout the same branch in each submodule as the root... 
-        - this is not the generic git behavior and may result in a repo that appears 
-          to have changes in it as soon as you check it out. There are two reasons for this
-          (1) that the repo may be checked in such that all submodules are not on the same branch
-          and (2) when you checkout the same branch across all submodules you will get the head
-          of each of those branches, and if the repo was not maintained according to the nuggit
-          workflow, the parent repo may be pointing to an older commit in the same branch as the
-          submodule, but when you checked out the branch of the submodule, it will get the head
-          of that branch in the submodule.
-        - need to figure out when we should use 
-                git submodule update --recursive
-                and when we should use
-                git submodule update --recursive --remote
-                * if we follow the nuggit workflow, these two commands will be equivalent.  So
-                  Use the first one and maybe use a nuggit_status to show where there are deviations.
-
-nuggit_branch.pl        
-        - display branches - done
-        - to do - add support for creating a new branch
-                nuggit_branch.pl <new branch>
-        - to do - add support for deleting a branch across all submodules
-                nuggit_branch.pl -d <branch>
+nuggit_checkout.pl
+        - to do - add ability to checkout a specific file to undo changes.
 
 nuggit_status.pl
-        - When you checkout master and update all submodules, you may get 
-          configuration where you are not on the same branch everywhere.
-          for example, mission may be master, but embedded is cfe_nasa 
-          and that is on branch jhuapl, which is our master
-                - Need to figure out how to cope with this.
-                - do we rebrand the master branch of cfe_nasa to be cfe_master?
-                and the jhuapl branch becomes master?
-                - or is there some other way to cope with this?
-                - do we allow branch non-uniformity when on master branch?
-        - option "--cached" will list the files that have been added to the staging area
-
-
-
-nuggit_add.pl
-        need to support 
-                specific file name - done
-                explicit path with use of wild card in filename
-                        i.e. dir/dir/file.* 
-                        or
-                        dir/dir/*.c
-                -A
-        do not allow wild card use in the directory.  expect this to be problematic
-                */*/*.c
-        adding a file or files using this command will be restricted to one repo or submodule at a time. 
-                to explain to a user, this would be covered if the user sticks to one directory at a time
-        - user specifies the file using relative to the file from the current location. This is the same as 
-                the output of nuggit_status.pl 
-
-nuggit_commit.pl
-        - there is an inhibit commit flag embedded in this to help with development/debug... to do - turn this inhibit off
-        - implemented the commit at the root of files and the commit in each submodule of files.
-        - to do - need to unnest submodules one level at a time and commit up.
-
+    need to improve the output to not show files that have already been added to the index or differentiate it somehow?
+    
 nuggit_fetch.pl
-        - started - may not be done
-
 nuggit_pull.pl
-        - started - may not be done
 
-nuggit_push.pl
-        - started - may not be done
-
-nuggit_diff.pl  ??? do we need this?
-        - started, but definitely needs work
-
-nuggit_merge.pl
-        - to do
-
-nuggit_start    ??? do we want this?
+nuggit_diff.pl 
+   to do - need to be able to diff between two hashes or two branches... going between two branches recursively may be tricky
+   
+???
 
 nuggit_rm.pl - need to create this file, no placeholder currently exists
 
