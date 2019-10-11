@@ -2,15 +2,15 @@
 
 use strict;
 use warnings;
+use v5.10;
 
 use Getopt::Long;
 use Cwd qw(getcwd);
 use FindBin;
 use lib $FindBin::Bin.'/../lib'; # Add local lib to path
+use Data::Dumper; # DEBUG
+
 require "nuggit.pm";
-
-sub get_selected_branch_here();
-
 
 
 # usage: 
@@ -20,56 +20,49 @@ sub get_selected_branch_here();
 
 print "nuggit_pull.pl\n";
 
-my $selected_branch = "";
-my $nuggit_status = "";
+my $skip_status_check = 1;
+my $commit_message;
+my $edit_flag = 1; # Mirrors Git's edit/no-edit flag
+my $verbose = 0;
 
-my ($root_dir, $relative_path_to_root) = find_root_dir();
-die("Not a nuggit!\n") unless $root_dir;
+GetOptions(
+           'verbose!' => \$verbose,
 
-#print "nuggit root dir is: $root_dir\n";
-#print "nuggit cwd is $cwd\n";
-#print $relative_path_to_root . "\n";
+           # TODO: Support for pulling from other branch, remote, or repo (for advanced users)
 
-#print "changing directory to root: $root_dir\n";
-chdir $root_dir;
+           # The following options if defined are passed-through to nuggit_merge
+           'message=s'  => \$commit_message, # Specify message to use for any commits upon merge (optional; primarily for purposes of automated testing). If omitted, user will be prompted for commit message.  An automated message will be used if a conflict has been automatically resolved.
+           'edit!' => \$edit_flag,
+           'skip-status-check!' => \$skip_status_check
+           );
 
+my $root_dir = do_upcurse();
 
-
-print "Checking for local changes\n";
-$nuggit_status = `nuggit_status.pl`;
-if(defined $nuggit_status)
-{
-  if($nuggit_status eq "")
-  {
-#    print "nuggit_status.pl returned empty string\n";
-  }
-  else
-  {
-    print "Local changes exists!!! The pull may not have occurred or completed!!!\n";
-    print "nuggit_status.pl returned the following:\n";
-    print "$nuggit_status\n";
-  }
-}
-else
-{
-  print "nuggit_status.pl returned nothing\n";
+if (!$skip_status_check) {
+    my $status = nuggit_status("status",1);
+    if ($status->{"status"} ne "clean")
+    {
+        say "Local changes detected.  Please commit or stash all changes before running pull.";
+        say " If you wish to attempt the pull anyway, re-run this command with '--skip-status-check' flag.";
+        say " Current repository status is: ";
+        say Dumper($status); # TODO: Pretty-print (move fn from nuggit_status to nuggit.pm)
+        #display_nuggit_status($nuggit_states);
+        die "Pull aborted due to dirty working directory.  Please commit, or re-run with --skip-status-check";
+    }
 }
 
 
+# Execute a Fetch
+# TODO: Make this a lib fn and add checks to confirm fetch succeeded
+require("$FindBin::Bin/nuggit_fetch.pl");
 
-#print "I think you may need to do the following when pulling a new-to-you branch\n";
-#print "  git pull origin <branch>\n";
-#print "  and then\n";
-#print "  git submodule foreach --recursive git pull origin <branch>\n";
+# Execute Nuggit Merge of remotes/origin/$selected_branch
+#  TODO: support for alternate remotes
+my $args = "";
+$args .= " --message \"$commit_message\"" if defined($commit_message);
+$args .= " --no-edit" if !$edit_flag; # Default is edit
+$args .= " --verbose" if $verbose;
+exec("$FindBin::Bin/nuggit_merge.pl $args");
 
-
-$selected_branch = get_selected_branch_here();
-
-print `git pull origin $selected_branch`;
-print `git submodule foreach --recursive git pull origin $selected_branch`;
-
-# TODO: Any new submodules need to be init and explicitly updated.
-#print `git submodule init`;
-#print `git submodule foreach --recursive git submodule init`;
-
+# Done (exec never returns)
 

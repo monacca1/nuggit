@@ -10,16 +10,17 @@ use strict;
 use warnings;
 use Getopt::Long;
 use Cwd qw(getcwd);
+use FindBin;
+use lib $FindBin::Bin.'/../lib'; # Add local lib to path
+
+require "nuggit.pm";
 
 sub get_selected_branch($);
 sub get_selected_branch_here();
 
-my $root_dir;
+my $verbose = 0;
 my $cwd = getcwd();
-
-
-$root_dir = `nuggit_find_root.pl`;
-chomp $root_dir;
+my $root_dir = do_upcurse($verbose);
 
 print "nuggit root dir is: $root_dir\n";
 #print "nuggit cwd is $cwd\n";
@@ -33,37 +34,13 @@ my $branch = get_selected_branch_here();
 print "nuggit_push.pl\n";
 
 print "TO DO - NEED TO MAKE SURE THE REPO IS ON THE SAME BRANCH THROUGHOUT ALL SUBMODULES\n";
-print "TO DO - MAY WANT TO ENFORCE A FETCH or PULL BEFORE THE PUSH\n";
 
 print `git submodule foreach --recursive git push --set-upstream origin $branch`;
+
+die "Failed to push one or more submodules" unless $? == 0;
+
 print `git push --set-upstream origin $branch`;
 
 
 
 
-sub get_selected_branch_here()
-{
-  my $branches;
-  my $selected_branch;
-  
-#  print "Is branch selected here?\n";
-  
-  # execute git branch
-  $branches = `git branch`;
-
-  $selected_branch = get_selected_branch($branches);  
-}
-
-
-sub get_selected_branch($)
-{
-  my $root_repo_branches = $_[0];
-  my $selected_branch;
-
-  $selected_branch = $root_repo_branches;
-  $selected_branch =~ m/\*.*/;
-  $selected_branch = $&;
-  $selected_branch =~ s/\* //;  
-  
-  return $selected_branch;
-}

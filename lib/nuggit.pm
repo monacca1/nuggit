@@ -1,9 +1,12 @@
 #!/usr/bin/env perl
+our $VERSION = 0.01;
 # TIP: To format documentation in the command line, run "perldoc nuggit.pm"
 
+use v5.10;
 use strict;
 use warnings;
 use Cwd qw(getcwd);
+use Term::ANSIColor;
 
 =head1 Nuggit Library
 
@@ -15,6 +18,26 @@ This module is standalone and does not require any non-standard modules
 
 =cut
 
+=head2 get_submodules()
+
+Return an array of all submodules from current (or specified) directory and below listed depth-first.
+
+NOTE: Direct usage of submodule_foreach() is preferred when possible.
+
+=cut
+
+sub get_submodules {
+    my $dir = shift;
+    my $old_dir = getcwd();
+    chdir($dir) if defined($dir);
+    my @modules;
+    submodule_foreach(sub {
+                          push(@modules, shift .'/'. shift );
+                      });
+    chdir($old_dir) if defined($dir);
+
+    return \@modules;
+}
 
 
 =head2 submodule_foreach(fn)
@@ -104,16 +127,16 @@ sub submodule_foreach {
       my $name = $words[1];
       my $label;
       $label = substr($words[2], 1, -1) if defined($words[2]); # Label may not always exist
-      #print "DEBUG: $hash, $name, $label, $status\n";
+
       # Enter submodule
       chdir($name);      
      
-      if (!$opts || (exists($opts->{recursive}) && $opts->{recursive})) {
+      if (!$opts || !defined($opts->{recursive}) || (defined($opts->{recursive}) && $opts->{recursive})) {
           submodule_foreach($fn, $opts, $name);
       }
 
       # Callback
-      $fn->($parent, $name, $status, $hash, $label);
+      $fn->($parent, $name, $status, $hash, $label, $opts);
 
       
       # Reset Dir
@@ -177,6 +200,32 @@ sub nuggit_init
     system('echo ".nuggit" >> .git/info/exclude'); # TODO: We should do this the Perl way to remove UNIX requirement
 }
 
+=head2 get_remote_tracking_branch
+
+Get the name of the default branch used for pushes/pulls for this repository.
+
+NOTE: This function may serve as the basis for an improved get_selected_branch() function that retrieves additional information.
+
+=cut
+
+sub get_remote_tracking_branch
+{
+    my $data = `git branch -vv`;
+    my @lines = split(/\n/,$data);
+    foreach my $line (@lines) {
+        if ($line =~ /^\*\s/) {
+            # This line is the current branch
+            if ($line =~ /\'([\w\-\_\/]+)\'$/) {
+                return $1;
+            } else {
+                say "No branch matched from $line";
+                return undef; # No remote tracking branch defined
+            }
+        }
+    }
+    die "Internal ERROR: get_remote_tracking_branch() couldn't identify current branch"; # shouldn't happen
+}
+
 =head2 get_selected_branch_here
 
 ?
@@ -193,7 +242,7 @@ sub get_selected_branch_here()
   # execute git branch
   $branches = `git branch`;
 
-  $selected_branch = get_selected_branch($branches);  
+  $selected_branch = get_selected_branch($branches);
 }
 
 
@@ -218,5 +267,206 @@ sub get_selected_branch($)
   
   return $selected_branch;
 }
+
+=head2 do_upcurse
+
+Find the top-level of this project and chdir into it.  If not a nuggit project, 'die'
+
+Returns root_dir since this is often needed by callers. (FUTURE: This should be an OOP method, in which case this return value would be deprecated in favor of class variable)
+
+=cut
+
+sub do_upcurse
+{
+    my $verbose = shift;
+    
+    my ($root_dir, $relative_path_to_root) = find_root_dir();
+    die("Not a nuggit!\n") unless $root_dir;
+
+    print "nuggit root dir is: $root_dir\n" if $verbose;
+    print "nuggit cwd is ".getcwd()."\n" if $verbose;
+    print "nuggit relative_path_to_root is ".$relative_path_to_root . "\n" if $verbose;
+    
+    #print "changing directory to root: $root_dir\n";
+    chdir $root_dir;
+    return $root_dir;
+}
+
+=head2 git_submodule_status
+
+Get status of Nuggit repository and return as a string.
+
+NOTE: This API may be refactored in future to return a data structure to seperate display and backend logic.
+
+Returns a status object (ref) containing:
+- status - clean || modified   (Future updates may add untracked, refs-only, or other status words/flags)
+- name   - Name of repository
+- path   - Full path to root of this repository
+- branch - Current branch
+- raw     - Output from underlying git command(s) with minimal parsing to clarify paths
+- children - An array of submodules, each of which is a status object of this type.
+
+=cut
+
+sub nuggit_status
+{
+  my $status;
+  my $root_dir = getcwd(); # Caller should chdir() first if an alternate starting dir desired
+  my $submodule_branch;
+  my $status_cmd;
+  my $status_cmd_mode = shift;
+  my $untracked_mode = shift; # If true, ignore untracked files
+  my $relative_path_to_root = shift; # TODO: This will be removed (handled in print fn instead) once status output is pre-parsed.
+
+  # identify the checked out branch of root repo
+  # execute git branch
+  my $branches = `git branch`;
+  my $root_repo_branch = get_selected_branch($branches);
+
+  # Replace mode with Git::Repository::Status, and apply to output filtering only
+  if ($status_cmd_mode eq "cached") 
+  {
+      $status_cmd = "git diff --name-only --cached";
+  }
+  elsif ($status_cmd_mode eq "unstaged")
+  {
+      $status_cmd = "git diff --name-only";
+  }
+  else 
+  {
+      $status_cmd = "git status --porcelain";
+      $status_cmd .= " -uno" if $untracked_mode;
+  }
+
+  my $submodules = get_submodules();
+  my $opts = {'status_cmd' => $status_cmd, 'status_cmd_mode' => $status_cmd_mode,
+              'output' => {}, 'out_children' => {}};
+
+  # Pass along relative path to root (this is a placeholder pending full parsing of status)
+  $opts->{'relative_path_to_root'} = $relative_path_to_root if (defined($relative_path_to_root));
+
+  $status = _get_status($opts); # Get root status
+
+  # Recurse into submodules
+  submodule_foreach(\&_get_status, $opts);
+
+  # And cleanup parent<->child relations (since we parse status depth-first
+  my $list = $opts->{'out_children'};
+  foreach my $child (keys %$list) {
+      my $parent = $opts->{output}{$child};
+      if (defined($parent)) {
+          $parent->{children} = $opts->{'out_children'}{$child};
+      } else {
+          die "Internal Error: $child is orphaned" unless $child eq '.';
+      }
+  }
+
+  return $status;
+} # end nuggit_status()
+
+# Internal status function called by git_submodule_status().  See above for details.
+sub _get_status
+{
+    my $rtv;
+    my ($parent, $name, $substatus, $hash, $label, $opts) = (@_);
+    
+    if (scalar(@_) > 4) {
+        #my $subpath = $parent . '/' . $name .'/';
+        my $subname = ($parent eq '.') ? "$name" : "$parent/$name";
+        
+        die("Internal Error: Duplicate repo at $subname") if defined($opts->{output}{$subname});
+        $rtv = {
+                'path' => $subname.'/',
+                'name' => $name,
+                'substatus' => $substatus, # Status of parent reference
+                'sha1' => $hash, # VERIFY
+                'label' => $label,
+               };
+        
+        # Save reference to self 
+        $opts->{output}{$subname} = $rtv;
+
+        # And save as a child of $parent (to be added to children object later)
+        $opts->{out_children}{$parent} = [] if !defined($opts->{out_children}{$parent});
+        push(@{$opts->{out_children}{$parent}}, $rtv);
+        
+    } else {
+        $opts = shift; # opts is sole-argument when called in this mode. Other args unneeded.
+        $rtv = {
+                'path' => './',
+                'name' => $name,
+               };
+        $opts->{output}{'.'} = $rtv;
+    }
+    
+    my $status;
+    my $branches;
+    my $submodule_branch;
+
+    my $status_cmd = $opts->{'status_cmd'} || die("Internal Error: missing status_cmd");
+    my $status_cmd_mode = $opts->{'status_cmd_mode'} || die("Internal Error: missing status_cmd_mode");
+    
+    $branches = `git branch`;
+    $submodule_branch = get_selected_branch($branches);
+    $rtv->{'branch'} = $submodule_branch;
+
+    $status = `$status_cmd`;
+
+    if($status ne "")
+    {
+        # Decode raw status
+        $rtv->{'files'} = {};
+        my @lines = split("\n", $status);
+
+        foreach my $line (@lines) {
+            if ($status_cmd_mode eq "status") {
+                if ($line =~ /^\s+(\w+)\s+([\.\w\-\/]+)/) {
+                    my $status = $1;
+                    my $file = $2;
+                    $rtv->{'files'}{$file} = $status;
+                }
+            } else {
+                $line =~ s/^\s+|\s+$//g; # Trim any whitespace
+                $rtv->{'files'}{$line} = ($status_cmd_mode eq "cached") ? 'S' : 'M';
+            }
+        }
+        
+        # add the repo path to the output from git that just shows the file
+        # TODO: Replace original path conversion with parsing of status
+        if (defined($opts->{'relative_path_to_root'})) {
+            my $relative_path_to_root = $opts->{'relative_path_to_root'};
+            my $subpath = $rtv->{'path'};
+            $subpath = "" if $subpath eq "./"; # Hide useless ./
+
+            if ($status_cmd_mode eq "status")
+            {
+                $status =~ s/^(...)/$1$relative_path_to_root$subpath/mg;
+            } 
+            else # cached or unstaged.  FIXME: S=staged, unstaged should be M or ?
+            {
+                $status =~ s/^(.)/S   $relative_path_to_root$subpath$1/mg;
+            }
+        }
+        $rtv->{'raw'} = $status;
+        $rtv->{'status'} = "modified"; # TODO: We can do better . . .
+
+    }
+    else
+    {
+        $rtv->{'status'} = 'clean';
+    }
+
+    # =============================================================================
+    # to do - detect if there are any remote changes
+    # with this workflow you should be keeping the remote branch up to date and 
+    # fully consitent across all submodules
+    # - show any commits on the remote that are not here.
+    # =============================================================================
+#    print "TO DO - SHOW ANY COMMITS ON THE REMOTE THAT ARE NOT HERE ??? or make this a seperate command?\n";
+    return $rtv;
+}
+
+
+
 
 1;

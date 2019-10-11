@@ -39,7 +39,7 @@ sub checkout_default_branch
   my ($parent, $name, $status, $hash, $label) = (@_);
   my $current_dir = $parent . '/' . $name; # Full Path to Repo Relative to Root
   
-  die "DEBUG: Internal Error, Unexpected Args length of ".scalar(@_) unless scalar(@_)==5;
+  die "DEBUG: Internal Error, Unexpected Args length of ".scalar(@_) unless scalar(@_)>=5;
   $tmp = `git symbolic-ref refs/remotes/origin/HEAD`;
   $tmp =~ m/remotes\/origin\/(.*)$/;
   $default_branch = $1;  

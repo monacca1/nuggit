@@ -61,6 +61,9 @@ chdir $root_dir;
 $branches = `git branch`;
 $root_repo_branch = get_selected_branch($branches);
 
+my $merge_conflict_file = "$root_dir/.nuggit/merge_conflict_state";
+die "A nuggit merge is in progress.  Commit changes to complete this by staging relevant files and running 'nuggit_merge --continue' or discard with '--abort'" if (-e $merge_conflict_file);
+
 
 my $date = `date`;
 chomp($date);

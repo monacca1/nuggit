@@ -1,4 +1,5 @@
 #!/usr/bin/perl -w
+# NOTICE: THIS FILE IS DEPRECATED IN FAVOR OF lib/nuggit.pm's find_root_dir()
 
 use strict;
 use warnings;
