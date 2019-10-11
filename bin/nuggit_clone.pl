@@ -44,7 +44,7 @@ print "repo name is: $repo\n";
 
 
 # clone the repository
-print `git clone $url --recursive $repo`;
+print `git clone $url --recursive -j8 $repo`;
 
 # initialize the nuggit meta data directory structure
 chdir($repo) || die "Can't enter cloned repo ($repo)";
