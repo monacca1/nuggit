@@ -74,7 +74,7 @@ my $destination_branch;
 my $branch = "";
 my $commit_message;
 my $local_time;
-my $verbose = 1;
+my $verbose = 0;
 my $do_upcurse = 1; # Upcurse to root of nuggit unless explicitly requested not to (ie: for testing).
 my $merge_continue_flag = 0; # IF set, attempt to resume existing merge
 my $abort_merge_flag = 0;
