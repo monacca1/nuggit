@@ -15,7 +15,7 @@ require "test.pm" ;
 require "nuggit.pm"; # For direct API testing, or usage of internal functions for validation
 
 our $test_root = "/tmp/testrepo"; # WARNING: This directory may be deleted at the start of each test if pre-existing
-our $verbose = 1; # 0 = off, 4=full
+our $verbose = 0; # 0 = off, 4=full
 our $verbose_setup = 0; # Discrete Verbosity level for setup functions
 my $skip_setup = 1;
 our $do_cmdlog = 1; # Global Cmd Logger to aide debugging
