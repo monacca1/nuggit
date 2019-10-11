@@ -197,7 +197,13 @@ sub nuggit_init
 {
     die("nuggit_init() must be run from the top level of a git repository") unless -e ".git";
     mkdir(".nuggit");
-    system('echo ".nuggit" >> .git/info/exclude'); # TODO: We should do this the Perl way to remove UNIX requirement
+
+    # Git .git dir (this handles non-standard directories, including bare repos and submodules)
+    my $git_dir = `git rev-parse --git-dir`;
+    chomp($git_dir);
+
+    system("echo \".nuggit\" >> $git_dir/info/exclude");
+
 }
 
 =head2 get_remote_tracking_branch
