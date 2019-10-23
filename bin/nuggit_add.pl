@@ -22,7 +22,7 @@ my $num_args;
 my $branch;
 my $cwd = getcwd();
 my $add_all_bool = 0;
-
+my $patch_bool = 0;
 
 print "nuggit_add.pl\n";
 
@@ -85,7 +85,8 @@ else
 sub ParseArgs()
 {
   Getopt::Long::GetOptions(
-     "-A"  => \$add_all_bool
+                           "A!"  => \$add_all_bool,
+                           "p!"  => \$patch_bool
      );
 }
 
@@ -133,7 +134,10 @@ sub add_file($)
   {
 #    print "path is null\n";
   }
-  print `git add $file`;
+  my $cmd = "git add";
+  $cmd .= " -p" if $patch_bool;
+  $cmd .= " $file";
+  print `$cmd`;
 
   my $dir = getcwd();
   system("echo nuggit_add.pl, directory: $dir, adding file: $file    >> $root_dir/.nuggit/nuggit_log.txt");  
