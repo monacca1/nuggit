@@ -12,7 +12,7 @@ use lib "$FindBin::Bin/../lib"; # Add local test lib to path
 use File::Slurp qw(edit_file_lines);
 
 require "test.pm" ;
-require "nuggit.pm"; # For direct API testing, or usage of internal functions for validation
+require Git::Nuggit; # For direct API testing, or usage of internal functions for validation
 
 our $test_root = "/tmp/testrepo"; # WARNING: This directory may be deleted at the start of each test if pre-existing
 our $verbose = 0; # 0 = off, 4=full

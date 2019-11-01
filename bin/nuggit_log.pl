@@ -1,4 +1,4 @@
-#!/usr/bin/perl -w
+#!/usr/bin/env perl
 
 use strict;
 use warnings;
@@ -7,7 +7,7 @@ use Cwd qw(getcwd);
 
 use FindBin;
 use lib $FindBin::Bin.'/../lib'; # Add local lib to path
-require "nuggit.pm";
+use Git::Nuggit;
 
 # show or clear the contents of the nuggit log
 

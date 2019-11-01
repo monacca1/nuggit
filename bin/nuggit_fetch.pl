@@ -6,7 +6,7 @@ use warnings;
 use Cwd qw(getcwd);
 use FindBin;
 use lib $FindBin::Bin.'/../lib'; # Add local lib to path
-require "nuggit.pm";
+use Git::Nuggit;
 
 do_upcurse();
 

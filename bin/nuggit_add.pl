@@ -1,4 +1,4 @@
-#!/usr/bin/perl -w
+#!/usr/bin/env perl
 
 use strict;
 use warnings;
@@ -9,7 +9,7 @@ use Cwd qw(getcwd);
 use Pod::Usage;
 use FindBin;
 use lib $FindBin::Bin.'/../lib'; # Add local lib to path
-require "nuggit.pm";
+use Git::Nuggit;
 
 
 # usage: 
@@ -29,7 +29,6 @@ print "nuggit_add.pl\n";
 
 my ($root_dir, $relative_path_to_root) = find_root_dir();
 die("Not a nuggit!") unless $root_dir;
-
 nuggit_log_init($root_dir);
 
 ParseArgs();

@@ -9,7 +9,7 @@ use Cwd qw(getcwd);
 use Pod::Usage;
 use FindBin;
 use lib $FindBin::Bin.'/../lib'; # Add local lib to path
-require "nuggit.pm";
+use Git::Nuggit;
 require Git::Nuggit::Status;
 
 =head1 SYNOPSIS
@@ -33,7 +33,7 @@ If set, only errors will be output.
 
 For other use cases, git reset must be executed manually at each desired level, or (with caution) using "ngt foreachgit reset".  For example, "ngt foreach git reset HEAD".  Due to the nature of submodules, commands such as resetting to HEAD~1 are NOT supported by nuggit.  
 
-Additional use cases may be added in the future.
+Additional use cases may be added in the future.  For example, a "ngt reset HEAD~1" would execute the equivalent git command at the root level only, followed by a 'git submodule update --init --recursive'.
 
 =back
 

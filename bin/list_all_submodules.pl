@@ -10,7 +10,7 @@ use FindBin;
 use lib $FindBin::Bin.'/../lib'; # Add local lib to path
 use Cwd;
 
-require "nuggit.pm";
+use Git::Nuggit;
 
 my $arg;
 my $i = 0;

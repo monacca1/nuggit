@@ -1,4 +1,4 @@
-#!/usr/bin/perl -w
+#!/usr/bin/env perl
 
 use strict;
 use warnings;
@@ -6,7 +6,7 @@ use Getopt::Long;
 use Cwd qw(getcwd);
 use FindBin;
 use lib $FindBin::Bin.'/../lib'; # Add local lib to path
-require "nuggit.pm";
+use Git::Nuggit;
 # usage: 
 #
 #/homes/monacca1/git-stuff/nuggit/bin/nuggit_checkout.pl <branch_name>

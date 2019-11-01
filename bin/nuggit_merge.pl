@@ -11,7 +11,7 @@ use lib $FindBin::Bin.'/../lib'; # Add local lib to path
 use IPC::Run3; # Utility to execute application and capture both stdout and stderr
 use Storable qw(store retrieve); # Serialization of merge in progress state
 
-require "nuggit.pm";
+use Git::Nuggit;
 use Git::Nuggit::Status;
 
 =head1 Nuggit Merge

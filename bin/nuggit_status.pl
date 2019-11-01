@@ -9,7 +9,7 @@ use Cwd qw(getcwd);
 use FindBin;
 use lib $FindBin::Bin.'/../lib'; # Add local lib to path
 use Data::Dumper; # Debug and --dump option
-require "nuggit.pm";
+use Git::Nuggit;
 use Git::Nuggit::Status;
 
 my $cached_bool = 0; # If set, show only staged changes
