@@ -7,8 +7,12 @@ set abs_rootdir = `cd $rootdir && pwd`
 # Add the bin dir to your path
 setenv PATH ${PATH}:${abs_rootdir}/bin
 
-# And lib to lib
-setenv PERL5LIB ${abs_rootdir}/lib:${PERL5LIB}
+# And lib to perl5lib
+if ( $?PERL5LIB ) then
+    setenv PERL5LIB ${abs_rootdir}/lib:${PERL5LIB}
+else
+    setenv PERL5LIB ${abs_rootdir}/lib
+endif
 
 # Autocomplete (ngt will provide autocomplete responses for itself, when appropriate env variable is set)
 complete -C ngt ngt
