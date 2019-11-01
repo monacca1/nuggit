@@ -49,4 +49,4 @@ print `git clone $url --recursive -j8 $repo`;
 # initialize the nuggit meta data directory structure
 chdir($repo) || die "Can't enter cloned repo ($repo)";
 nuggit_init();
-
+nuggit_log_init();

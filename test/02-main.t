@@ -57,9 +57,13 @@ my @tests = (
              ["Simple Conflict, Manual Resolution Required", \&test_simple_conflict],
              ["Non-conflicting Parallel Work in Discrete Submodules", \&test_2user_parallel_submodule],
              ["Non-conflicting Parallel Work in Same Submodule", \&test_2user_parallel_files_same_submodule],
-             # TODO: Conflicting Parallel Work in Same Submodule (and file)
              
              # TODO: nuggit_init Test from root level of repo, from no repo, and from submodule (may belong in 02-base.t)
+
+             # Merge test, default branch
+             # Merge test, specified branch
+             # Merge test, default branch when default isn't always the same
+
             );
 
 my $test_cnt = 0;
@@ -129,7 +133,7 @@ sub simple_clone_write_tests {
     tchdir("$test_work/user1"); # Reuse user1 from prior test
     subtest('Simple Write Test in nested submodule',
             \&test_write, 
-            ("First test_write()", "sub1/sub3/README.md", {check_modified => qw(sub1 sub1/sub3)})
+            ("First test_write()", "sub1/sub3/README.md", {check_modified => [qw(sub1 sub1/sub3)]})
            );
 
     return 1;
@@ -153,7 +157,7 @@ sub test_simple_2user
         tchdir("$test_work/user1");
         subtest ("Simple Write",
                  \&test_write,
-                 ($msg, "sub1/sub3/README.md", {check_modified => qw(sub1 sub1/sub3) } )
+                 ($msg, "sub1/sub3/README.md", {check_modified => [qw(sub1 sub1/sub3)] } )
                   );
         ok( (@lines = read_file($fn, chomp => 1))[-1] eq $msg, "sub3/README ends with expected line");
     };
@@ -185,7 +189,7 @@ sub test_simple_conflict
         tchdir("$test_work/user1");
         subtest ("Simple Write",
                  \&test_write,
-                 ($msg, $fn, {check_modified => qw(sub1 sub1/sub3) } )
+                 ($msg, $fn, {check_modified => [qw(sub1 sub1/sub3)] } )
                   );
         ok( (@lines = read_file($fn, chomp => 1))[-1] eq $msg, "$fn ends with expected lineA");
     };
@@ -196,7 +200,7 @@ sub test_simple_conflict
 
         subtest ("Write in second submodule, expect nuggit push failure",
                  \&test_write,
-                 ($msg2, $fn, {check_modified => qw(sub2), push_fail => 1 } )
+                 ($msg2, $fn, {check_modified => [qw(sub1 sub1/sub3)], push_fail => 1 } )
                   );
         
         dies_ok{ nuggit("pull") } "Pull Changes, expect conflicts requiring manual resolution";
@@ -230,13 +234,6 @@ sub test_simple_conflict
 
 }
 
-# Same as test_simple_conflict, but operates within a submodule, with pending change in second submodule
-# NOTE: Second submodule should be parsed after first, such that merge must be resumed for it to be processed
-sub test_simple_submodule_conflict
-{
-    # TODO: leverage prior test logic; only $fn should differ
-}
-
 sub test_2user_parallel_submodule
 {
     plan tests => 4;
@@ -256,7 +253,7 @@ sub test_2user_parallel_submodule
         tchdir("$test_work/user1");
         subtest ("Simple Write",
                  \&test_write,
-                 ($msg, $fn, {check_modified => qw(sub1 sub1/sub3) } )
+                 ($msg, $fn, {check_modified => [qw(sub1 sub1/sub3)] } )
                   );
         ok( (@lines = read_file($fn, chomp => 1))[-1] eq $msg, "$fn ends with expected lineA");
     };
@@ -267,7 +264,7 @@ sub test_2user_parallel_submodule
 
         subtest ("Write in second submodule, expect nuggit push failure",
                  \&test_write,
-                 ($msg2, $fn2, {check_modified => qw(sub2), push_fail => 1 } )
+                 ($msg2, $fn2, {check_modified => [qw(sub2)], push_fail => 1 } )
                   );
         
         ok( nuggit("pull"), "Pull Changes, expect conflicts to be automatically resolved");
@@ -302,7 +299,7 @@ sub test_2user_parallel_files_same_submodule
         tchdir("$test_work/user1");
         subtest ("Simple Write",
                  \&test_write,
-                 ($msg, $fn, {check_modified => qw(sub1 sub1/sub3) } )
+                 ($msg, $fn, {check_modified => [qw(sub1 sub1/sub3)] } )
                   );
         ok( (@lines = read_file($fn, chomp => 1))[-1] eq $msg, "$fn ends with expected lineA");
     };
@@ -315,8 +312,10 @@ sub test_2user_parallel_files_same_submodule
         log_cmd("# Write \"$msg\" to $fn");
         ok(nuggit("add",$fn2), "Stage file");
 
-        ok(  ( nuggit("status", "--cached") =~ /^\s*S.+(\.\.\/?)*$fn2$/m), "Verify $fn2 is staged") || return;
-        ok(nuggit("commit", "-m \"Update $fn2 file\""), "Commit $fn2") || return;
+        my $status = get_status();
+        my $obj = file_status($status, $fn2);
+        ok( $obj && $obj->{staged_status} == STATE('MODIFIED'), "Verify $fn2 is staged"); # || return;
+        ok(nuggit("commit", "-m \"Update $fn2 file\""), "Commit $fn2"); # || return;
 
         dies_ok{ nuggit("push") } "Push should fail due to conflicts";
 
@@ -334,3 +333,4 @@ sub test_2user_parallel_files_same_submodule
     
     return 1;
 }
+

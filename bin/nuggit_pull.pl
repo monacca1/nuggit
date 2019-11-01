@@ -1,4 +1,4 @@
-#!/usr/bin/perl -w
+#!/usr/bin/env perl
 
 use strict;
 use warnings;
@@ -8,7 +8,6 @@ use Getopt::Long;
 use Cwd qw(getcwd);
 use FindBin;
 use lib $FindBin::Bin.'/../lib'; # Add local lib to path
-use Data::Dumper; # DEBUG
 
 require "nuggit.pm";
 
@@ -39,14 +38,13 @@ GetOptions(
 my $root_dir = do_upcurse();
 
 if (!$skip_status_check) {
-    my $status = nuggit_status("status",1);
-    if ($status->{"status"} ne "clean")
+    my $status = get_status();
+    if (!status_check($status))
     {
-        say "Local changes detected.  Please commit or stash all changes before running pull.";
-        say " If you wish to attempt the pull anyway, re-run this command with '--skip-status-check' flag.";
-        say " Current repository status is: ";
-        say Dumper($status); # TODO: Pretty-print (move fn from nuggit_status to nuggit.pm)
-        #display_nuggit_status($nuggit_states);
+        say colored("Local changes detected.  Please commit or stash all changes before running pull.", 'red');
+        say colored(" If you wish to attempt the pull anyway, re-run this command with '--skip-status-check' flag.", 'yellow');
+        say "\nCurrent repository status is: ";
+        pretty_print_status();
         die "Pull aborted due to dirty working directory.  Please commit, or re-run with --skip-status-check";
     }
 }
@@ -58,11 +56,12 @@ require("$FindBin::Bin/nuggit_fetch.pl");
 
 # Execute Nuggit Merge of remotes/origin/$selected_branch
 #  TODO: support for alternate remotes
-my $args = "";
+my $args = "--log-as-pull";
 $args .= " --message \"$commit_message\"" if defined($commit_message);
 $args .= " --no-edit" if !$edit_flag; # Default is edit
 $args .= " --verbose" if $verbose;
 exec("$FindBin::Bin/nuggit_merge.pl $args");
+
 
 # Done (exec never returns)
 

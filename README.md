@@ -1,17 +1,64 @@
-nuggit (incomplete prototype status):
+# Nuggit (prototype)
 
-  push, pull and merge need work
-
-  Nuggit is a wrapper for git that makes repositories consisting of submodules (or nested submodules) 
-work more like mono-repositories.  This is, in part, achieved by doing work on the same branc across
+Nuggit is a wrapper for git that makes repositories consisting of submodules (or nested submodules) 
+work more like mono-repositories.  This is, in part, achieved by doing work on the same branch across
 all submodules and taking the approproate action when submodules are modified, added, pushed, pulled
 etc. without requring the user to do extra magic just for submodules.
 
-The following describes the nuggut prototype user scripts.  The goal would be to eventually have a single 
-driver script "nuggit" that would identify the command and then call the approprate script.
-        i.e. nuggit checkout would call nuggit_checkout.pl
-Again, this is a prototype, the implementation of any of the individual scripts could probably be 
-significantly improved from the perspecives of: design, error handling, git commands, documentation, etc
+A wrapper script. "ngt" can be used to invoke all of the capabilities
+defined below.  Tab auto-completion is optionally available for this wrapper.
+
+
+The nuggit.sh or nuggit.csh shell should be sourced to add nuggit to
+your path for bash or csh respectively.  These files can be used as an
+example if needed to adopt for other shell environments.  
+
+Usage information for most scripts is available with a "--man" or
+"--help"  parameter.  For example, "ngt --man" or "ngt status --man".
+
+## Installation
+Several installation options are documented below for convenience.
+
+Minimum requirements for Nuggit are:
+- Command-line Git tools, version 2.13.2 or later.  For best results, 
+- Perl version 5.10 or later
+
+### Automated (not yet available)
+TODO: A Makefile.PL will be added in the future to enable standard
+Perl installation.
+
+### Manual via CPAN
+Install Perl module dependencies using CPAN, or CPANM.  CPANM can be installed and run without root
+privileges on most systems (see below)
+
+For run-time dependencies, "sudo cpan IPC::Run3" or "cpanm IPC::Run3".
+Additional dependencies are required for running the test suite.  See
+the test directory for details.
+
+Source the appropriate shell script in your profile to add Nuggit to
+your path and enable auto-completion of commands (ie: "ngt status").
+Scripts are provided for bash and cshell.
+
+#### Optional: CPANM Setup
+The following commands will install cpanm and all required dependencies locally.  This may take a few minutes if none are already installed.  Running cpanm as root will install packages globally.
+- curl -L https://cpanmin.us/ -o cpanm && chmod +x cpanm
+- ./cpanm JSON Term::ReadKey DateTime Git::Repository HTTP::Request LWP::UserAgent
+- ./cpanm --local-lib=~/perl5 local::lib && eval $(perl -I ~/perl5/lib/perl5/ -Mlocal::lib)
+
+### Manual
+No non-standard modules requiring compialtion are utilized by this
+suite permitting an alternative manual installation process if
+required.
+
+The following procedure is not recommended unless nominal installation
+ethods are unavailable.
+
+- Obtain this repository (ie: git clone ...)
+- Download the IPC::Run3 library.
+- Copy the IPC-Run/lib/IPC directory into this repository's 'lib'
+directory.
+- Add the bin folder to your path (ie: source the provided
+nuggit.[c]sh script)
 
 
 #########################################################################################################

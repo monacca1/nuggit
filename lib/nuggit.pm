@@ -8,6 +8,12 @@ use warnings;
 use Cwd qw(getcwd);
 use Term::ANSIColor;
 
+# TODO: This should become an Object where:
+# - constructor finds root dir and relative path
+# - constructor dies if not a nuggit (not called for clone or init)
+# - allow configuration of defaults/settings.  Persistent settings, if used, can be read from .nuggit directory
+
+
 =head1 Nuggit Library
 
 This library provides common utility functions for interacting with repositories using Nuggit.
@@ -110,7 +116,7 @@ sub submodule_foreach {
   }
   my $list = `git submodule`;
 
-  # TODO: Consider switchign to IPC::Run3 to check for stderr for better error handling
+  # TODO: Consider switching to IPC::Run3 to check for stderr for better error handling
   if (!$list || $list eq "") {
     return;
   }
@@ -351,10 +357,10 @@ sub nuggit_status
   # Pass along relative path to root (this is a placeholder pending full parsing of status)
   $opts->{'relative_path_to_root'} = $relative_path_to_root if (defined($relative_path_to_root));
 
-  $status = _get_status($opts); # Get root status
+  $status = _nuggit_status($opts); # Get root status
 
   # Recurse into submodules
-  submodule_foreach(\&_get_status, $opts);
+  submodule_foreach(\&_nuggit_status, $opts);
 
   # And cleanup parent<->child relations (since we parse status depth-first
   my $list = $opts->{'out_children'};
@@ -371,15 +377,15 @@ sub nuggit_status
 } # end nuggit_status()
 
 # Internal status function called by git_submodule_status().  See above for details.
-sub _get_status
+sub _nuggit_status
 {
     my $rtv;
     my ($parent, $name, $substatus, $hash, $label, $opts) = (@_);
-    
+
     if (scalar(@_) > 4) {
         #my $subpath = $parent . '/' . $name .'/';
         my $subname = ($parent eq '.') ? "$name" : "$parent/$name";
-        
+
         die("Internal Error: Duplicate repo at $subname") if defined($opts->{output}{$subname});
         $rtv = {
                 'path' => $subname.'/',
@@ -388,14 +394,14 @@ sub _get_status
                 'sha1' => $hash, # VERIFY
                 'label' => $label,
                };
-        
+
         # Save reference to self 
         $opts->{output}{$subname} = $rtv;
 
         # And save as a child of $parent (to be added to children object later)
         $opts->{out_children}{$parent} = [] if !defined($opts->{out_children}{$parent});
         push(@{$opts->{out_children}{$parent}}, $rtv);
-        
+
     } else {
         $opts = shift; # opts is sole-argument when called in this mode. Other args unneeded.
         $rtv = {
@@ -404,14 +410,14 @@ sub _get_status
                };
         $opts->{output}{'.'} = $rtv;
     }
-    
+
     my $status;
     my $branches;
     my $submodule_branch;
 
     my $status_cmd = $opts->{'status_cmd'} || die("Internal Error: missing status_cmd");
     my $status_cmd_mode = $opts->{'status_cmd_mode'} || die("Internal Error: missing status_cmd_mode");
-    
+
     $branches = `git branch`;
     $submodule_branch = get_selected_branch($branches);
     $rtv->{'branch'} = $submodule_branch;
@@ -472,7 +478,94 @@ sub _get_status
     return $rtv;
 }
 
+=head1 check_merge_conflict_state()
+
+Checks if a merge operation is in progress, and dies if it is.
+
+This function should be called with the path to the nuggit root repository or with that as the current working directory.
+
+=cut
+
+sub check_merge_conflict_state
+{
+    my $root_dir = shift || '.';
+    if( -e "$root_dir/.nuggit/merge_conflict_state") {
+        die "A merge is in progress.  Please complete with 'ngt merge --continue' or abort with 'ngt merge --abort' before proceeding.";
+    }
+}
+
+=head1 Nuggit Logging
+
+Activity is autoamtically logged to root .nuggit/nuggit_log.txt
+
+In the future, verbosity level may be controllable via environemnt variable or other settings.
+
+Log file is a (mostly) CSV file with the following format:
+
+Script execution is logged as timestamp, command
+    NOTE: For nuggit, current working dir is irrelevant if within a nuggit repo.
+
+These columns will be blank for any additional entries for a given script.  Other entries may include:
+
+A general message, prepended with ",,\t" such that the first 2 columns are empty and a tab improves readability when viewed directly.
+
+For all other cases, remaining columns will follow in a title,value form, for example a git add command may show:
+   CWD, current/rel/path, CMD, git add myfile
+
+Any git commands that may affect working state should be logged as noted above with "nuggit_log" function.
+
+=cut
+
+my $nuggit_log_fh; # TODO: This should be a blessed var, once nuggit is converted to OOP
+my $cached_root_dir; # Scaffold until we make this an object
+
+sub nuggit_log_init
+{
+    my $root_dir = shift || getcwd(); # TODO: This should really be a package variable
+    my $verbose;
+
+    # Does nothing if already initialized.  
+    # We don't raise an error, as there are currently cases (where one script invokes another) that this is valid.
+    return if ($nuggit_log_fh);
+
+    open($nuggit_log_fh, '>>', "$root_dir/.nuggit/nuggit_log.txt");
+    
+    my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst)=localtime(time);
+    my $nice_timestamp = sprintf( "%02d/%02d/%04d %02d:%02d:%02d",
+                                   $mon+1,$mday,$year+1900,$hour,$min,$sec);
+    my $msg = "$nice_timestamp, "; # Command/script eecuted
+    if ($verbose) {
+        $msg .= $0; # Include full path to script, this may make it difficult to read output
+    } else {
+        my ($vol, $dir, $file) = File::Spec->splitpath($0);
+        $msg .= $file;
+    }
 
 
+    # Perl Magic to re-assemble arguments
+    foreach (@ARGV) {
+        $msg .= /\s/ ?   " \'" . $_ . "\'"
+            :           " "   . $_;
+    }
+    
+    say $nuggit_log_fh $msg;
+    $cached_root_dir = $root_dir; # TODO: Scaffold until this becomes OOP
+}
+
+# TODO: Consider verbosity flag to nuggit_log, or guarding with said flag in caller
+sub nuggit_log
+{
+    my $msg = shift;
+
+    # Log message. We prepend marker (CSV-friendly and read-friendly) to indicate this continues init entry
+    say $nuggit_log_fh ",,\t".$msg;
+}
+# Log a git command in a consistent manner (only commands that affect state of the repository; ie; not for status)
+sub nuggit_log_cmd
+{
+    my $cmd = shift;
+    my $cwd = File::Spec->abs2rel( getcwd(), $cached_root_dir );
+    say $nuggit_log_fh ",,CWD,$cwd,CMD,$cmd";
+}
 
 1;

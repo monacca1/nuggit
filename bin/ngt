@@ -1,0 +1,182 @@
+#!/usr/bin/env perl
+# ngt - The shorter version of nuggit
+
+# Optional Dependencies:
+#   Complete::Program - to enable auto-completion of programs
+
+use strict;
+use warnings;
+use v5.10; # Adds say function
+use FindBin;
+
+# Get First Parameter (case-insensitive)
+my $cmd = lc(shift);
+
+# Command Database (excludes help/doc/env commands defined in this file)
+my %files = (
+    # Core Commands
+    add    => {cmd => "nuggit_add.pl",
+               completion_type => "file"},
+    branch => "nuggit_branch.pl",
+    checkout => "nuggit_checkout.pl", # TODO: Autocomplete known (root-level) branches
+    checkout_default => {cmd => "nuggit_checkout_default.pl",
+                         description => "Checkout default/tracked branch for each submodule"
+    },
+    clone => "nuggit_clone.pl",
+    commit => "nuggit_commit.pl",
+    init => "nuggit_init",
+    merge  => "nuggit_merge.pl",
+    pull => "nuggit_pull.pl",
+    push   => "nuggit_push.pl",
+    stash => {cmd => "nuggit_foreach.pl git stash",
+              completion_list => [qw(save pop list show drop apply branch)]
+    },
+    status => "nuggit_status.pl",
+    tag    => "nuggit_foreach.pl git tag",
+
+    # For Advanced Users
+    foreach => {cmd => "nuggit_foreach.pl",
+                completion_type => "system" # Use system default completion
+    },
+
+    # Helper Aliases for special cases/details
+    git_status => {cmd => "nuggit_foreach.pl git status",
+                   description => "Recursively invoke native git status (DEBUG)"
+    },
+    reset => "nuggit_reset.pl",
+);
+
+# Supported Autocompletion Shells:
+#Complete::Bash - provides COMP_LINE and COMP_POINT
+# Complete::Zsh - ?
+# Complete::Tcsh - provides COMMAND_LINE env variable
+if (defined($ENV{'COMP_LINE'}) || defined($ENV{'COMMAND_LINE'}) ) {
+    require Complete::File;
+    Complete::File->import('complete_file');
+    require Complete::Util;
+    Complete::Util->import('complete_array_elem');
+
+    if (defined($ENV{'COMP_LINE'})) {
+        require Complete::Bash;
+        Complete::Bash->import(qw(parse_cmdline format_completion));
+    } elsif (defined($ENV{'COMMAND_LINE'}) ) {
+        require Complete::Tcsh;
+        Complete::Tcsh->import(qw(parse_cmdline format_completion));
+    }
+
+    my( $words, $cword) = @{ parse_cmdline() };
+    my $res;
+    my $word = $words->[$cword];
+    my $def = $files{$words->[1]};
+    if ($cword == 1) {
+        $res = complete_array_elem(array=>[keys(%files)], word=>$word);
+    } elsif (ref($def)) {
+        # Definition available for this command
+        if (defined($def->{completion_type}) && $def->{completion_type} eq "file") {
+            $res = file_complete($word);
+        } elsif (defined($def->{completion_type}) && $def->{completion_type} eq "system") {
+            eval {require Complete::Program; } || exit;
+            Complete::Program->import('complete_program');
+            $res = complete_program(word => $word);
+        } elsif (defined($def->{completion_list})) {
+            $res = complete_array_elem(array => $def->{completion_list},
+                                       word => $word);
+        }
+    } else {
+        # No more auto-completion
+        exit;
+    }
+    print format_completion($res);
+    exit;
+
+} elsif ($cmd eq "check") {
+    # Check for Nuggit Library
+    eval "use Git::Nuggit::Status";
+    die "APL::Nuggit does not appear to be installed. Did you source nuggit.sh or equivalent?" if $@;
+
+    eval "use IPC::Run3";
+    die "IPC::Run3 does not appear to be installed. Install via cpan, or see README for other options." if $@;
+
+    my $git_version = `git --version`;
+    if ($git_version =~ /git version (\d)\.(\d+)\.?(\d+)?/) {
+        die "Warning: Git 2.13.2 or later is required for full functionality." unless ( ($1 >= 2 && $2 > 13) || ($1 == 2 && $2 == 13 && 3 >= 2));
+    } else {
+        die "Unable to find git";
+    }
+
+    say "All compatibility checks have passed";
+    exit;
+} elsif ($cmd =~ /(help|man)$/) {
+    show_help();
+} elsif (defined($cmd) && defined($files{$cmd})) {
+    # Execute specified file directly
+    my $rawcmd = $FindBin::Bin.'/';
+    $rawcmd .= (ref($files{$cmd}) ? $files{$cmd}->{'cmd'} : $files{$cmd});
+
+    unshift(@ARGV, $rawcmd);
+    exec(@ARGV);
+    exit;
+} elsif (defined($cmd)) {
+  say "ERROR: Unrecognized Command ($cmd)";
+} else {
+    say colored("Please specify a valid command", 'red');
+    show_help();
+}
+
+sub show_help {
+    say "---------------------------------------------------";
+    say "Nuggit; A Git Utility for Submodule-based workflows";
+    say "---------------------------------------------------";
+    say "Usage: ngt <cmd> <args>\n";
+
+    say "This is a wrapper for available nuggit commands. Internal commands are:";
+    say "  ngt help      Show this help dialog";
+    say "  ngt check     Verify nuggit installation and dependencies\n";
+
+    say "Commands for 'ngt' can be autocompleted by pressing the tab key, while a list";
+    say "  of all matches can be returned by pressing tab twice. This will work";
+    say "  on Bash and CSH terminals only, providing that the nuggit.[c]sh script";
+    say "  has been sourced.\n";
+    
+    say "Most of the commands below have their own help page";
+    say " accessible as 'ngt <cmd> --help' for abbreviated usage";
+    say " or 'ngt <cmd> --man' for detailed usage information.";
+    say "\n";
+    
+    foreach my $file (sort keys %files) {
+        my $obj = $files{$file};
+        print " ".$file." ";
+        if (ref($obj)) {
+            if ($obj->{'completion_list'}) {
+                my $first = 0;
+                foreach my $subcmd (@{$obj->{'completion_list'}}) {
+                    print "|" unless !$first;
+                    print $subcmd;
+                    $first++;
+                }
+            } elsif (defined($obj->{'completion_type'})) {
+                if ($obj->{'completion_type'} eq "file") {
+                    print "<file>";
+                }
+            }
+            print "\t".$obj->{'description'} if defined($obj->{'description'});
+        }
+        print "\n";
+    }
+}
+
+sub file_complete {
+    my $word = shift;
+    my $rtv;
+
+    for(my $i = 0; $i < 10; $i++) { # Prevent infinite recursion
+        $rtv = complete_file(word => $word,
+                             file_regex_filter => qr/^\./  # Hide hidden folders
+                            );
+
+        # Continue the loop if sole-completion is a directory
+        $word = @{$rtv}[0];
+        last unless (@{$rtv}==1 && -d $word);
+    }
+    return $rtv;
+}

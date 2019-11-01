@@ -22,8 +22,11 @@ my $cwd = getcwd();
 
 my ($root_dir, $relative_path_to_root) = find_root_dir();
 die("Not a nuggit!\n") unless $root_dir;
+nuggit_log_init($root_dir);
 
-print "nuggit root dir is: $root_dir\n";
+check_merge_conflict_state(); # Do not proceed if merge in process; require user to commit via ngt merge --continue
+
+# print "nuggit root dir is: $root_dir\n";
 #print "nuggit cwd is $cwd\n";
 
 #print "changing directory to root: $root_dir\n";

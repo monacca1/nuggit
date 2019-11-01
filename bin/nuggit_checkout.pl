@@ -1,9 +1,12 @@
-#!/usr/bin/perl -w
+#!/usr/bin/env perl
 
 use strict;
 use warnings;
 use Getopt::Long;
 use Cwd qw(getcwd);
+use FindBin;
+use lib $FindBin::Bin.'/../lib'; # Add local lib to path
+require "nuggit.pm";
 
 # usage: 
 #
@@ -16,7 +19,6 @@ use Cwd qw(getcwd);
 
 my $num_args;
 my $branch;
-my $root_dir;
 my $cwd = getcwd();
 my $existing_branch_name = "";
 my $create_branch_name = "";
@@ -30,6 +32,10 @@ sub create_branch_where_needed($);
 sub does_branch_exist_at_root($);
 sub does_branch_exist_here($);
 
+my ($root_dir, $relative_path_to_root) = find_root_dir();
+die("Not a nuggit!\n") unless $root_dir;
+nuggit_log_init($root_dir);
+
 ParseArgs();
 
 if( ($follow_branch_bool == 0) && ($follow_commit_bool == 0))
@@ -39,21 +45,14 @@ if( ($follow_branch_bool == 0) && ($follow_commit_bool == 0))
   $follow_commit_bool = 0;
 }
 
+check_merge_conflict_state(); # Checkout not permitted while merge in progress
 
-$root_dir = `nuggit_find_root.pl`;
-chomp $root_dir;
-
-print "nuggit root dir is: $root_dir\n";
+#print "nuggit root dir is: $root_dir\n";
 #print "nuggit cwd is $cwd\n";
 
 #print "changing directory to root: $root_dir\n";
-chdir $root_dir;
+chdir($root_dir) || die("Can't enter $root_dir");
 
-if($root_dir eq "-1")
-{
-  print "Not a nuggit!\n";
-  exit();
-}
 
 if($create_branch_name eq "")
 {

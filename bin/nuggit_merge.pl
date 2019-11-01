@@ -1,4 +1,4 @@
-#!/usr/bin/perl -w
+#!/usr/bin/env perl
 
 use strict;
 use warnings;
@@ -12,6 +12,7 @@ use IPC::Run3; # Utility to execute application and capture both stdout and stde
 use Storable qw(store retrieve); # Serialization of merge in progress state
 
 require "nuggit.pm";
+use Git::Nuggit::Status;
 
 =head1 Nuggit Merge
 
@@ -75,31 +76,33 @@ my $branch = "";
 my $commit_message;
 my $local_time;
 my $verbose = 0;
-my $do_upcurse = 1; # Upcurse to root of nuggit unless explicitly requested not to (ie: for testing).
 my $merge_continue_flag = 0; # IF set, attempt to resume existing merge
 my $abort_merge_flag = 0;
 my $edit_flag = 1; # Mirrors Git's edit/no-edit flag
 my $help = 0; my $man = 0;
-
+my $log_as_pull; # For logging/tracing purposes only
 $local_time = localtime();
 
 print "nuggit_merge.pl\n";
+
+my ($root_dir, $relative_path_to_root) = find_root_dir();
+die("Not a nuggit!") unless $root_dir;
+nuggit_log_init($root_dir);
 
 # Parse Options (positional arguments will be handled after)
 GetOptions(
     "help"            => \$help,
     "man"             => \$man,
     'verbose!' => \$verbose,
-    'upcursive!' => \$do_upcurse,   # Primarily for test purposes.
     'continue' => \$merge_continue_flag,
     'abort'    => \$abort_merge_flag,
     'message=s'  => \$commit_message, # Specify message to use for any commits upon merge (optional; primarily for purposes of automated testing). If omitted, user will be prompted for commit message.  An automated message will be used if a conflict has been automatically resolved.
     'edit!' => \$edit_flag,
-           );
+           'log-as-pull' => \$log_as_pull, # For logging purposes only in liueue of an OOP call from pull wrapper
+          );
 pod2usage(1) if $help;
 pod2usage(-exitval => 0, -verbose => 2) if $man;
 
-my $root_dir = ($do_upcurse) ? do_upcurse($verbose) : ".";
 my $merge_conflict_file = "$root_dir/.nuggit/merge_conflict_state";
 
 if ($merge_continue_flag) {
@@ -148,16 +151,6 @@ sub do_merge_recursive
     
 }
 
-sub indent($)
-{
-  my $i = 0;
-  my $limit = $_[0];
-  for($i = 0; $i < $limit; $i = $i + 1)
-  {
-    print "  ";
-  }
-}
-
 =head1 do_merge
 
 Perform actual Merge operation on current directory (no recursion).
@@ -196,6 +189,7 @@ sub do_merge
     my $merge_cmd = "git merge $source_branch";
     my ($stdout, $stderr);
     run3($merge_cmd, undef, \$stdout, \$stderr);
+    nuggit_log_cmd($merge_cmd);
 
     # Did merge fail due to specified branch/ref being invalid?
     # TODO
@@ -225,7 +219,9 @@ sub do_merge
                 }
 
                 # Stage file and increment counter
-                system("git add $conflicted");
+                my $cmd = "git add $conflicted";
+                system($cmd);
+                nuggit_log_cmd($cmd);
                 $num_submodule_conflicts++;
                 say "Automatically resolving submodule reference conflict for $conflicted";
             } elsif ($line =~ /CONFLICT/) {
@@ -294,34 +290,31 @@ sub commit_conflict_resolution
     say colored("commit_conflict_resolution at ".cwd(),'green') if $verbose;
     
     # Get status of conflicted repo (this fn works from current dir down)
-    my $status = nuggit_status("unstaged", 1);
+    my $status = get_status({uno => 1});
 
-    # Unless all changes are staged (ie: conflicts resolved), abort
-    if ($status->{'status'} ne "clean") {
-        # Special case: Are the only unstaged files submodule references?
-        #  If so, let's stage them.  These should be submodules where conflicts have already been resolved
-
-        my $staged_cnt = 0; # Number of extra submodules now staged
-        my $unstaged_cnt = 0;
-        
-        foreach my $file (keys %{$status->{'files'}}) {
-            if (-d $file) {
-                # This is a directory, auto-stage it; this should be a submodule that's already been merged
-                system("git add $file");
-                say "Automatically staging $file";
-                $staged_cnt++;
-            } else {
-                $unstaged_cnt++;
+    # Unless all changes (aside from refs) are staged (ie: conflicts resolved), abort
+    if ($status->{'status'} >= STATE('UNTRACKED')) {
+        if ($status->{'unstaged_files_cnt'} > 0) {
+            say "Unable to complete merge.  You have $status->{'unstaged_files_cnt'} unresolved/unstaged files remaining under ".cwd();
+            exit_save_merge_state($merge);
+        } else {
+            # Add all submodules (directory objects) at this level
+            foreach my $file (keys %{$status->{'objects'}}) {
+                if (-d $file) {
+                    # This is a directory, auto-stage it; this should be a submodule that's already been merged
+                    my $cmd = "git add $file";
+                    system($cmd);
+                    nuggit_log_cmd($cmd);
+                    say "Automatically staging $file";
+                } else {
+                    # This case indicates a bug in the merge algorithm or status check
+                    say "Error completing merge (BUG?). Expected $file to be a submodule but it is not a directory";
+                    exit_save_merge_state($merge);
+                }
             }
         }
-
-        # If unresolved conflicts remain, save and abort
-        if ($unstaged_cnt > 0) {
-            say "Unable to complete merge ($unstaged_cnt unresolved/unstaged files remaining under ".cwd().").";
-            exit_save_merge_state($merge);
-        }
     }
-
+    
     # Commit changes at this level to complete the merge
     my $cmd = "git commit";
     if ($commit_message) {
@@ -330,14 +323,15 @@ sub commit_conflict_resolution
         $cmd .= " --no-edit";
     }
     system($cmd);
+    nuggit_log_cmd($cmd);
 
     # Re-test status to confirm success (ignore untracked)
-    $status = nuggit_status("status",1);
+    $status = get_status({uno => 1});
    
     #say "commit_conflict_resolution() status is: ".Dumper($status);
 
     # TODO: We should probably save state here
-    die "Failed to resolve conflict at ".cwd().".  See above output for details." unless $status->{'status'} eq "clean";
+    die "Failed to resolve conflict at ".cwd().".  See above output for details." unless status_check($status);
 
 }
 

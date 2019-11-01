@@ -1,36 +1,27 @@
-#!/usr/bin/perl -w
+#!/usr/bin/env perl
+
+# TODO: Support for -a flag
+# TODO: Support for combining single-letter flags, as in "-am"
+# TODO: Support for amend? May be better to skip this one.
+# TODO: Option to prompt user before commit if unstaged changes exist?
+# TODO: Option to launch default editor to define message
 
 use strict;
 use warnings;
-
+use v5.10;
+use Pod::Usage;
 use Getopt::Long;
 use Cwd qw(getcwd);
 use FindBin;
 use lib $FindBin::Bin.'/../lib'; # Add local lib to path
 require "nuggit.pm";
-
+use Git::Nuggit::Status;
+use IPC::Run3; # Utility to execute application and capture both stdout and stderr
 
 # usage: 
 #
 # nuggit_commit.pl -m "commit message"
 #
-
-print "nuggit_commit.pl\n";
-
-# to get a list of files that have been staged to commit (by the user) use:
-#   git diff --name-only --cached
-# use this inside each submodule to see if we need to commit in that submodule.
-
-
-# for each submodule drill down into that directory:
-#    see if there is anything stated to commit
-#    if there is something staged to commit, commit the staged files with the commit message provided
-#    this will need to be nested or recursive or linear across all submodules... need to design how this will work
-#       but will need to traverse all the way back up the tree committing at each level.  Use the commit message 
-#       provided by the caller, but for committing submodules that have changed as a result, consider constructing
-#       a commit message that is based on the callers commit message... consider adding the branch and submodule name
-#       to the commit?
-#    
 
 sub ParseArgs();
 sub recursive_commit( $ );
@@ -38,173 +29,125 @@ sub staged_changes_exist_here();
 sub nuggit_commit($);
 
 my $verbose;
-my $git_diff_cmd   = "git diff --name-only --cached";
-my $cached_bool;
-my $commit_message_string;
-my $inhibit_commit_bool = 1;
-my $need_to_commit_at_root = 0;
-my $branches;
-my $root_repo_branch;
 
-ParseArgs();
+my $commit_message_string;
+my $need_to_commit_at_root = 0;
+my $branch_check = 1; # Check that all modified submodules are on the correct branch
+my $root_repo_branch;
+my $commit_all_files = 0; # Results in "git commit -a"
 
 my ($root_dir, $relative_path_to_root) = find_root_dir();
 die("Not a nuggit!\n") unless $root_dir;
+nuggit_log_init($root_dir);
 
-print "nuggit root dir is: $root_dir\n" if $verbose;
-print "nuggit cwd is ".getcwd()."\n" if $verbose;
-print $relative_path_to_root . "\n" if $verbose;
+ParseArgs();
 
-print "changing directory to root: $root_dir\n" if $verbose;
+say "nuggit root dir is: $root_dir" if $verbose;
+say "nuggit cwd is ".getcwd() if $verbose;
+say $relative_path_to_root if $verbose;
+
+say "changing directory to root: $root_dir" if $verbose;
 chdir $root_dir;
 
-$branches = `git branch`;
-$root_repo_branch = get_selected_branch($branches);
+check_merge_conflict_state(); # Do not proceed if merge in process; require user to commit via ngt merge --continue
 
-my $merge_conflict_file = "$root_dir/.nuggit/merge_conflict_state";
-die "A nuggit merge is in progress.  Commit changes to complete this by staging relevant files and running 'nuggit_merge --continue' or discard with '--abort'" if (-e $merge_conflict_file);
+my $status = get_status({uno => 1}); # Get status, ignoring untracked files
 
+die "No changes to commit." if status_check($status);
 
-my $date = `date`;
-chomp($date);
-system("echo ===========================================         >> $root_dir/.nuggit/nuggit_log.txt");
-system("echo nuggit_commit.pl, branch = $root_repo_branch, $date >> $root_dir/.nuggit/nuggit_log.txt");
-system("echo commit message: $commit_message_string              >> $root_dir/.nuggit/nuggit_log.txt");
-recursive_commit("");
+if ($status->{'branch.head'}) {
+    $root_repo_branch = $status->{'branch.head'};
+    if ($root_repo_branch eq "(detached)" ) {
+        die "ERROR: Root repository is in a detached head state";
+    }
+} else {
+    die "ERROR: Unable to detect branch name.";
+}
+
+if ($branch_check) {
+    if ($status->{'branch_status_flag'}) {
+        pretty_print_status($status);
+        die "One or more submodules are not on branch $root_repo_branch.  Please resolve, or (with caution) rerun with --no-branch-check to ignore.";
+    }
+}
+
+my $total_commits = 0; # Number of commits made (root+submodules)
+my $autostaged_refs = 0; # Number of submodule references automagically staged
+my $prestaged_objs = 0; # Number of objects user has previously staged
+my $untracked_objs = 0; # Reference count of untracked files not committed
+my $unstaged_objs = 0; # Reference count of modified objects not staged/committed.
+recursive_commit($status);
+
+say "$autostaged_refs submodule references automatically committed" if $autostaged_refs > 0;
+say "$untracked_objs untracked files exist in your work tree." if $untracked_objs > 0;
+
+if (!$commit_all_files) {
+    say "$prestaged_objs previously staged changes committed" if $prestaged_objs > 0;
+    say "$unstaged_objs unstaged changes remaining in your work tree." if $unstaged_objs > 0;
+}
+
+sub recursive_commit( $ )
+{
+    my $status = shift;
+    my $need_to_commit_here = 0;
+    my $dir = getcwd();
+
+    foreach my $child (keys %{$status->{objects}}) {
+        my $sub = $status->{objects}->{$child};
+        
+        if ($sub->{is_submodule}) {
+            chdir($sub->{path}) || die "Error: Unable to enter submodule $child";
+            if (recursive_commit($sub)) {
+                chdir($dir);
+                # A commit was triggered in this submodule, so it will be auto-staged
+                my ($errmsg, $stdout);
+                my $cmd = "git add $child";
+                run3($cmd, undef, \$stdout, \$errmsg);
+                die "Error ($?): Unable to autostage $child in $dir:\n\n $stdout \n $errmsg" if $?;
+                nuggit_log_cmd($cmd);
+                
+                $need_to_commit_here = 1;
+                $autostaged_refs++;
+            } else {
+                # else user must stage manually, for example if a commit was made outside of nuggit
+                chdir($dir); # pop dir for next iteration
+            }
+        } elsif ($sub->{staged_status} > STATE('UNTRACKED')) {
+            $need_to_commit_here = 1;
+            $prestaged_objs++;
+        } elsif ($sub->{status} == STATE('UNTRACKED')) {
+            $untracked_objs++;
+        } elsif ($sub->{status} > STATE('UNTRACKED')) {
+            $unstaged_objs++;
+            $need_to_commit_here = 1 if $commit_all_files;
+        }
+    }
+    # If commit is required, make it
+    if ($need_to_commit_here) {
+        nuggit_commit($status->{path});
+        $total_commits++;
+        return 1;
+    } else {
+        return 0;
+    }
+}
 
 
 sub ParseArgs()
 {
-  Getopt::Long::GetOptions(
-                           "m=s"  => \$commit_message_string,
-                           "verbose!" => \$verbose
+    my ($help, $man);
+    Getopt::Long::Configure("bundling"); # ie: enables -am
+    Getopt::Long::GetOptions(
+                           "message|m=s"  => \$commit_message_string,
+                           "all|a!"           => \$commit_all_files,
+                           "verbose!" => \$verbose,
+                           "branch-check!" => \$branch_check,
+                           "help"            => \$help,
+                           "man"             => \$man,
                           );
-  die("Commit message is required. Specify with: -m \"Useful description\"") unless $commit_message_string;
-}
-
-
-
-sub recursive_commit( $ )
-{
-  my $status;
-  my $submodule = "";
-  my @submodule_array;
-  my $dir;
-  my $submodule_dir;
-  my $location = $_[0];
-  my $tmp;
-  my $need_to_add_and_commit_submodule = 0;
-  my $need_to_commit_here = 0;
-
-  # use the "location" the build up the relative path of the submodule... relative to the root repo.
-  if($location ne "")
-  {
-    #print "LOCATION: " . $location . "\n";
-    
-    # The trailing slash needs to be there for the recursive buildup 
-    # of the path, but remove it for the printing
-    $tmp = $location;
-    $tmp =~ s/\/$//;
-#    print $tmp . "\n"
-  }
-  
-  # check if there are any submodules in this repo or if this is a leaf repo
-  if(-e ".gitmodules")
-  {
-    # Assemble non-recursive list of submodules
-      submodule_foreach(
-                        sub { push @submodule_array,  shift.'/'.shift; },
-                        {recursive => 0}
-                       );
-
-    $dir = getcwd();
-    chomp($dir);
-
-    while($submodule=shift(@submodule_array))
-    {
-#      print "===============================\n";
-#      print "Root: " . $dir . "\n";
-
-      chomp($submodule);
-      
-      $submodule_dir = $dir . "/" . $submodule;
-  
-#      print "SUBMODULE: " . $submodule . " SUBMODULE DIR: " . $submodule_dir . "\n";
-  
-      chdir($submodule_dir) || die "Can't enter $submodule_dir";
-    
-#      print "At level $i - recursing\n";
-#      $i = $i + 1;
-       $need_to_add_and_commit_submodule = recursive_commit( $location . $submodule . "/" );
-       $need_to_commit_here += $need_to_add_and_commit_submodule;
-#      $i = $i - 1;
-#      print "POP back to level $i\n";
-
-      chdir($dir) || die "Can't enter $dir";
-
-      # ==========================================================================================
-      # at this point we are back in the parent directory.
-      # if the submodule we just recursed into caused a commit
-      # we need to "git add" this submodule here.  When this function returns
-      # it will get committed
-      # ==========================================================================================
-      if($need_to_add_and_commit_submodule >= 1)
-      {
-        print "Need to commit here: $need_to_commit_here at $submodule_dir\n";
-        print "The submodule caused a commit, we need to 'git add $submodule' here:\n";
-        print "in directory: " . getcwd() . "\n";
-        print "about to execute: git add $submodule\n";
-        print `git add $submodule`;
-        
-        system("echo git add $submodule >> $root_dir/.nuggit/nuggit_log.txt");
-      }
-      else
-      {
-        print "Submodule $submodule did not cause a commit\n";
-      }
-      # ==========================================================================================
-    
-    } # end while
-    
-  } # end if(-e ".gitmodules")
-  
-  
-  if(staged_changes_exist_here())
-  {
-    $need_to_commit_here = 1;
-
-    if(defined $submodule)
-    {
-      print "Staged changes exist here in submodule: $submodule, location $location\n";
-    }
-    else
-    {
-      print "Staged changes exist here at root\n";
-    }
-
-    nuggit_commit($location);
-  }
-
-  return $need_to_commit_here;
-
-}
-
-
-
-sub staged_changes_exist_here()
-{
-  my $status;
-  my $dir;
-  my $need_to_commit_here;
-
-  $status = `$git_diff_cmd`;
-  
-  if($status ne "")
-  {
-    $dir = getcwd();
-    print "Files staged to commit here at ($dir)\n";
-    $need_to_commit_here = 1;
-  }
+    pod2usage(1) if $help;
+    pod2usage(-exitval => 0, -verbose => 2) if $man;
+    die("Commit message is required. Specify with: -m \"Useful description\"") unless $commit_message_string;
 }
 
 
@@ -212,13 +155,61 @@ sub nuggit_commit($)
 {
    my $commit_status;
    my $repo = $_[0];
-   my $dir;
 
-   $dir = getcwd();    
-   system("echo in dir $dir, committing in repo $repo >> $root_dir/.nuggit/nuggit_log.txt");
+   my $args = "";
+   $args .= "-a " if $commit_all_files;
+   my ($stdout, $errmsg); # Git commit typically does not output to stderr
+   my $cmd = "git commit $args -m \"N:$root_repo_branch; $commit_message_string\"";
+   run3($cmd, undef, \$stdout, \$errmsg);
+   nuggit_log_cmd($cmd);
+   my $err = $?;
+
+   say colored("Commit status in repo $repo:", 'green');
+   say $stdout if $stdout;
+   say $errmsg if $errmsg;
    
-   $commit_status = `git commit -m "N: Branch $root_repo_branch, $commit_message_string"`;
-   print "Commit status in repo $repo: \n";
-   print $commit_status . "\n";
+   if ($err) {
+       die("Error detected ($err), aborting nuggit commit");
+   }
 }
+
+sub run_cmd
+{
+    my $cmd = shift;
+    my ($stdout, $stderr);
+    run3($cmd, undef, \$stdout, \$stderr);
+}
+
+
+=head1 Nuggit commit
+
+Commit files to the repository, using nuggit to automatically handle submodule boundaries and references.
+
+=head1 SYNOPSIS
+
+=over
+
+=item --help
+
+Display an abbreviated help menu
+
+=item --man
+
+Display detailed documentation.
+
+=item --message|m
+
+Commit message.  Nuggit will automatically prepend the branch name.
+
+=item --all|a
+
+If set, commit all modified files.  
+
+=item --no-branch-check
+
+Bypass verification that all submodules are on the same branch.
+
+=back
+
+=cut
 

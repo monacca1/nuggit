@@ -1,4 +1,7 @@
+#!/usr/bin/env perl
 use v5.10; # Add support for 'say'
+use strict;
+use warnings;
 
 # Common Test Framework
 #  NOTE: Functions provided depend on the following global variables set from main:
@@ -10,6 +13,9 @@ use FindBin;
 use Cwd;
 use File::pushd; # Module to chdir, and automatically pop when function returns
 use File::Spec;
+
+# Local Dependencies (under test)
+use Git::Nuggit::Status;
 
 # Get Path to Bin Directory
 my $bin = $FindBin::Bin.'/../bin';
@@ -40,8 +46,11 @@ sub test_write {
     my $msg = shift || "test_write()";
     my $fn = shift || "sub1/sub3/README.md";
     my $opts = shift;
-    $num_tests = 8;
-    $num_tests += scalar(@{$opts->{check_modified}}) if ($opts && $opts->{check_modified});
+    my $num_tests = 9;
+    if ($opts && defined($opts->{'check_modified'})) {
+        $num_tests += scalar(@{$opts->{'check_modified'}});
+    }
+    #$num_tests += scalar(@{$opts->{'check_modified'}}) if ($opts && defined($opts->{'check_modified'}));
     plan tests => $num_tests;
 
     # Update a file in nested sub3
@@ -49,25 +58,29 @@ sub test_write {
     log_cmd("# Write \"$msg\" to $fn");
 
     # Verify Status
-    my $status = nuggit("status");
-    ok(  $status =~ /^\s*M.+$fn$/m, "Check file $fn Modified");
+    my $status = get_status();
+    ok( $status->{status} == STATE('MODIFIED'), "Check repo Modified (".show_status($status->{status}).")" );
+    
+    my $obj = file_status($status, $fn);
+    ok( $obj && $obj->{status} == STATE('MODIFIED'), "Check file $fn Modified" ); # TODO
 
     if ($opts && $opts->{check_modified}) {
         # Assume a list of parent submodules given that should be modified at this point
         foreach my $dir (@{$opts->{check_modified}}) {
-            ok(  $status =~ /^\s*M.+$dir$/m, "Check dir $dir Modified");
+            $obj = file_status($status, $dir);
+            ok(  $obj && $obj->{status} == STATE('MODIFIED'), "Check $dir Modified");
         }
     }
     
     # Stage sub3 Change
     ok(nuggit("add",$fn), "Stage submodule reference");
-    ok(  nuggit("status", "--cached") =~ /^\s*S.+$fn$/m, "Verify $fn is staged");
+    $status = get_status(); $obj = file_status($status, $fn);
+    ok( $obj && $obj->{staged_status} == STATE('MODIFIED'), "Verify $fn is staged");
 
     # Commit
     ok(nuggit("commit", "-m \"Update $fn file\""), "Commit $fn change");       
 
     # Verify Status
-    my $status;
     lives_ok{$status = nuggit_status("status")} "Get Status";
     ok( ($status->{'status'} eq "clean"), "Status is clean after commit");
 
@@ -117,9 +130,9 @@ sub nuggit_setup_user {
     
     # Verify State is Clean
     ok( nuggit("checkout_default"), "Checkout of default branches"); # TODO: Consider folding this into clone
-
-    my $status = nuggit("status");
-    ok( ($status =~ /^\s*$/), "Status is clean after clone");
+    
+    my $status = get_status();
+    ok( $status->{status} == STATE('CLEAN'), "Status is clean after clone" );
 
     return 1;
 }
