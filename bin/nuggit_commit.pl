@@ -1,7 +1,5 @@
 #!/usr/bin/env perl
 
-# TODO: Support for -a flag
-# TODO: Support for combining single-letter flags, as in "-am"
 # TODO: Support for amend? May be better to skip this one.
 # TODO: Option to prompt user before commit if unstaged changes exist?
 # TODO: Option to launch default editor to define message
@@ -147,7 +145,27 @@ sub ParseArgs()
                           );
     pod2usage(1) if $help;
     pod2usage(-exitval => 0, -verbose => 2) if $man;
-    die("Commit message is required. Specify with: -m \"Useful description\"") unless $commit_message_string;
+
+    if (!defined($commit_message_string) ) {
+        my $editor = `git config --get core.editor`;
+        chomp($editor);
+        my $file = "$root_dir/.nuggit/TMP_COMMIT_MSG";
+        my $cmd = "$editor $file";
+        system($cmd);
+
+        die("Commit message is required") unless -e $file;
+
+        open(my $fh, "<", $file) or die "Commit message is required";
+        read $fh, $commit_message_string, -s $fh;
+        close($fh);
+        unlink($file); # And delete temporary file
+    }
+
+    my $size = length $commit_message_string;
+    my $min_len = 4; # TODO: Make this configurable?
+    if ($size < $min_len) {
+        die("A useful commit message of at least $min_len characters is required: You specified \"$commit_message_string\"");
+    }
 }
 
 
