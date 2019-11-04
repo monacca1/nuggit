@@ -22,17 +22,19 @@ my %files = (
     checkout_default => {cmd => "nuggit_checkout_default.pl",
                          description => "Checkout default/tracked branch for each submodule"
     },
-    clone => "nuggit_clone.pl",
-    commit => "nuggit_commit.pl",
-    init => "nuggit_init",
-    merge  => "nuggit_merge.pl",
-    pull => "nuggit_pull.pl",
-    push   => "nuggit_push.pl",
-    stash => {cmd => "nuggit_foreach.pl git stash",
-              completion_list => [qw(save pop list show drop apply branch)]
+    clone   => "nuggit_clone.pl",
+    commit  => "nuggit_commit.pl",
+    init    => "nuggit_init",
+    log     => "nuggit_log.pl",
+    merge   => "nuggit_merge.pl",
+    pull    => "nuggit_pull.pl",
+    push    => "nuggit_push.pl",
+    reset   => "nuggit_reset.pl",
+    stash   => {cmd => "nuggit_foreach.pl git stash",
+                completion_list => [qw(save pop list show drop apply branch)]
     },
-    status => "nuggit_status.pl",
-    tag    => "nuggit_foreach.pl git tag",
+    status  => "nuggit_status.pl",
+    tag     => "nuggit_foreach.pl git tag",
 
     # For Advanced Users
     foreach => {cmd => "nuggit_foreach.pl",
@@ -43,7 +45,7 @@ my %files = (
     git_status => {cmd => "nuggit_foreach.pl git status",
                    description => "Recursively invoke native git status (DEBUG)"
     },
-    reset => "nuggit_reset.pl",
+
 );
 
 # Supported Autocompletion Shells:

@@ -522,6 +522,7 @@ my $cached_root_dir; # Scaffold until we make this an object
 sub nuggit_log_init
 {
     my $root_dir = shift || getcwd(); # TODO: This should really be a package variable
+    my $cmd = shift;
     my $verbose;
 
     # Does nothing if already initialized.  
@@ -534,22 +535,45 @@ sub nuggit_log_init
     my $nice_timestamp = sprintf( "%02d/%02d/%04d %02d:%02d:%02d",
                                    $mon+1,$mday,$year+1900,$hour,$min,$sec);
     my $msg = "$nice_timestamp, "; # Command/script eecuted
-    if ($verbose) {
-        $msg .= $0; # Include full path to script, this may make it difficult to read output
+
+    if ($cmd) {
+        # If a script explicitly specifies it's command (ie: for selective logging)
+        $msg .= $cmd;
     } else {
-        my ($vol, $dir, $file) = File::Spec->splitpath($0);
-        $msg .= $file;
-    }
+        if ($verbose) {
+            $msg .= $0; # Include full path to script, this may make it difficult to read output
+        } else {
+            my ($vol, $dir, $file) = File::Spec->splitpath($0);
+            $msg .= $file;
+        }
 
-
-    # Perl Magic to re-assemble arguments
-    foreach (@ARGV) {
-        $msg .= /\s/ ?   " \'" . $_ . "\'"
+        # Perl Magic to re-assemble arguments
+        foreach (@ARGV) {
+            $msg .= /\s/ ?   " \'" . $_ . "\'"
             :           " "   . $_;
+        }
     }
-    
+
     say $nuggit_log_fh $msg;
     $cached_root_dir = $root_dir; # TODO: Scaffold until this becomes OOP
+}
+
+# This should only be called from nuggit_log.pl. 
+sub _nuggit_log_clear
+{
+    my $keep_lines = shift; # Number of lines in log to preserve
+    # Note: The last line (when used as intended) will be a log of this clear operation from nuggit_log_init
+    my $file = "$cached_root_dir/.nuggit/nuggit_log.txt";
+
+    close($nuggit_log_fh) if $nuggit_log_fh;
+
+    if ($keep_lines) {
+        system("tail -n $keep_lines $file > $file.new");
+        rename("$file.new", $file);
+    } else {
+        unlink($file);
+    }
+    open($nuggit_log_fh, '>>', $file);
 }
 
 # TODO: Consider verbosity flag to nuggit_log, or guarding with said flag in caller

@@ -18,7 +18,7 @@ use Git::Nuggit::Status;
 
 This script performs a submodule-aware merge, automatically resolving submodule reference-only conflicts in a manner consistent with the nuggit workflow.  If the nuggit workflow is not being strictly followed, users should explicitly verify that any automatic merges completed as expected prior to pushing any changes.
 
-NOTE: This function is invoked by nuggit_pull.
+NOTE: This script is invoked by nuggit_pull.
 
 =head1 SYNOPSIS
 
@@ -37,6 +37,14 @@ Display detailed documentation.
 =item --verbose
 
 Display additional details.
+
+=item --remote
+
+This flag is an alias to "ngt merge refs/remotes/origin/HEAD" and can be used to safely merge root and all submodules against the default branch of each submodule.
+
+If a branch is specified with this flag, then said branch name will be used for the root repository only.
+
+WARNING: This is dependent on the default branch configuration of the remote server. This does NOT utilize the .gitmodules tracking 'branch' definition.
 
 =item --continue
 
@@ -61,7 +69,6 @@ If specified, this flag will be passed on to git such that the default merge mes
 =head1 TODO
 
 - If new submodule is detected, automatically handle by running submodule update --init after (assuming all changes committed / no conflicts)
-- Verify/Implement Support for submodules with differing default branches?  ie: a '--default' flag that utilizes default tracking branch for all repos instead of implicit 'master'
 - --abort option only removes state file and does not cleanup repo
    - TODO: How to reset remainder of workspace?  Perhaps instruct user to run nuggit checkout command?
 
@@ -74,14 +81,13 @@ my $source_branch = "";
 my $destination_branch;
 my $branch = "";
 my $commit_message;
-my $local_time;
 my $verbose = 0;
 my $merge_continue_flag = 0; # IF set, attempt to resume existing merge
 my $abort_merge_flag = 0;
 my $edit_flag = 1; # Mirrors Git's edit/no-edit flag
 my $help = 0; my $man = 0;
 my $log_as_pull; # For logging/tracing purposes only
-$local_time = localtime();
+my $merge_remote_head = 0;
 
 print "nuggit_merge.pl\n";
 
@@ -99,6 +105,7 @@ GetOptions(
     'message=s'  => \$commit_message, # Specify message to use for any commits upon merge (optional; primarily for purposes of automated testing). If omitted, user will be prompted for commit message.  An automated message will be used if a conflict has been automatically resolved.
     'edit!' => \$edit_flag,
            'log-as-pull' => \$log_as_pull, # For logging purposes only in liueue of an OOP call from pull wrapper
+           'remote!' => \$merge_remote_head,
           );
 pod2usage(1) if $help;
 pod2usage(-exitval => 0, -verbose => 2) if $man;
@@ -116,36 +123,57 @@ if ($merge_continue_flag) {
 } else { # Else start a fresh merge
     my $source = $ARGV[0];
     if (!defined($ARGV[0])) {
+        # Use remote for current branch; This is the default git behavior
         say "No branch specified for merge, assuming default remote";
         $source = "";
-        # TODO/VERIF?y
+        # TODO/VERIFY
     }
+    # TODO: Need to handle merge from master with varying branches
 
     chdir($root_dir);
     my $merge = {
                  "source" => $source,
                  "destination" => get_selected_branch_here(),
                  "submodules" => get_submodules(),
+                 "merge_default" => $merge_remote_head,
                 };
     
     print "Source branch is: $source_branch\n";
     say "Destination branch is the current branch: ".$merge->{destination};
+
     do_merge_recursive($merge);
-    
 }
 
 # Recursive Merge Driver
 sub do_merge_recursive
 {
     my $merge = shift;
+    my $branch;
+
+    if ($merge->{'merge_default'}) {
+        # User has requested to merge against the tracking branch (ie: from .gitmodules)
+        $branch = "refs/remotes/origin/HEAD"; # TODO: Make remote name configurable
+    } else {
+        $branch = $merge->{'source'}; # Typical case
+    }
+
     say colored("do_merge_recursive() at ".cwd(),'green') if $verbose;
+    
     while(my $repo = shift(@{$merge->{submodules}} ) ) {
+        my $dir = File::Spec->catdir($root_dir,$repo);
+        
         $merge->{'conflicted'} = $repo; # log last repo parsed for easy save/restore
-        chdir("$root_dir/$repo") || die "Internal Error: Failed to enter directory $repo"; # TODO: Should we exit_save instead? If we failed to checkout a new submodule, this could occur and not be an error
-        do_merge($merge) || exit_save_merge_state($merge);
+        chdir($dir) || exit_save_merge_state("Internal Error: Failed to enter directory $repo");
+        
+        do_merge($merge, $branch) || exit_save_merge_state($merge);
     }
     chdir($root_dir);
-    do_merge($merge) || exit_save_merge_state($merge);
+    if ($merge->{'merge_default'} && !$merge->{'source'}) {
+        $branch = "refs/remotes/origin/HEAD";
+    } else {
+        $branch = $merge->{'source'};
+    }
+    do_merge($merge, $branch) || exit_save_merge_state($merge);
 
     return;
     
@@ -163,27 +191,12 @@ If an error is detected during the merge, this function will throw an exception 
 sub do_merge
 {
     my $merge = shift; # Merge Configuration Object
-    my $source_branch = $merge->{'source'};
-    say colored("do_merge() at ".cwd(),'green') if $verbose;
+    my $source_branch = shift; # Branch to merge
+    say colored("do_merge($source_branch) at ".cwd(),'green') if $verbose;
     
     # Are we in a detached head?
     # If so, abort -- nominal workflow assumes this shouldn't be the case
     # DEFERRED/TODO: A merge from a detached head is not recommended, but not fatal, so we can add this check later
-
-    # Does specified branch exist?
-    if ($source_branch) {
-        # DEFERRED: We can wait for merge command to fail if it does not
-    }
-    else # Not specified, merge without arguments will utilize default tracking branch
-    {
-        # If we wish to be explicit and identify the remote tracking branch (not necessary)
-        #        $source_branch = get_remote_tracking_branch();
-        #        if (!$source_branch) {
-        #            # TODO: Should this use exit_save? Perhaps only if not the root repo? Certainly not with default msg
-        #            die  "No remote branch specified or upstream set.  Please rerun merge with an explicit branch, or explicitly set one for this repo/submodule, ie: 'cd ".cwd()." && git branch -u origin/".get_selected_branch_here();
-        #        }
-    }
-
 
     # Execute merge, capture STDOUT and STDERR as needed
     my $merge_cmd = "git merge $source_branch";
@@ -346,6 +359,7 @@ sub exit_save_merge_state
 }
 sub load_merge_state
 {
+    die("Error: No Nuggit Merge in progress. If a merge was started outside of nuggit, it must be finished without it.") unless -e $merge_conflict_file;
     my $state = retrieve($merge_conflict_file);
     die("Error loading merge_conflict_state") unless defined($state);
     return $state;

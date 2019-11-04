@@ -1,10 +1,27 @@
-#!/usr/bin/perl -w
+#!/usr/bin/env perl
 
 use strict;
 use warnings;
-
+use v5.10;
 use Getopt::Long;
+use Pod::Usage;
 use Cwd qw(getcwd);
+use File::Spec;
+use Git::Nuggit;
+
+=head1 SYNOPSIS
+
+List or create branches.
+
+To create a branch, "ngt branch BRANCH_NAME"
+
+To list branches, "ngt branch"
+
+To list all branches, "ngt branch -a"
+
+To delete a branch, "ngt branch -d BRANCH_NAME"
+
+=cut
 
 
 # usage: 
@@ -29,20 +46,20 @@ sub delete_branch($);
 sub create_new_branch($);
 sub get_selected_branch_here();
 
-my $root_dir;
 my $cwd = getcwd();
 my $root_repo_branches;
 my $selected_branch;
-my $display_branches = 0;
+my $show_all_flag    = 0; # IF set, show all branches
 my $create_branch    = 0;
 my $delete_branch    = undef;
+my $verbose = 0;
 
 # print "nuggit_branch.pl\n";
 
 ParseArgs();
 
-$root_dir = `nuggit_find_root.pl`;
-chomp $root_dir;
+my ($root_dir, $relative_path_to_root) = find_root_dir();
+die("Not a nuggit!\n") unless $root_dir;
 
 print "nuggit root directory is: $root_dir\n";
 #print "nuggit cwd is $cwd\n";
@@ -70,25 +87,25 @@ else
   
   if($argc == 1)
   {
-    $create_branch = 1;
+      create_new_branch($ARGV[0]);
   }
   elsif($argc == 0)
   {
-    $display_branches = 1;
+      display_branches();
   }
 }
 
-
-if($display_branches)
+sub display_branches
 {
-  $root_repo_branches = `git branch`;
+    my $flag = ($show_all_flag ? "-a" : "");
+  $root_repo_branches = `git branch $flag`;
   $selected_branch    = get_selected_branch($root_repo_branches);
 
-  print "Root repo is on branch: \n";
-  print "* ".  $selected_branch . "\n";
-  print "\n";
-  print "Full list of root repo branches is: \n";
-  print $root_repo_branches . "\n";
+  say "Root repo is on branch:";
+  say "* ".  $selected_branch;
+  say "";
+  say "Full list of root repo branches is:";
+  say $root_repo_branches;
 
   # --------------------------------------------------------------------------------------
   # now check each submodule to see if it is on the selected branch
@@ -96,20 +113,24 @@ if($display_branches)
   # show the command to set each submodule to the same branch as root repo
   # --------------------------------------------------------------------------------------
 
-  is_branch_selected_throughout($selected_branch);
-}
+    is_branch_selected_throughout($selected_branch);
 
-if($create_branch)
-{
-  create_new_branch($ARGV[0]);
 }
 
 
 sub ParseArgs()
 {
-  Getopt::Long::GetOptions(
-     "d=s"  => \$delete_branch
-     );
+    my ($help, $man);
+    Getopt::Long::GetOptions(
+      "d=s"  => \$delete_branch,
+      "all|a!" => \$show_all_flag,
+      "verbose!" => \$verbose,
+      "help"            => \$help,
+      "man"             => \$man,
+      );
+    pod2usage(1) if $help;
+    pod2usage(-exitval => 0, -verbose => 2) if $man;
+
 }
 
 sub create_new_branch($)
@@ -121,31 +142,6 @@ sub create_new_branch($)
   print "TO DO - CREATE NEW BRANCH: $_[0]\n";
 }
 
-sub get_selected_branch_here()
-{
-  my $branches;
-  my $selected_branch;
-  
-#  print "Is branch selected here?\n";
-  
-  # execute git branch
-  $branches = `git branch`;
-
-  $selected_branch = get_selected_branch($branches);  
-}
-
-sub get_selected_branch($)
-{
-  my $root_repo_branches = $_[0];
-  my $selected_branch;
-
-  $selected_branch = $root_repo_branches;
-  $selected_branch =~ m/\*.*/;
-  $selected_branch = $&;
-  $selected_branch =~ s/\* //;  
-  
-  return $selected_branch;
-}
 
 
 # check all submodules to see if the branch exists
@@ -154,35 +150,22 @@ sub is_branch_selected_throughout($)
   my $root_dir = getcwd();
   my $branch = $_[0];
   my $branch_consistent_throughout = 1;
-  
-  # get a list of all of the submodules
-  my $submodules = `list_all_submodules.pl`;
-  
-  # put each submodule entry into its own array entry
-  my @submodules = split /\n/, $submodules;
 
-#  print "Is branch selected throughout?\n";
-    
-  foreach (@submodules)
-  {
-    # switch directory into the sumbodule
-    chdir $_;
-    
+  submodule_foreach(sub {
+      my $subname = File::Spec->catdir(shift, shift);
+                        
     if(is_branch_selected_here($branch) == 0)
     {
-      print "**** Branch discrepancy\n";
-      print "****  Branch $branch is not selected in submodule: $_\n";
-      print "****     Selected branch in submodule is: " . get_selected_branch_here() . "\n";
-      print "****  Please run:\n";
-      print "****       nuggit checkout $branch\n";
-      print "\n";
+      say "**** Branch discrepancy";
+      say "****  Branch $branch is not selected in submodule: $subname";
+      say "****     Selected branch in submodule is: " . get_selected_branch_here();
+      say "****  Please run:";
+      say "****       nuggit checkout $branch";
+      say "";
       
       $branch_consistent_throughout = 0;
     }
-    
-    # return to root directory
-    chdir $root_dir;
-  }
+  });
 
   if($branch_consistent_throughout == 1)
   {
@@ -228,3 +211,4 @@ sub delete_branch($)
   print `git submodule foreach --recursive git branch -d $branch`;
   print `git branch -d $branch`;
 }
+

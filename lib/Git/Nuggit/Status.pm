@@ -125,7 +125,7 @@ sub get_status
 
     my $rtv = {
                'path' => '.',
-               'children' => [], # Submodules (keys only)
+               'children' => [], # Submodules
                'objects' => {}, # Hash of all Objects (not recursive)
                'status' => $STATE{'CLEAN'}, # Clean, unless it isn't
                'staged_status' => $STATE{'CLEAN'},

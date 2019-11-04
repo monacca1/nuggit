@@ -326,7 +326,6 @@ sub test_2user_parallel_files_same_submodule
         ok( (@lines = read_file($fn2, chomp => 1))[-1] eq $msg2, "sub2/README ends with expected line");
 
         # Verify nuggit_status is clean
-        my $status;
         lives_ok{$status = nuggit_status("status")};
         ok($status->{'status'} eq "clean", "Status is clean after commit");
     };

@@ -56,11 +56,12 @@ require("$FindBin::Bin/nuggit_fetch.pl");
 
 # Execute Nuggit Merge of remotes/origin/$selected_branch
 #  TODO: support for alternate remotes
-my $args = "--log-as-pull";
-$args .= " --message \"$commit_message\"" if defined($commit_message);
-$args .= " --no-edit" if !$edit_flag; # Default is edit
-$args .= " --verbose" if $verbose;
-exec("$FindBin::Bin/nuggit_merge.pl $args");
+push(@ARGV, '--log-as-pull');
+push(@ARGV, "--message", $commit_message) if defined($commit_message);
+push(@ARGV, "--no-edit") if !$edit_flag; # Default is edit
+push(@ARGV, "--verbose") if $verbose;
+
+exec("$FindBin::Bin/nuggit_merge.pl", @ARGV);
 
 
 # Done (exec never returns)
