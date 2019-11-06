@@ -15,4 +15,4 @@ else
 endif
 
 # Autocomplete (ngt will provide autocomplete responses for itself, when appropriate env variable is set)
-complete -C ngt ngt
+complete ngt 'p/*/`ngt`/'

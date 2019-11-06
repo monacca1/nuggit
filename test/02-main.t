@@ -14,7 +14,7 @@ use File::Slurp qw(edit_file_lines);
 require "test.pm" ;
 require Git::Nuggit; # For direct API testing, or usage of internal functions for validation
 
-our $test_root = "/tmp/testrepo"; # WARNING: This directory may be deleted at the start of each test if pre-existing
+our $test_root = "testrepo"; # WARNING: This directory may be deleted at the start of each test if pre-existing
 our $verbose = 0; # 0 = off, 4=full
 our $verbose_setup = 0; # Discrete Verbosity level for setup functions
 my $skip_setup = 1;

@@ -8,9 +8,10 @@ use strict;
 use warnings;
 use v5.10; # Adds say function
 use FindBin;
+use Term::ANSIColor;
 
 # Get First Parameter (case-insensitive)
-my $cmd = lc(shift);
+my $cmd = lc(shift) if @ARGV;
 
 # Command Database (excludes help/doc/env commands defined in this file)
 my %files = (
@@ -91,7 +92,7 @@ if (defined($ENV{'COMP_LINE'}) || defined($ENV{'COMMAND_LINE'}) ) {
     print format_completion($res);
     exit;
 
-} elsif ($cmd eq "check") {
+} elsif (defined($cmd) && $cmd eq "check") {
     # Check for Nuggit Library
     eval "use Git::Nuggit::Status";
     die "APL::Nuggit does not appear to be installed. Did you source nuggit.sh or equivalent?" if $@;
@@ -108,7 +109,7 @@ if (defined($ENV{'COMP_LINE'}) || defined($ENV{'COMMAND_LINE'}) ) {
 
     say "All compatibility checks have passed";
     exit;
-} elsif ($cmd =~ /(help|man)$/) {
+} elsif (defined($cmd) && $cmd =~ /(help|man)$/) {
     show_help();
 } elsif (defined($cmd) && defined($files{$cmd})) {
     # Execute specified file directly
