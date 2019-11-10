@@ -9,7 +9,7 @@ use FindBin;
 use lib $FindBin::Bin.'/../lib'; # Add local lib to path
 use Git::Nuggit;
 
-
+die("This script is deprecated.  Use \"nuggit merge --default\" instead");
 
 # TO DO 
 # - this script will 

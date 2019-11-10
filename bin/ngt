@@ -25,13 +25,15 @@ my %files = (
     },
     clone   => "nuggit_clone.pl",
     commit  => "nuggit_commit.pl",
+    diff    => "nuggit_diff.pl",
+    fetch   => "nuggit_fetch.pl",
     init    => "nuggit_init",
     log     => "nuggit_log.pl",
     merge   => "nuggit_merge.pl",
     pull    => "nuggit_pull.pl",
     push    => "nuggit_push.pl",
-    reset   => "nuggit_reset.pl",
-    stash   => {cmd => "nuggit_foreach.pl git stash",
+    reset   => {cmd => "nuggit_reset.pl", completion_type => "file"},
+    stash   => {cmd => "nuggit_foreach.pl", args => [ qw( git stash) ],
                 completion_list => [qw(save pop list show drop apply branch)]
     },
     status  => "nuggit_status.pl",
@@ -114,7 +116,18 @@ if (defined($ENV{'COMP_LINE'}) || defined($ENV{'COMMAND_LINE'}) ) {
 } elsif (defined($cmd) && defined($files{$cmd})) {
     # Execute specified file directly
     my $rawcmd = $FindBin::Bin.'/';
-    $rawcmd .= (ref($files{$cmd}) ? $files{$cmd}->{'cmd'} : $files{$cmd});
+    my $obj = $files{$cmd};
+
+    if (ref($obj)) {
+        if ($obj->{'args'}) {
+            my @tmp = @{$obj->{'args'}};
+            push(@tmp, @ARGV);
+            @ARGV = @tmp;
+        }
+        $rawcmd .= $obj->{'cmd'};
+    } else {
+        $rawcmd .= $obj;
+    }
 
     unshift(@ARGV, $rawcmd);
     exec(@ARGV);

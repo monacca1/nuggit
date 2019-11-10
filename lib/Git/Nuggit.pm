@@ -173,13 +173,14 @@ sub find_root_dir
 
     for($i = 0; $i < $max_depth; $i = $i+1)
     {
-        # .nuggt must exist inside a git repo
+        # .nuggit must exist inside a git repo
         if(-e ".nuggit" && -e ".git") 
         {
             $nuggit_root = getcwd();
             #     print "starting path was $cwd\n";
             #     print ".nuggit exists at $nuggit_root\n";
             $path = "./" unless $path;
+            chdir($cwd);
             return ($nuggit_root, $path);
         }
         chdir "../";
@@ -189,7 +190,7 @@ sub find_root_dir
         #  print "$i, $max_depth - cwd = " . $cwd . "\n";
   
     }
-
+    chdir($cwd);
     return undef;
 }
 
@@ -494,102 +495,5 @@ sub check_merge_conflict_state
     }
 }
 
-=head1 Nuggit Logging
-
-Activity is autoamtically logged to root .nuggit/nuggit_log.txt
-
-In the future, verbosity level may be controllable via environemnt variable or other settings.
-
-Log file is a (mostly) CSV file with the following format:
-
-Script execution is logged as timestamp, command
-    NOTE: For nuggit, current working dir is irrelevant if within a nuggit repo.
-
-These columns will be blank for any additional entries for a given script.  Other entries may include:
-
-A general message, prepended with ",,\t" such that the first 2 columns are empty and a tab improves readability when viewed directly.
-
-For all other cases, remaining columns will follow in a title,value form, for example a git add command may show:
-   CWD, current/rel/path, CMD, git add myfile
-
-Any git commands that may affect working state should be logged as noted above with "nuggit_log" function.
-
-=cut
-
-my $nuggit_log_fh; # TODO: This should be a blessed var, once nuggit is converted to OOP
-my $cached_root_dir; # Scaffold until we make this an object
-
-sub nuggit_log_init
-{
-    my $root_dir = shift || getcwd(); # TODO: This should really be a package variable
-    my $cmd = shift;
-    my $verbose;
-
-    # Does nothing if already initialized.  
-    # We don't raise an error, as there are currently cases (where one script invokes another) that this is valid.
-    return if ($nuggit_log_fh);
-
-    open($nuggit_log_fh, '>>', "$root_dir/.nuggit/nuggit_log.txt");
-    
-    my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst)=localtime(time);
-    my $nice_timestamp = sprintf( "%02d/%02d/%04d %02d:%02d:%02d",
-                                   $mon+1,$mday,$year+1900,$hour,$min,$sec);
-    my $msg = "$nice_timestamp, "; # Command/script eecuted
-
-    if ($cmd) {
-        # If a script explicitly specifies it's command (ie: for selective logging)
-        $msg .= $cmd;
-    } else {
-        if ($verbose) {
-            $msg .= $0; # Include full path to script, this may make it difficult to read output
-        } else {
-            my ($vol, $dir, $file) = File::Spec->splitpath($0);
-            $msg .= $file;
-        }
-
-        # Perl Magic to re-assemble arguments
-        foreach (@ARGV) {
-            $msg .= /\s/ ?   " \'" . $_ . "\'"
-            :           " "   . $_;
-        }
-    }
-
-    say $nuggit_log_fh $msg;
-    $cached_root_dir = $root_dir; # TODO: Scaffold until this becomes OOP
-}
-
-# This should only be called from nuggit_log.pl. 
-sub _nuggit_log_clear
-{
-    my $keep_lines = shift; # Number of lines in log to preserve
-    # Note: The last line (when used as intended) will be a log of this clear operation from nuggit_log_init
-    my $file = "$cached_root_dir/.nuggit/nuggit_log.txt";
-
-    close($nuggit_log_fh) if $nuggit_log_fh;
-
-    if ($keep_lines) {
-        system("tail -n $keep_lines $file > $file.new");
-        rename("$file.new", $file);
-    } else {
-        unlink($file);
-    }
-    open($nuggit_log_fh, '>>', $file);
-}
-
-# TODO: Consider verbosity flag to nuggit_log, or guarding with said flag in caller
-sub nuggit_log
-{
-    my $msg = shift;
-
-    # Log message. We prepend marker (CSV-friendly and read-friendly) to indicate this continues init entry
-    say $nuggit_log_fh ",,\t".$msg;
-}
-# Log a git command in a consistent manner (only commands that affect state of the repository; ie; not for status)
-sub nuggit_log_cmd
-{
-    my $cmd = shift;
-    my $cwd = File::Spec->abs2rel( getcwd(), $cached_root_dir );
-    say $nuggit_log_fh ",,CWD,$cwd,CMD,$cmd";
-}
 
 1;

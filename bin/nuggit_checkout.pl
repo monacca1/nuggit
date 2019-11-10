@@ -4,25 +4,51 @@ use strict;
 use warnings;
 use Getopt::Long;
 use Cwd qw(getcwd);
+use Pod::Usage;
 use FindBin;
 use lib $FindBin::Bin.'/../lib'; # Add local lib to path
 use Git::Nuggit;
+use Git::Nuggit::Log;
 
-# usage: 
-#
-#/homes/monacca1/git-stuff/nuggit/bin/nuggit_checkout.pl <branch_name>
-#
-#
-# nuggit_checkout.pl <branch_name>
-# nuggit_checkout.pl -b <branch_name>
-#
+=head1 SYNOPSIS
+
+nuggit checkout <branch_name>
+
+The following additional options are supported:
+
+=over
+
+=item --help
+
+Display an abbreviated help menu
+
+=item --man
+
+Display detailed documentation.
+
+=item --branch or -b
+
+Create the specified branch.  This command may fail if the branch already exists.
+
+=item --follow-branch | --no-follow-branch
+
+Checkout the specified branch at each level (default)
+
+=item --follow-commit | --no-follow-commit
+
+Checkout the committed reference for each submodule (git submodule update --init --recursive)
+
+=back
+
+=cut
+
 
 my $num_args;
 my $branch;
 my $cwd = getcwd();
 my $existing_branch_name = "";
 my $create_branch_name = "";
-my $follow_branch_bool = 0;
+my $follow_branch_bool = 1;
 my $follow_commit_bool = 0;
 
 
@@ -33,17 +59,11 @@ sub does_branch_exist_at_root($);
 sub does_branch_exist_here($);
 
 my ($root_dir, $relative_path_to_root) = find_root_dir();
-die("Not a nuggit!\n") unless $root_dir;
-nuggit_log_init($root_dir);
+my $log = Git::Nuggit::Log->new(root => $root_dir);
 
 ParseArgs();
-
-if( ($follow_branch_bool == 0) && ($follow_commit_bool == 0))
-{
-  print "default behavior is to follow the branch\n";
-  $follow_branch_bool = 1;
-  $follow_commit_bool = 0;
-}
+die("Not a nuggit!\n") unless $root_dir;
+$log->start(1);
 
 check_merge_conflict_state(); # Checkout not permitted while merge in progress
 
@@ -95,7 +115,7 @@ if($create_branch_name eq "")
         create_branch_where_needed($branch);
       }
 
-      print `git submodule update --recursive`;   
+      print `git submodule update --init --recursive`;   
       print `git submodule foreach --recursive git checkout $branch`;
 
     }
@@ -104,7 +124,7 @@ if($create_branch_name eq "")
       print "follow commit\n";
       # checkout the branch in the root repo (already done)
       # and update each submodule 
-      print `git submodule update --recursive`;
+      print `git submodule update --init --recursive`;
       
       ############################################################################################
       # SHOULD NOT NEED TO DO THIS WITH THE DESIRED WORKFLOW, BUT IT COULD PROBABLY HAPPEN
@@ -131,7 +151,8 @@ else
 
 sub ParseArgs()
 {
-  my $arg_count = @ARGV;
+    my $arg_count = @ARGV;
+    my ($help, $man);
 
 #  print "Number of arguments $arg_count \n";
   
@@ -143,10 +164,14 @@ sub ParseArgs()
   #
   ######################################################################################################
   Getopt::Long::GetOptions(
+    "help"            => \$help,
+    "man"             => \$man,
      "b=s"            => \$create_branch_name,
      "follow-branch"  => \$follow_branch_bool,
      "follow-commit"  => \$follow_commit_bool
      );
+    pod2usage(1) if $help;
+    pod2usage(-exitval => 0, -verbose => 2) if $man;
 
   if($follow_branch_bool == 1)
   {

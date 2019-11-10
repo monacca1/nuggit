@@ -2,8 +2,8 @@
 
 use strict;
 use warnings;
-
-use Cwd qw(getcwd);
+use v5.10;
+use Git::Nuggit;
 
 # usage: 
 #
@@ -23,39 +23,10 @@ use Cwd qw(getcwd);
 # ../../
 # etc
 
-my $cwd = getcwd();
-my $nuggit_root;
-my $path = "";
-
-my $max_depth = 10;
-my $i = 0;
-
-for($i = 0; $i < $max_depth; $i = $i+1)
-{
-  if(-e ".nuggit") 
-  {
-     $nuggit_root = getcwd();
-#     print "starting path was $cwd\n";
-#     print ".nuggit exists at $nuggit_root\n";
-
-#     print $nuggit_root . "\n";
-#     print $cwd . "\n";
-     if($path ne "")
-     {
-       print $path . "\n";
-     }
-     else
-     {
-       print "./" . "\n";
-     }
-     exit();
-  }
-  chdir  "../";
-  $path = "../" . $path;
-  
-#  $cwd = getcwd();
-#  print "$i, $max_depth - cwd = " . $cwd . "\n";
-  
+my ($root_dir, $relative_path_to_root) = find_root_dir();
+if ($root_dir) {
+    say "Root directory found: $root_dir";
+    say "Relative path: $relative_path_to_root";
+} else {
+    die("Not a Nuggit!");
 }
-
-print "ERROR - could not find .nuggit\n";

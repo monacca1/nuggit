@@ -10,6 +10,7 @@ use Pod::Usage;
 use FindBin;
 use lib $FindBin::Bin.'/../lib'; # Add local lib to path
 use Git::Nuggit;
+use Git::Nuggit::Log;
 
 
 # usage: 
@@ -29,11 +30,10 @@ print "nuggit_add.pl\n";
 
 my ($root_dir, $relative_path_to_root) = find_root_dir();
 die("Not a nuggit!") unless $root_dir;
-nuggit_log_init($root_dir);
+my $log = Git::Nuggit::Log->new(root => $root_dir);
 
 ParseArgs();
-
-my $branches;
+$log->start(1);
 
 chdir($cwd);
 
@@ -127,7 +127,7 @@ sub git_add {
     $cmd .= " -A " if $add_all_bool;
     $cmd .= " $file" if $file; # support for -A option
     system($cmd);
-    nuggit_log_cmd($cmd);
+    $log->cmd($cmd);
     die "Add of $file failed: $?" if $?;
 }
 

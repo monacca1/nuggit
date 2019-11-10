@@ -10,7 +10,8 @@ use Pod::Usage;
 use FindBin;
 use lib $FindBin::Bin.'/../lib'; # Add local lib to path
 use Git::Nuggit;
-require Git::Nuggit::Status;
+use Git::Nuggit::Status;
+use Git::Nuggit::Log;
 
 =head1 SYNOPSIS
 
@@ -42,13 +43,14 @@ Additional use cases may be added in the future.  For example, a "ngt reset HEAD
 my $patch_flag = 0;
 my $quiet_flag = 0;
 my $mode = "";
-
+use Data::Dumper; # DEBUG
 
 my ($root_dir, $relative_path_to_root) = find_root_dir();
-die("Not a nuggit!") unless $root_dir;
-nuggit_log_init($root_dir);
+my $log = Git::Nuggit::Log->new(root => $root_dir);
 
 ParseArgs();
+die("Not a nuggit!") unless $root_dir;
+$log->start(1);
 
 my $cwd = getcwd();
 
@@ -59,35 +61,31 @@ $base_cmd .= "-p " if $patch_flag;
 my $argc = @ARGV; # get the number of arguments
 
 if ($argc == 0) {
+    say "No arguments specified, unstaging all";
     # NOTE: This is a simple implementation. We could optimize this by only running in submodules showing changes
     submodule_foreach(sub {
         system($base_cmd);
-        nuggit_log_cmd($base_cmd);
+        $log->cmd($base_cmd);
                       });
 
 } else {
     # For each given path
     foreach my $arg (@ARGV)
-    {
+    {        
+        say "Unstaging $arg";
+
+        # Start at original working dir
         chdir($cwd);
 
+        # Get name of parent dir
         my ($vol, $dir, $file) = File::Spec->splitpath( $arg );
 
-        # chdir as far as we can to ensure we can handle deleted or removed directories
-        my @dirs = File::Spec->splitdir($dir);
-        while(@dirs) {
-            my $path = shift(@dirs);
-            if (-d $path) {
-                chdir($path);
-            } else {
-                unshift(@dirs, $path);
-                last;
-            }
-            $file = File::Spec->catfile(@dirs, $file);
-            my $cmd = "$base_cmd $file";
-            system($cmd);
-            nuggit_log_cmd($cmd);
-        }
+        # Enter it. We do not currently handle case where parent dir was deleted (TODO)
+        chdir($dir) || die ("Error: $dir doesn't exist");
+        
+        my $cmd = "$base_cmd $file";
+        system($cmd);
+        $log->cmd($cmd);
         
     }
 }

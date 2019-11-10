@@ -2,21 +2,32 @@
 use strict;
 use warnings;
 use FindBin;
+use Getopt::Long;
+use Pod::Usage;
 use lib $FindBin::Bin.'/../lib'; # Add local lib to path
 use Git::Nuggit;
+use Git::Nuggit::Log;
 
+=head1 SYNOPSIS
 
-# usage: 
-#
-#/homes/monacca1/git-stuff/nuggit/bin/nuggit_clone.pl ssh://git@sd-bitbucket.jhuapl.edu:7999/fswsys/mission.git
-#
+nuggit clone CLONE_URL_TO_ROOT_REPO
+
+=cut
+
+my ($help, $man);
+Getopt::Long::GetOptions(
+    "help"            => \$help,
+    "man"             => \$man,
+                        );
+pod2usage(1) if $help;
+pod2usage(-exitval => 0, -verbose => 2) if $man;
 
 
 
 # (1) quit unless we have the correct number of command-line args
 my $num_args = $#ARGV + 1;
 if ($num_args != 1 && $num_args != 2) {
-    print "\nUsage: nuggit_clone.pl url/repo.git [target_dir]\n";
+    po2usage(1);
     exit 1;
 }
 
@@ -49,4 +60,5 @@ print `git clone $url --recursive -j8 $repo`;
 # initialize the nuggit meta data directory structure
 chdir($repo) || die "Can't enter cloned repo ($repo)";
 nuggit_init();
-nuggit_log_init();
+my $log = Git::Nuggit::Log->new(root => '.')->start(1);
+

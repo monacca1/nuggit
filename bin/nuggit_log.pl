@@ -5,11 +5,11 @@ use warnings;
 use v5.10;
 use Getopt::Long;
 use Cwd qw(getcwd);
-
+use Pod::Usage;
 use FindBin;
 use lib $FindBin::Bin.'/../lib'; # Add local lib to path
 use Git::Nuggit;
-
+use Git::Nuggit::Log;
 
 
 # show or clear the contents of the nuggit log
@@ -46,27 +46,28 @@ my $cwd;
 my $root_repo_branch;
 my ($root_dir, $relative_path_to_root) = find_root_dir();
 die("Not a nuggit!") unless $root_dir;
-
+my $log = Git::Nuggit::Log->new(root => $root_dir); # TODO: May need to be tweaked if parsing external log
 ParseArgs();
-
-my $log_file = "$root_dir/.nuggit/nuggit_log.txt";
 
 if($clear_nuggit_log == 1)
 {
-    _nuggit_log_clear();
-    nuggit_log_init($root_dir, "ngt log --clear");
+    $log->clear(); # Empty existing log
+    $log->start(1); # And record a new entry indicating truncation (this command)
 }
 elsif($show_raw_bool == 1)
 {
-  print `cat $log_file`;
+    my $log_file = $log->get_filename();
+    print `cat $log_file`;
 }
 elsif($write_msg)
 {
     # Include comment flag to avoid issues if we attempt to replay commands in future
-    nuggit_log_init($root_dir, "# $write_msg");
+    $log->start_as("# $write_msg");
 }
 else
 {
+    # TODO: Consider moving at least entry parsing into Log.pm
+    my $log_file = $log->get_filename();
     die("Log file does not exist") unless -e $log_file;
     open(my $fh, '<', $log_file) || die("Error: Unable to open log file");
     my $last_timestamp;
@@ -119,12 +120,16 @@ else
 sub ParseArgs()
 {
     my ($filter_today, $filter_last_days, $filter_last_hours);
+    my ($help, $man);
     Getopt::Long::GetOptions(
-        "clean|c"         => \$clear_nuggit_log,
+        "help"            => \$help,
+        "man"             => \$man,
+        "clear|c"         => \$clear_nuggit_log,
         "raw!"            => \$show_raw_bool,
         "message|m=s"     => \$write_msg,
         "summary|s!"      => \$show_summary_bool,
         "verbose|v!"      => \$verbose,
+        "all|v!"          => \$verbose,
         "show=s"   => \$show_n_entries,
 
         # Filtering Options (incomplete)
@@ -132,7 +137,9 @@ sub ParseArgs()
         "days|d=i" => \$filter_last_days,
         "hours|h=i" => \$filter_last_hours,
         );
-    
+    pod2usage(1) if $help;
+    pod2usage(-exitval => 0, -verbose => 2) if $man;
+
     $show_summary_bool = 0 if $verbose;
 
     if ($filter_today) {
@@ -163,6 +170,26 @@ Write the specified message to the log file
 =item --summary | --no-summary
 
 If set (default), only the primary entries of nuggit commands executed will be shown.  Otherwise, any additional records, for example of git commands logged by nuggit actions, will also be shown.
+
+Viewing all entries may also be enabled with --verbose, --all, -v, or -a
+
+=item --clear
+
+Clear all entries from the log file (a new entry will be appended for this action)
+
+=item --raw
+
+View the log file in raw, unparsed format.
+
+=item --today
+
+Only show log entries from the past 24 hours.
+
+=item --days | --hours
+
+Only specify log entries from the specified number of days and/or hours (flags may be combined).
+
+=item 
 
 =back
 

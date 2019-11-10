@@ -14,6 +14,7 @@ use FindBin;
 use lib $FindBin::Bin.'/../lib'; # Add local lib to path
 use Git::Nuggit;
 use Git::Nuggit::Status;
+use Git::Nuggit::Log;
 use IPC::Run3; # Utility to execute application and capture both stdout and stderr
 
 # usage: 
@@ -35,10 +36,12 @@ my $root_repo_branch;
 my $commit_all_files = 0; # Results in "git commit -a"
 
 my ($root_dir, $relative_path_to_root) = find_root_dir();
-die("Not a nuggit!\n") unless $root_dir;
-nuggit_log_init($root_dir);
+my $log = Git::Nuggit::Log->new(root => $root_dir);
 
 ParseArgs();
+
+die("Not a nuggit!\n") unless $root_dir;
+$log->start(verbose => $verbose, level => 1);
 
 say "nuggit root dir is: $root_dir" if $verbose;
 say "nuggit cwd is ".getcwd() if $verbose;
@@ -102,7 +105,7 @@ sub recursive_commit( $ )
                 my $cmd = "git add $child";
                 run3($cmd, undef, \$stdout, \$errmsg);
                 die "Error ($?): Unable to autostage $child in $dir:\n\n $stdout \n $errmsg" if $?;
-                nuggit_log_cmd($cmd);
+                $log->cmd($cmd);
                 
                 $need_to_commit_here = 1;
                 $autostaged_refs++;
@@ -179,7 +182,7 @@ sub nuggit_commit($)
    my ($stdout, $errmsg); # Git commit typically does not output to stderr
    my $cmd = "git commit $args -m \"N:$root_repo_branch; $commit_message_string\"";
    run3($cmd, undef, \$stdout, \$errmsg);
-   nuggit_log_cmd($cmd);
+   $log->cmd($cmd);
    my $err = $?;
 
    say colored("Commit status in repo $repo:", 'green');

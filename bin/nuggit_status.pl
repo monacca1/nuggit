@@ -1,10 +1,42 @@
 #!/usr/bin/env perl
-# This file will replace nuggit_status.pl upon completion
+
+=hea1 SYNOPSIS
+
+Display submodule-aware status of project.
+
+   nuggit status
+
+
+
+=item --help
+
+Display an abbreviated help menu
+
+=item --man
+
+Display detailed documentation.
+
+=item -uno
+
+Ignore untracked files
+
+=item --ignored
+
+Show ignored files
+
+=item --json
+
+Show raw status structure in JSON format.
+
+=back
+
+=cut
 
 use strict;
 use warnings;
 use v5.10;
 use Getopt::Long;
+use Pod::Usage;
 use Cwd qw(getcwd);
 use FindBin;
 use lib $FindBin::Bin.'/../lib'; # Add local lib to path
@@ -12,8 +44,10 @@ use Data::Dumper; # Debug and --dump option
 use Git::Nuggit;
 use Git::Nuggit::Status;
 
+# The following flags are currently DEPRECATED, but may be re-added in the future
 my $cached_bool = 0; # If set, show only staged changes
 my $unstaged_bool = 0; # If set, and cached not set, show only unstaged changes
+
 my $verbose = 0;
 my $do_dump = 0; # Output Dumper() of raw status (debug-only)
 my $do_json = 0; # Outptu in JSON format
@@ -23,7 +57,10 @@ my $flags = {
             };
 my $color_submodule = 'yellow';
 
-  Getopt::Long::GetOptions(
+my ($help, $man);
+Getopt::Long::GetOptions(
+    "help"            => \$help,
+    "man"             => \$man,
                            "cached|staged"  => \$cached_bool, # Allow --cached or --staged
                            "unstaged"=> \$unstaged_bool,
                            "verbose!" => \$verbose,
@@ -32,6 +69,9 @@ my $color_submodule = 'yellow';
                            'dump' => \$do_dump,
                            'json' => \$do_json,
      );
+pod2usage(1) if $help;
+pod2usage(-exitval => 0, -verbose => 2) if $man;
+
 
 my $root_repo_branch;
 

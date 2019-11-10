@@ -13,6 +13,7 @@ use Storable qw(store retrieve); # Serialization of merge in progress state
 
 use Git::Nuggit;
 use Git::Nuggit::Status;
+use Git::Nuggit::Log;
 
 =head1 Nuggit Merge
 
@@ -38,7 +39,7 @@ Display detailed documentation.
 
 Display additional details.
 
-=item --remote
+=item --default
 
 This flag is an alias to "ngt merge refs/remotes/origin/HEAD" and can be used to safely merge root and all submodules against the default branch of each submodule.
 
@@ -89,11 +90,8 @@ my $help = 0; my $man = 0;
 my $log_as_pull; # For logging/tracing purposes only
 my $merge_remote_head = 0;
 
-print "nuggit_merge.pl\n";
-
 my ($root_dir, $relative_path_to_root) = find_root_dir();
-die("Not a nuggit!") unless $root_dir;
-nuggit_log_init($root_dir);
+my $log = Git::Nuggit::Log->new(root => $root_dir);
 
 # Parse Options (positional arguments will be handled after)
 GetOptions(
@@ -105,10 +103,12 @@ GetOptions(
     'message=s'  => \$commit_message, # Specify message to use for any commits upon merge (optional; primarily for purposes of automated testing). If omitted, user will be prompted for commit message.  An automated message will be used if a conflict has been automatically resolved.
     'edit!' => \$edit_flag,
            'log-as-pull' => \$log_as_pull, # For logging purposes only in liueue of an OOP call from pull wrapper
-           'remote!' => \$merge_remote_head,
+           'remote|default!' => \$merge_remote_head,
           );
 pod2usage(1) if $help;
 pod2usage(-exitval => 0, -verbose => 2) if $man;
+die("Not a nuggit!") unless $root_dir;
+$log->start(verbose => $verbose, level => 1);
 
 my $merge_conflict_file = "$root_dir/.nuggit/merge_conflict_state";
 
@@ -202,7 +202,7 @@ sub do_merge
     my $merge_cmd = "git merge $source_branch";
     my ($stdout, $stderr);
     run3($merge_cmd, undef, \$stdout, \$stderr);
-    nuggit_log_cmd($merge_cmd);
+    $log->cmd($merge_cmd);
 
     # Did merge fail due to specified branch/ref being invalid?
     # TODO
@@ -234,7 +234,7 @@ sub do_merge
                 # Stage file and increment counter
                 my $cmd = "git add $conflicted";
                 system($cmd);
-                nuggit_log_cmd($cmd);
+                $log->cmd($cmd);
                 $num_submodule_conflicts++;
                 say "Automatically resolving submodule reference conflict for $conflicted";
             } elsif ($line =~ /CONFLICT/) {
@@ -317,7 +317,7 @@ sub commit_conflict_resolution
                     # This is a directory, auto-stage it; this should be a submodule that's already been merged
                     my $cmd = "git add $file";
                     system($cmd);
-                    nuggit_log_cmd($cmd);
+                    $log->cmd($cmd);
                     say "Automatically staging $file";
                 } else {
                     # This case indicates a bug in the merge algorithm or status check
@@ -336,7 +336,7 @@ sub commit_conflict_resolution
         $cmd .= " --no-edit";
     }
     system($cmd);
-    nuggit_log_cmd($cmd);
+    $log->cmd($cmd);
 
     # Re-test status to confirm success (ignore untracked)
     $status = get_status({uno => 1});

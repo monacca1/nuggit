@@ -3,17 +3,30 @@
 use strict;
 use warnings;
 use Getopt::Long;
+use Pod::Usage;
 use Cwd qw(getcwd);
 use FindBin;
 use lib $FindBin::Bin.'/../lib'; # Add local lib to path
 use Git::Nuggit;
-# usage: 
-#
-#/homes/monacca1/git-stuff/nuggit/bin/nuggit_checkout.pl <branch_name>
-#
-#
-# nuggit_checkout_tracking.pl
-#
+use Git::Nuggit::Log;
+
+=head1 SYNOPSIS
+
+Checkout the default branch at all levels.
+
+=over
+
+=item --help
+
+Display an abbreviated help menu
+
+=item --man
+
+Display detailed documentation.
+
+=back
+
+=cut
 
 my $num_args;
 my $branch;
@@ -22,7 +35,16 @@ my $cwd = getcwd();
 
 my ($root_dir, $relative_path_to_root) = find_root_dir();
 die("Not a nuggit!\n") unless $root_dir;
-nuggit_log_init($root_dir);
+my $log = Git::Nuggit::Log->new(root => $root_dir)->start(1);
+
+my ($help, $man);
+Getopt::Long::GetOptions(
+    "help"            => \$help,
+    "man"             => \$man,
+                        );
+pod2usage(1) if $help;
+pod2usage(-exitval => 0, -verbose => 2) if $man;
+
 
 check_merge_conflict_state(); # Do not proceed if merge in process; require user to commit via ngt merge --continue
 
@@ -45,8 +67,11 @@ sub checkout_default_branch
   die "DEBUG: Internal Error, Unexpected Args length of ".scalar(@_) unless scalar(@_)>=5;
   $tmp = `git symbolic-ref refs/remotes/origin/HEAD`;
   $tmp =~ m/remotes\/origin\/(.*)$/;
+
+  # TODO: Handle ambiguous HEAD case.  If multiple branches are returned from above, prompt user to select (default to master, if it exists).  Or better yet, pasre .gitmodules to find tracking branch
+  
   $default_branch = $1;  
-#  print $tmp;
+
   print "default HEAD branch is $default_branch\n";
 
 #  $tmp = `git remote show origin | grep HEAD`;   

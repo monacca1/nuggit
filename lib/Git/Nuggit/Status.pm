@@ -364,6 +364,7 @@ Parameters:
 - relative_path - Relative path to repository root level. This will be concatenated with an object's path for display.  If omitted, path will be relative to the top directory of the repository that the provided status object represents.
 - root_branch - If defined for applicable objects, output a warning if current branch does not match.
 - verbose - If set, always output additional information when known, for example commit hash.
+
 =cut
 
 sub do_pretty_print_status {
@@ -374,10 +375,13 @@ sub do_pretty_print_status {
 
     foreach my $key (sort keys(%{$status->{'objects'}})) {
         my $obj = $status->{objects}->{$key};
+        # Note: We deliberately do not use File::Spec here because we want to colorize submodule path
         print " ".$obj->{'status_flag'};
-        print colored($obj->{'staged_status_flag'},$stageColor);
-        print colored(' '.$relative_path,$warnColor);
-        print '/' unless(substr($relative_path,-1) eq "/");
+        print colored($obj->{'staged_status_flag'},$stageColor).' ';
+        if ($relative_path && $relative_path !~ /^\.\/?$/) {
+            print colored($relative_path,$warnColor);
+            print '/' unless(substr($relative_path,-1) eq "/");
+        }
         print $obj->{'path'};
         print " <= ".$obj->{'old_path'} if $obj->{'old_path'};
 
@@ -393,7 +397,7 @@ sub do_pretty_print_status {
             } else {
                 print " (".$obj->{'branch.oid'}.")" if $verbose;
             }
-            if (defined($obj->{'branch.ahead'})) {
+            if (defined($obj->{'branch.ahead'}) && ($obj->{'branch.ahead'}>0 || $obj->{'branch.behind'}>0)) {
                 my $ahead = $obj->{'branch.ahead'};
                 my $behind = $obj->{'branch.behind'};
                 print " Upstream-Delta( ";
