@@ -18,8 +18,6 @@ use Term::ANSIColor;
 
 This library provides common utility functions for interacting with repositories using Nuggit.
 
-This module is standalone and does not require any non-standard modules
-
 =head1 Methods
 
 =cut

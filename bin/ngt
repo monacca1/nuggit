@@ -14,41 +14,44 @@ use Term::ANSIColor;
 my $cmd = lc(shift) if @ARGV;
 
 # Command Database (excludes help/doc/env commands defined in this file)
-my %files = (
-    # Core Commands
-    add    => {cmd => "nuggit_add.pl",
-               completion_type => "file"},
-    branch => "nuggit_branch.pl",
-    checkout => "nuggit_checkout.pl", # TODO: Autocomplete known (root-level) branches
-    checkout_default => {cmd => "nuggit_checkout_default.pl",
-                         description => "Checkout default/tracked branch for each submodule"
-    },
-    clone   => "nuggit_clone.pl",
-    commit  => "nuggit_commit.pl",
-    diff    => "nuggit_diff.pl",
-    fetch   => "nuggit_fetch.pl",
-    init    => "nuggit_init",
-    log     => "nuggit_log.pl",
-    merge   => "nuggit_merge.pl",
-    pull    => "nuggit_pull.pl",
-    push    => "nuggit_push.pl",
-    reset   => {cmd => "nuggit_reset.pl", completion_type => "file"},
-    stash   => {cmd => "nuggit_foreach.pl", args => [ qw( git stash) ],
-                completion_list => [qw(save pop list show drop apply branch)]
-    },
-    status  => "nuggit_status.pl",
-    tag     => "nuggit_foreach.pl git tag",
-
-    # For Advanced Users
-    foreach => {cmd => "nuggit_foreach.pl",
-                completion_type => "system" # Use system default completion
-    },
-
-    # Helper Aliases for special cases/details
-    git_status => {cmd => "nuggit_foreach.pl git status",
-                   description => "Recursively invoke native git status (DEBUG)"
-    },
-
+my %files =
+(
+ # Core Commands
+ add    => {cmd => "nuggit_add.pl",
+            completion_type => "file"},
+ branch => "nuggit_branch.pl",
+ checkout => "nuggit_checkout.pl", # TODO: Autocomplete known (root-level) branches
+ checkout_default => {cmd => "nuggit_checkout_default.pl",
+                      description => "Checkout default/tracked branch for each submodule"
+                     },
+ clone     => "nuggit_clone.pl",
+ commit    => "nuggit_commit.pl",
+ diff      => "nuggit_diff.pl",
+ difftool  =>  {cmd => "nuggit_foreach.pl", args => [ qw( git difftool) ] },
+ fetch     => "nuggit_fetch.pl",
+ init      => "nuggit_init",
+ log       => "nuggit_log.pl",
+ merge     => "nuggit_merge.pl",
+ mergetool =>  {cmd => "nuggit_foreach.pl", args => [ qw( git mergetool) ] },
+ pull      => "nuggit_pull.pl",
+ push      => "nuggit_push.pl",
+ reset     => {cmd => "nuggit_reset.pl", completion_type => "file"},
+ stash     => {cmd => "nuggit_foreach.pl", args => [ qw( git stash) ],
+             completion_list => [qw(save pop list show drop apply branch)]
+            },
+ status  => "nuggit_status.pl",
+ tag     => "nuggit_foreach.pl git tag",
+ 
+ # For Advanced Users
+ foreach => {cmd => "nuggit_foreach.pl",
+             completion_type => "system" # Use system default completion
+            },
+ 
+ # Helper Aliases for special cases/details
+ git_status => {cmd => "nuggit_foreach.pl git status",
+                description => "Recursively invoke native git status (DEBUG)"
+               },
+ 
 );
 
 # Supported Autocompletion Shells:

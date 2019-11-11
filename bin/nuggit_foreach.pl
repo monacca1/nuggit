@@ -54,12 +54,13 @@ chdir $root_dir || die("Error: Can't enter root; $root_dir");
 submodule_foreach(sub {
                       my ($parent, $name, $status, $hash, $label) = (@_);
                       say colored("$parent/$name - Executing $cmd", 'green');
-                      say `$cmd`;
+                      system($cmd);
+
                       if ($break_on_error) {
                           die("Command failed") if $? != 0;
                       }
                   }, $opts);
 say colored("Root ($root_dir) - $cmd", 'green');
-say `$cmd`;
+system($cmd);
 
 # Done
