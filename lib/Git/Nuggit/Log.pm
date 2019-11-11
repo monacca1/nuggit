@@ -187,9 +187,11 @@ sub parse_args
         }
     } elsif (defined($args{root})) {
         return 0 unless (-d $args{root});
+        $self->{root} = ($args{root} eq ".") ? getcwd() : File::Spec->rel2abs($args{root});
         $self->{file} = $args{root}."/.nuggit/nuggit_log.txt";
     } elsif (-d '.nuggit') {
         $self->{file} = ".nuggit/nuggit_log.txt";
+        $self->{root} = getcwd();
     } else {
         return 0;
     }
