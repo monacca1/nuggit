@@ -90,7 +90,7 @@ if($create_branch_name eq "")
     # if the remote branch was fetched and exists here as a remote branch, then we will
     # be able to checkout it out even though there is no local branch
     print `git checkout $branch`;
-    system("git branch --set-upstream origin/$branch");
+    system("git branch --track origin/$branch");
   }
 
   if(does_branch_exist_at_root($branch))
@@ -98,7 +98,7 @@ if($create_branch_name eq "")
 
     # checkout the branch at the root
     print `git checkout $branch`;
-    system("git branch --set-upstream origin/$branch");
+    system("git branch --track origin/$branch");
     
     if($follow_branch_bool)
     {
@@ -145,9 +145,9 @@ else
 {
   # Creating a branch. Create it recursively in all submodules
   print `git checkout -b $branch`;
-  system("git branch --set-upstream origin/$branch");
+  system("git branch --track origin/$branch");
   print `git submodule foreach --recursive git checkout -b $branch`;
-  print `git submodule foreach --recursive git branch --set-upstream origin/$branch`;
+  print `git submodule foreach --recursive git branch --track origin/$branch`;
 }
 
 
@@ -260,12 +260,12 @@ sub create_branch_where_needed($)
     {
       # to do - create the branch here
         system("git checkout -b $branch");
-        system("git branch --set-upstream origin/$branch");
+        system("git branch --track origin/$branch");
     }
     else
     {
       system("git checkout $branch");
-      system("git branch --set-upstream origin/$branch"); # VERIFY: Is this necessary
+      system("git branch --track origin/$branch"); # VERIFY: Is this necessary
   }
     
     # return to root directory
