@@ -108,7 +108,7 @@ GetOptions(
 pod2usage(1) if $help;
 pod2usage(-exitval => 0, -verbose => 2) if $man;
 die("Not a nuggit!") unless $root_dir;
-$log->start(verbose => $verbose, level => 1);
+$log->start(verbose => $verbose, level => 1, log_as_child => $log_as_pull);
 
 my $merge_conflict_file = "$root_dir/.nuggit/merge_conflict_state";
 
@@ -164,7 +164,7 @@ sub do_merge_recursive
         
         $merge->{'conflicted'} = $repo; # log last repo parsed for easy save/restore
         chdir($dir) || exit_save_merge_state("Internal Error: Failed to enter directory $repo");
-        
+
         do_merge($merge, $branch) || exit_save_merge_state($merge);
     }
     chdir($root_dir);

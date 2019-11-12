@@ -1,5 +1,5 @@
 #!/usr/bin/env perl
-
+use v5.10;
 use strict;
 use warnings;
 use Getopt::Long;
@@ -84,15 +84,13 @@ sub checkout_default()
   my $git_config_branch = "";
   
   # get a list of all of the submodules
-  my $submodules = `list_submodules.sh`;
-  
-  # put each submodule entry into its own array entry
-  my @submodules = split /\n/, $submodules;
+  my $submodules = get_submodules();
 
 #  print "Does branch exist throughout?\n";
     
-  foreach (@submodules)
+  foreach (@{$submodules})
   {
+      say "At $_";
     $tmp2 = `git config --file .gitmodules --get-regexp branch`;
 
     if( $tmp2 =~ m/submodule\.$_\.branch (.*)\n/  )

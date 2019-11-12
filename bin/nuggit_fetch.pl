@@ -13,7 +13,7 @@ use Pod::Usage;
 
 my $root_dir = do_upcurse();
 
-my $log = Git::Nuggit::Log->new(root => $root_dir)->start(0);
+my $log = Git::Nuggit::Log->new(root => $root_dir);
 
 =head1 SYNOPSIS
 
@@ -32,8 +32,10 @@ Getopt::Long::GetOptions(
                         );
 pod2usage(1) if $help;
 pod2usage(-exitval => 0, -verbose => 2) if $man;
-
+$log->start(1);
 
 # TODO: Detect if fetch fails
-print `git fetch --all --recurse-submodules`;
+my $cmd = "git fetch --all --recurse-submodules";
+print `$cmd`;
+$log->cmd($cmd);
 #print `git submodule foreach --recursive git fetch --all`;
