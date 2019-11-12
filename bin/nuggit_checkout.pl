@@ -118,7 +118,7 @@ if($create_branch_name eq "")
 
       print `git submodule update --init --recursive`;   
       print `git submodule foreach --recursive git checkout $branch`;
-
+      print `git submodule foreach --recursive git branch --track origin/$branch`;
     }
     elsif($follow_commit_bool)
     {
