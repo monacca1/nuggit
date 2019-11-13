@@ -113,6 +113,11 @@ sub recursive_commit( $ )
                 # else user must stage manually, for example if a commit was made outside of nuggit
                 chdir($dir); # pop dir for next iteration
             }
+
+            # Handle manually staged submodule references
+            if ($sub->{staged_status} > STATE('UNTRACKED')) {
+                $need_to_commit_here = 1;
+            }
         } elsif ($sub->{staged_status} > STATE('UNTRACKED')) {
             $need_to_commit_here = 1;
             $prestaged_objs++;

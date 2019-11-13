@@ -305,6 +305,8 @@ sub do_upcurse
 
 =head2 git_submodule_status
 
+DEPRECATED: Use Git::Nuggit::Status instead.  This function may be removed at any time.
+
 Get status of Nuggit repository and return as a string.
 
 NOTE: This API may be refactored in future to return a data structure to seperate display and backend logic.
@@ -491,6 +493,93 @@ sub check_merge_conflict_state
     if( -e "$root_dir/.nuggit/merge_conflict_state") {
         die "A merge is in progress.  Please complete with 'ngt merge --continue' or abort with 'ngt merge --abort' before proceeding.";
     }
+}
+
+# The following is an initial cut at an OOP interface.  The OOP interface is incomplete at this stage
+#  and serves as a convenience wrapper for other commands, and Nuggit::Log
+package Git::Nuggit;
+use Git::Nuggit::Log;
+use Cwd qw(getcwd);
+use IPC::Run3;
+
+sub new
+{
+    my ($class, %args) = @_;
+    # This is a Singleton library, handled transparently for the user
+    # Future: If a non-singleton use case arises, we can add a flag to bypass it below
+    state $instance;
+    if (defined($instance)) {
+        # If previously initialized, do not re-initialize
+        return $instance;
+    }
+
+    my ($root_dir, $relative_path_to_root) = main::find_root_dir(); # TODO: Move all functions into namespace & export
+    $args{root} = $root_dir; # For Logger initialiation
+
+    return undef unless $root_dir; # Caller is responsible for aborting if Nuggit is required
+   
+    # Create our object
+    $instance = bless {
+        logger => Git::Nuggit::Log->new(%args),
+        root => $root_dir,
+        relative_path_to_root => $relative_path_to_root,
+        verbose => $args{verbose},
+        # Command execution defaults (TODO: setters)
+        run_die_on_error => 1,
+        run_echo_always => 1,
+        # level =>  (defined($args{level}) ? $args{level} : 0),
+    }, $class;
+
+    # Wrapper to conveniently allow root/file to be specified in constructor or start method
+    #  Return self if successful, fail if parsing fails.
+    return $instance;
+}
+
+sub root_dir
+{
+    my $self = shift;
+    return $self->{root};
+}
+
+sub start
+{
+    my $self = shift;
+    return $self->{logger}->start(@_);
+}
+
+sub logger {
+    my $self = shift;
+    return $self->{logger};
+}
+
+# Usage: my ($status, $stdout, $stderr) = run($cmd [,@args]);  # TODO: @args to be added later, for now single string expected
+sub run {
+    my $self = shift;
+    # TODO: Support optional log level.  If set, the first argument will be numeric.
+    my $cmd = shift;
+
+    my ($stdout, $stderr);
+    
+    $self->{logger}->cmd($cmd);
+
+    # Run it (wrap in an eval, since we don't want script to die automatically)
+    # We use IPC::Run3 so we can reliably capture stdout + stderr (backticks only captures stdout)
+    run3($cmd, undef, \$stdout, \$stderr);
+
+    if ($self->{run_die_on_error} && $?) {
+        say $stderr if $stderr;
+        my ($package, $filename, $line) = caller;
+        my $cwd = getcwd(); # TODO: Convert to relative path
+        die("$cmd failed with $? at $package $filename:$line in $cwd");
+    }
+
+    if ($self->{run_echo_always}) {
+        say $stdout if $stdout;
+        say $stderr if $stderr;
+    }
+
+    
+    return ($?, $stdout, $stderr);
 }
 
 

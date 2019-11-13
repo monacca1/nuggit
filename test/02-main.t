@@ -57,7 +57,8 @@ my @tests = (
              ["Simple Conflict, Manual Resolution Required", \&test_simple_conflict],
              ["Non-conflicting Parallel Work in Discrete Submodules", \&test_2user_parallel_submodule],
              ["Non-conflicting Parallel Work in Same Submodule", \&test_2user_parallel_files_same_submodule],
-             
+
+             ["Simple 2 User with branches", \&test_simple_branches],
              # TODO: nuggit_init Test from root level of repo, from no repo, and from submodule (may belong in 02-base.t)
 
              # Merge test, default branch
@@ -165,6 +166,46 @@ sub test_simple_2user
         plan tests => 4;
         tchdir("$test_work/user2");
         ok( (@lines = read_file($fn, chomp => 1))[-1] ne $msg, "sub3/README does NOT yet end with expected line");
+        ok( nuggit("pull"), "Pull Changes");
+        ok( (@lines = read_file($fn, chomp => 1))[-1] eq $msg, "sub3/README ends with expected line");
+    };
+    
+    return 1;
+}
+sub test_simple_branches
+{
+    plan tests => 4;
+
+    # Setup users
+    subtest("Setup user1", \&nuggit_setup_user, "user1");
+    subtest("Setup user2", \&nuggit_setup_user, "user2");
+
+    my $msg = "TEST User1 Append in brnch";
+    my $fn = "sub1/sub3/README.md";
+    my $branch = "branch1";
+    my @lines;
+    
+    subtest 'User 1 Appends to sub1/sub3/README.md' => sub {
+        plan tests => 4;
+        tchdir("$test_work/user1");
+
+        # Checkout a new branch
+        ok(nuggit("checkout","--verbose","-b", $branch), "Checkout $branch");
+        
+        subtest ("Simple Write",
+                 \&test_write,
+                 ($msg, "sub1/sub3/README.md", {check_modified => [qw(sub1 sub1/sub3)] } )
+                  );
+        ok( (@lines = read_file($fn, chomp => 1))[-1] eq $msg, "sub3/README ends with expected line");
+    };
+    subtest 'User 2 Can Pull Change' => sub {
+        plan tests => 6;
+        tchdir("$test_work/user2");
+        # Checkout existing remote branch
+        dies_ok{nuggit("checkout","--verbose",$branch);} "Checkout fails before fetch";
+        ok(nuggit("fetch"), "Fetch remote changes");
+        ok(nuggit("checkout","--verbose",$branch), "Checkout $branch");
+        
         ok( nuggit("pull"), "Pull Changes");
         ok( (@lines = read_file($fn, chomp => 1))[-1] eq $msg, "sub3/README ends with expected line");
     };
