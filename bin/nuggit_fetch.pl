@@ -35,7 +35,7 @@ pod2usage(-exitval => 0, -verbose => 2) if $man;
 $log->start(1);
 
 # TODO: Detect if fetch fails
-my $cmd = "git fetch --all --recurse-submodules";
+my $cmd = "git fetch --all --recurse-submodules -j8";
 print `$cmd`;
 $log->cmd($cmd);
 #print `git submodule foreach --recursive git fetch --all`;
