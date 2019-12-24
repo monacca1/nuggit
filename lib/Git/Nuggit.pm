@@ -532,7 +532,7 @@ sub new
         verbose => $args{verbose},
         # Command execution defaults (TODO: setters)
         run_die_on_error => 1,
-        run_echo_always => 1,
+        run_echo_always => defined($args{echo_always}) ? $args{echo_always} : 1,
         # level =>  (defined($args{level}) ? $args{level} : 0),
     }, $class;
 

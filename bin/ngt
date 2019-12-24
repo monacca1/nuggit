@@ -26,7 +26,7 @@ my %files =
                      },
  clone     => "nuggit_clone.pl",
  commit    => "nuggit_commit.pl",
- diff      => "nuggit_diff.pl",
+ diff      => {cmd => "nuggit_diff.pl", completion_type => "file"},
  difftool  =>  {cmd => "nuggit_foreach.pl", args => [ qw( git difftool) ] },
  fetch     => "nuggit_fetch.pl",
  init      => "nuggit_init",
