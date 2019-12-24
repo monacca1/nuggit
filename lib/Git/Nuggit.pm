@@ -134,15 +134,21 @@ sub submodule_foreach {
 
       # Enter submodule
       chdir($name);      
-     
+
+      # Pre-traversal callback (breadth-first)
+      if (defined($opts) && defined($opts->{breadth_first_fn}) ) {
+          $opts->{breadth_first_fn}->($parent, $name, $status, $hash, $label, $opts);
+      }
+
+
+      # Recurse
       if (!$opts || !defined($opts->{recursive}) || (defined($opts->{recursive}) && $opts->{recursive})) {
           submodule_foreach($fn, $opts, $name);
       }
 
-      # Callback
-      $fn->($parent, $name, $status, $hash, $label, $opts);
+      # Callback (depth-first)
+      $fn->($parent, $name, $status, $hash, $label, $opts) if $fn;
 
-      
       # Reset Dir
       chdir($cwd);
     

@@ -44,6 +44,12 @@ If specified, checkout the default branch for each repository.  If a tracking br
 
 If a branch name is also specified, than said branch will be checked out at the root level, otherwise a default remote branch will be inferred as described above.
 
+=item --init-submodules | --no-init-submodules
+
+If set (default), a "git submodule update --init" will be automatically executed within each repository.  This step is required for consistent behavior when checking out a branch that introduces a new submodule.
+
+Consequently, if enabled, changes may be lost if uncommitted submodule references exist in the current workspace in some cases.  It is generally recommended that all changes should be committed prior to changing branches, however if that is not the case executing with '--no-init-submodules' may be beneficial.
+
 =back
 
 =cut
@@ -56,6 +62,7 @@ my $create_branch_bool = 0;
 my $follow_branch_bool = 1; # Follow branch, or follow commit
 my $checkout_default_bool = 0;
 my $verbose = 0;
+my $do_init_submodules = 1;
 
 sub ParseArgs();
 sub does_branch_exist_throughout($);
@@ -74,6 +81,7 @@ check_merge_conflict_state(); # Checkout not permitted while merge in progress
 
 chdir($root_dir) || die("Can't enter $root_dir");
 
+# Handle Branch checkout/creation at root level (special case)
 if ($create_branch_bool) {
     my $branch_state = does_branch_exist_at_root($branch);
     
@@ -118,7 +126,7 @@ else
 }
 
 # Remaining behavior will be identical for both cases
-$ngt->run("git submodule init"); # Checkout any new submodules
+$ngt->run("git submodule update --init") if $do_init_submodules; # Checkout any new submodules
 
 if($follow_branch_bool)
 {
@@ -133,7 +141,7 @@ else # follow commit
 {
     # checkout the branch in the root repo (already done)
     # and update each submodule to specified commit
-    $ngt->run("git submodule update --init --recursive");
+    $ngt->run("git submodule update --init --recursive") if $do_init_submodules;
     say "Submodules updated to match references (--follow-commit).  WARNING: Submodules may be in detached head state";
     
     ############################################################################################
@@ -162,14 +170,15 @@ sub ParseArgs()
   #
   ######################################################################################################
   Getopt::Long::GetOptions(
-    "help"             => \$help,
-    "man"              => \$man,
-     "b"               => \$create_branch_bool,
-     "follow-branch!"  => \$follow_branch_bool,
-      "follow-commit!" => \$follow_commit_bool,
-      "verbose!"       => \$verbose,
-      "default!"       => \$checkout_default_bool,
-     );
+                           "help"             => \$help,
+                           "man"              => \$man,
+                           "b"               => \$create_branch_bool,
+                           "follow-branch!"  => \$follow_branch_bool,
+                           "follow-commit!" => \$follow_commit_bool,
+                           "verbose!"       => \$verbose,
+                           "default!"       => \$checkout_default_bool,
+                           "init-submodules!" => \$do_init_submodules,
+                          );
     pod2usage(1) if $help;
     pod2usage(-exitval => 0, -verbose => 2) if $man;
 
@@ -245,9 +254,9 @@ sub setup_branch_where_needed
     my $branch = shift;
     my $root_dir = getcwd();
 
-    submodule_foreach(sub {
+    submodule_foreach(undef, {'breadth_first_fn' => sub {
         my ($parent, $name, $substatus, $hash, $label, $opts) = (@_);
-
+say "DBG: In $root_dir; ".getcwd()." / $parent / $name";
         if ($checkout_default_bool)
         {
             my $remote_branch;
@@ -287,9 +296,8 @@ sub setup_branch_where_needed
         # Initialize any new recursive submodules
       # TODO: checkout results should give us an indication if a submodule has been updated to make below conditional
       # NOTE: If below does initialize a new submodule, it may not be checked out to the new branch
-        $ngt->run("git submodule init");
-        
-                      });
+        $ngt->run("git submodule update --init");
+                      }});
 }
 
 
