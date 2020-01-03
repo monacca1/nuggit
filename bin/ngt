@@ -39,7 +39,7 @@ my %files =
  stash     => {cmd => "nuggit_foreach.pl", args => [ qw( git stash) ],
              completion_list => [qw(save pop list show drop apply branch)]
             },
- status  => "nuggit_status.pl",
+ status     => {cmd => "nuggit_status.pl", completion_type => "file"},
  tag     => "nuggit_foreach.pl git tag",
  
  # For Advanced Users

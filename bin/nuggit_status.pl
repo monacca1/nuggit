@@ -82,20 +82,26 @@ print "nuggit root dir is: $root_dir\n" if $verbose;
 print "nuggit cwd is ".getcwd()."\n" if $verbose;
 print "nuggit relative_path_to_root is ".$relative_path_to_root . "\n" if $verbose;
 
-#print "changing directory to root: $root_dir\n";
-chdir $root_dir;
+# Optional: Query status only for specified path
+my $argc = @ARGV;
+if ($argc == 1) {
+    $relative_path_to_root = $ARGV[0];
+    say "Changing directory to specified $relative_path_to_root" if $verbose;
+    chdir $relative_path_to_root || die "Can't enter directory $relative_path_to_root: $!";
+} elsif ($argc == 0) {
+    #print "changing directory to root: $root_dir\n" if $verbose;
+    chdir $root_dir || die "Can't enter $root_dir";
+} else {
+    pod2usage( {
+                -message => "Error: Only zero or one unnamed arguments supported. You provided $argc",
+                -exitval => "1", # Return non-zero to indicate an error
+               });
+}
 
 # Get Status with specified options
 my $status = get_status($flags); # TODO: Flags for untracked? show all?
 
 die("Unable to retrieve Nuggit repository status") unless defined($status);
-
-# EXPERIMENTAL: If a file/dir argument is given, filter results. Output parsing may be inconsistent for files
-if (@ARGV) {
-    $status = file_status($status, $ARGV[0]);
-    die("Unable to find status for $ARGV[0]") unless $status;
-}
-
 
 say Dumper($status) if $do_dump;
 
