@@ -27,7 +27,7 @@ pod2usage(-exitval => 0, -verbose => 2) if $man;
 # (1) quit unless we have the correct number of command-line args
 my $num_args = $#ARGV + 1;
 if ($num_args != 1 && $num_args != 2) {
-    po2usage(1);
+    pod2usage(1);
     exit 1;
 }
 
