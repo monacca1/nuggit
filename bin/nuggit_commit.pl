@@ -2,7 +2,6 @@
 
 # TODO: Support for amend? May be better to skip this one.
 # TODO: Option to prompt user before commit if unstaged changes exist?
-# TODO: Option to launch default editor to define message
 
 use strict;
 use warnings;

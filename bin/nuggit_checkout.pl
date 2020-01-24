@@ -256,7 +256,7 @@ sub setup_branch_where_needed
 
     submodule_foreach(undef, {'breadth_first_fn' => sub {
         my ($parent, $name, $substatus, $hash, $label, $opts) = (@_);
-say "DBG: In $root_dir; ".getcwd()." / $parent / $name";
+
         if ($checkout_default_bool)
         {
             my $remote_branch;
