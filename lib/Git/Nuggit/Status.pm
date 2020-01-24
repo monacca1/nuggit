@@ -45,7 +45,7 @@ Supported states are:
 
 # Status values.  This is an (improvised) enum in order of increasing priority.
 # WARNING: These variables should NOT be modified under any condition (but making it a const in Perl is messy)
-my @STATE = qw(CLEAN IGNORED UNTRACKED RENAMED MODIFIED CONFLICT);
+my @STATE = qw(CLEAN IGNORED UNTRACKED UNINITIALIZED RENAMED MODIFIED CONFLICT);
 my %STATE;
 for my $i (0 .. (@STATE-1)) { $STATE{$STATE[$i]} = $i; }
 # This provides conversion between numeric and text versions.  show_status() in comparison adds colorization
@@ -74,7 +74,8 @@ The following options (in hash form) are currently supported:
 
 get_status({
 	uno => 0,     # If 1, pass '-uno' flag to ignore untracked files
-	ignored => 0  # If 1, git may show any files that have been ignored (ie: due to a .gitignore)
+	ignored => 0, # If 1, git may show any files that have been ignored (ie: due to a .gitignore)
+    all => 1,     # If 1, show all submodules, including those nominally un-modified.
 });
 
 =head3 Output Format
@@ -118,11 +119,6 @@ sub get_status
     $flags .= "-uno " if ($opts->{uno}); # Hide untracked files
     $flags .= "--ignored" if ($opts->{ignored}); # Show ignored flags
 
-    # TOOD: Option to Query All Submodules
-    #  - Option to show only if status not clean OR branch not matching?
-    #  - Requires separate command to query list of submodules, then compare against
-    #     already parsed submodules to query those that are unchanged
-
     my $rtv = {
                'path' => '.',
                'children' => [], # Submodules
@@ -136,7 +132,8 @@ sub get_status
                'unstaged_files_cnt' => 0, # Number of modified (not submodule) files unstaged (recursive)
                'branch_status_flag' => 0, # True if any scanned submodules are not on the same branch as parent
               };
-    _get_status($rtv, $flags);
+    _get_status($rtv, $flags, $opts);
+
     return $rtv;
 }
 
@@ -145,6 +142,7 @@ sub _get_status
 {
     my $rtv = shift;
     my $flags = shift;
+    my $opts = shift;
 
     # Get detailed porcelain status, including branch information
     my $status_cmd = "git status --porcelain=v2 --branch $flags";
@@ -163,7 +161,7 @@ sub _get_status
             if ($key eq "branch.ab") {
                 # Store split values, and original
                 $rtv->{'branch.ahead'} = shift(@parts);
-                $rtv->{'branch.behind'} = shift(@parts);                
+                $rtv->{'branch.behind'} = shift(@parts);
             } else {
                 $rtv->{$key} = shift(@parts);
             }
@@ -262,7 +260,7 @@ sub _get_status
             my $tmppath = getcwd();
             chdir($path);
             
-            _get_status( $obj, $flags ); #$subname,$path);
+            _get_status( $obj, $flags, $opts );
 
             push(@{ $rtv->{children} }, $obj); # Add path to children array
             chdir($tmppath);
@@ -291,6 +289,57 @@ sub _get_status
 
 
     }
+
+    # Query any missing submodules, if all-submodules mode.
+    if ($opts->{all}) {
+        #my $subs = main::list_submodules_here(); # TODO: This needs to be moved into Nuggit namespace
+        my $subs = get_submodule_status();
+
+        if ($subs) {
+            foreach my $sub (@$subs) {
+                my $subname = $sub->{"name"};
+                
+                if (defined($rtv->{objects}) && defined($rtv->{objects}{$subname})) {
+                    my $obj = $rtv->{objects}{$subname};
+                    $obj->{"commit_described"} = $sub->{"commit_described"};
+                } else {
+                    my $obj = {
+                        'children' => [],
+                            'objects' => {},
+                            'status' => $STATE{'CLEAN'},
+                            'staged_status' => $STATE{'CLEAN'},
+                            'staged_files_cnt' => 0,
+                            'unstaged_files_cnt' => 0,
+                            'branch_status_flag' => 0,
+                            'path' => $subname,
+                            'is_submodule' => 1,
+                            'status_flag' => " ",
+                            'staged_status_flag' => " ",
+                            'branch.oid' => $sub->{"commit"},
+                            "commit_described" => $sub->{"commit_described"},
+                    };
+
+                    # Check if submodule was initialized
+                    if (!defined($sub->{"commit_described"}) && $sub->{"state"} eq "-") {
+                        $obj->{'status'} = $STATE{'UNINITIALIZED'};
+                        $rtv->{'status'} = $obj->{'status'} if $obj->{status} > $rtv->{status};
+                    } else {
+                        # Otherwise Load Submodule Status as usual
+                        my $tmppath = getcwd();
+                        chdir($subname);
+                        _get_status( $obj, $flags, $opts );
+                        chdir($tmppath);
+                        
+                    }
+                    push(@{ $rtv->{children} }, $obj); # Add path to children array
+                    $rtv->{objects}{$subname} = $obj;
+
+                }
+            }
+        }
+    }
+    
+
 
     return $rtv;
 } # end get_status
@@ -336,19 +385,19 @@ sub pretty_print_status
     if ($status->{'branch_status_flag'}) {
         say colored("\tOne or more submodules are not on the above branch.",$warnColor);
     }
-    if (defined($status->{'branch.ahead'}) && ($status->{'branch.ahead'} > 0 || $status->{'branch.behind'} > 0)) {
+    if (defined($status->{'branch.ahead'}) && ($status->{'branch.ahead'} != 0 || $status->{'branch.behind'} != 0)) {
         print "Your branch is out of sync with upstream";
         print " (".$status->{'branch.upstream'}.")" if defined($status->{'branch.upstream'});
 
         my $ahead = $status->{'branch.ahead'};
         my $behind = $status->{'branch.behind'};
         print ". It is ";
-        if ($ahead > 0 && $behind > 0) {
+        if ($ahead != 0 && $behind != 0) {
             say "$behind commits behind and $ahead ahead";
-        } elsif ($ahead > 0) {
+        } elsif ($ahead != 0) {
             say "ahead by $ahead commits.";
         } else {
-            say "behind by $behind commits.";
+            say "behind by ".abs($behind)." commits.";
         }
     }
     say "";
@@ -389,7 +438,10 @@ sub do_pretty_print_status {
             print colored(" Delta-Commits",$warnColor) if $obj->{sub_commit_delta};
             print colored(" Modified",$warnColor) if $obj->{sub_modified};
             print " Untracked-Content" if $obj->{sub_untracked};
-            if (!defined($obj->{'branch.head'})) {
+
+            if ($obj->{'status'} == STATE('UNINITIALIZED')) {
+                print colored(' Uninitialized', $badColor);
+            } elsif (!defined($obj->{'branch.head'})) {
                 print colored(' Detached? OID:'.$obj->{'branch.oid'}, $warnColor);
             } elsif (defined($root_branch) && $obj->{'branch.head'} ne $root_branch) {
                 print colored(' Branch: '.$obj->{'branch.head'}, $badColor);
@@ -397,13 +449,13 @@ sub do_pretty_print_status {
             } else {
                 print " (".$obj->{'branch.oid'}.")" if $verbose;
             }
-            if (defined($obj->{'branch.ahead'}) && ($obj->{'branch.ahead'}>0 || $obj->{'branch.behind'}>0)) {
+            if (defined($obj->{'branch.ahead'}) && ($obj->{'branch.ahead'}!=0 || $obj->{'branch.behind'}!=0)) {
                 my $ahead = $obj->{'branch.ahead'};
                 my $behind = $obj->{'branch.behind'};
                 print " Upstream-Delta( ";
-                print $ahead." " if $ahead > 0;
-                print $behind if $behind > 0;
-                print ")";
+                print $ahead." " if $ahead != 0;
+                print $behind if $behind != 0;
+                print " )";
             }
             print "\n";
             do_pretty_print_status($obj, File::Spec->catdir($relative_path,$obj->{'path'}), $root_branch, $verbose);
@@ -435,6 +487,8 @@ sub show_status
         return colored("modified", $warnColor);        
     } elsif ($status == $STATE{'CONFLICT'}) {
         return colored("conflicted", $badColor);
+    } elsif ($status == $STATE{'UNINITIALIZED'}) {
+        return colored("uninitialized", $badColor);
     } else {
         return colored("unknown=$status",'red');
     }
@@ -449,7 +503,8 @@ NOTICE: At present, $filename must be the full path to the file (or submodule) r
 FUTURE ENHANCEMENTS:
 - Handle relative paths if given $relative_path_to_root
 - Handle regex/wildcard search for matching files.  Option for negation pattern
-
+    Ideally, detect if an input term is string or regex, and treat accordingly
+- Handle multiple input patterns
 =cut
 
 sub file_status
@@ -491,5 +546,43 @@ sub status_check
         return 0;
     }
 }
+
+
+sub get_submodule_status {
+    my $path = shift;
+    my $recursive = shift;
+    my $opts = ($recursive) ? "--recursive" : "";
+
+    # Quick check (this should be faster than shell invocation)
+    my $file = ".gitmodules";
+    $file = File::Spec->catfile($path, $file) if $path;
+    return undef unless -e $file; # Save a bash command if no submodules here
+
+    # Get submodule status
+    my $old_dir = getcwd();   
+    chdir($path) if $path;
+    my $status = `git submodule status $opts`;
+    chdir($old_dir) if $path;
+
+    # And parse
+    chomp($status);
+    my @lines = split('\n', $status);
+    
+    my @rtv;
+    foreach my $sub (@lines) {
+        my ($state,$hash,$name,$branch) = $sub =~ /([\s\+\-])([0-9a-fA-F]+)\s+(\w+)\s*(.+)?/;
+        # Note: branch is the result of "git describe", which finds the nearest match to hash
+
+        push(@rtv, {
+                "name" => $name,
+                "commit" => $hash,
+                "state" => $state,
+                "commit_described" => $branch,
+             });
+    }
+
+    return \@rtv;
+}
+
 
 1;

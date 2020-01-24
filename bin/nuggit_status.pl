@@ -1,12 +1,12 @@
 #!/usr/bin/env perl
 
-=hea1 SYNOPSIS
+=head1 SYNOPSIS
 
 Display submodule-aware status of project.
 
    nuggit status
 
-
+=over
 
 =item --help
 
@@ -54,6 +54,7 @@ my $do_json = 0; # Outptu in JSON format
 my $flags = {
              "uno" => 0, # If set, ignore untracked objects (git -uno command). This has no effect on cached or unstaged modes (which always ignore untracked files)
              "ignored" => 0, # If set, show ignored files
+             "all" => 0, # If set, show all submodules (even if status is clean)
             };
 my $color_submodule = 'yellow';
 
@@ -67,7 +68,8 @@ Getopt::Long::GetOptions(
                            "uno!" => \$flags->{uno},
                            "ignored!" => \$flags->{ignored},
                            'dump' => \$do_dump,
-                           'json' => \$do_json,
+                         'json' => \$do_json,
+                         'all|a!' => \$flags->{all},
      );
 pod2usage(1) if $help;
 pod2usage(-exitval => 0, -verbose => 2) if $man;
