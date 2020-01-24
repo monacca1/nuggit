@@ -10,14 +10,15 @@ use Git::Nuggit::Log;
 
 =head1 SYNOPSIS
 
-nuggit clone CLONE_URL_TO_ROOT_REPO
+nuggit clone [-b BRANCH_NAME] CLONE_URL_TO_ROOT_REPO
 
 =cut
 
-my ($help, $man);
+my ($branch, $help, $man);
 Getopt::Long::GetOptions(
-    "help"            => \$help,
-    "man"             => \$man,
+                         "help"            => \$help,
+                         "man"             => \$man,
+                         "branch|b=s"      => \$branch,
                         );
 pod2usage(1) if $help;
 pod2usage(-exitval => 0, -verbose => 2) if $man;
@@ -53,9 +54,12 @@ if (!$repo) {
 
 print "repo name is: $repo\n";
 
+my $opts = "";
+$opts .= "-b $branch " if defined($branch);
+
 
 # clone the repository
-print `git clone $url --recursive -j8 $repo`;
+print `git clone $opts $url --recursive -j8 $repo`;
 
 # initialize the nuggit meta data directory structure
 chdir($repo) || die "Can't enter cloned repo ($repo)";
