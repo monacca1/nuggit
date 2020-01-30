@@ -63,32 +63,45 @@ nuggit.[c]sh script)
     
 # Nuggit Commands:
 
-NOTICE: The listing below may not be up to date or incomplete.
+NOTICE: The listing below may not be up to date or may be incomplete.
 Details are available for most commands by running "--help"
 (abbreviated) or "--man" (full).
 
 Commands can be run with their full names as shown below, or through
 the nuggit wrapper as described above.
 
-### nuggit_env.sh 
-- the nuggit scripts path needs to be added to your path.  You can either add the instance
-of nuggit to your path using your .cshrc or you can use this nuggit_env.sh script.  To use
-the nuggit_env.sh, you must navigate to the nuggit/bin directory, (be in the bash shell) and
-"source nuggit_env.sh"
+### nuggit add
+- add the specified files to the staging area
+- example
+  - `nuggit add ./fsw_core/apps/appx/file.c`
+- nuggit add command utilizes the "nuggit_log.txt".  Each file that is "added" to the staging area
+using "nuggit add" will result in a nuggit log entry.  See "nuggit log"
 
-### nuggit_clone.pl
+### nuggit branch
+- view the branches that exist and display if the same branch is checked out across all
+submodules or if there is a branch discrepancy
+- example
+  - 'nuggit branch'
+
+### nuggit branch delete merged
+- delete a specified branch that has already been merged.   Delete it in the local repository
+and delete it in the remote repository
+- Command sytax:
+  - nuggit_branch_delete_merged.pl <branch to delete>
+- example
+  - nuggit_branch_delete_merged.pl JIRA-XYZ
+
+
+### nuggit clone
 - clone a repositoy 
   - i.e. 
-    - `nuggit_clone.pl ssh://git@sd-bitbucket.jhuapl.edu:7999/fswsys/mission.git`
+    - `nuggit clone ssh://git@sd-bitbucket.jhuapl.edu:7999/fswsys/mission.git`
 
 ### nuggit_init
 - Install the nuggit data structure to a preexisting repository.  If the repo was cloned
 using the native git clone you will need to "nuggit_init" in the root folder of the 
 git repository
         
-### nuggit_branch.pl
-- view the branches that exist and display if the same branch is checked out across all
-submodules or if there is a branch discrepancy
 
 ### nuggit_checkout_default.pl
 - this will recursively checkout the default branch, starting in the root repo and recursing
@@ -168,13 +181,6 @@ the pull
 relative path is relative to the nuggit root repository.  This is so the file path and name
 can be copied and pasted into the command line of the nuggit_add.pl command
         
-### nuggit_add.pl
-- add the specified files to the staging area
-- example
-  - `nuggit_add.pl ./fsw_core/apps/appx/file.c`
-- nuggit_add.pl utilizes the "nuggit_log.txt".  Each file that is "added" to the staging area
-using nuggit_add.pl will result in a nuggit log entry.  See "nuggit_log"
-                
 ### nuggit_commit.pl
 - commit all the files that have been added to the staging area across all of the
 repositores (root and nested submodules) into the checked out branch
