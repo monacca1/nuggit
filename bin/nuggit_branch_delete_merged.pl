@@ -29,7 +29,7 @@ my $argc = @ARGV;  # get the number of arguments.
 my $cwd = getcwd();
 my $branch_to_delete = "";
 
-print "nuggit_branch_delette_merged.pl\n";
+print "nuggit_branch_delete_merged.pl\n";
 
 
 my ($root_dir, $relative_path_to_root) = find_root_dir();
