@@ -54,7 +54,7 @@ else
 
   print "TO DO - CLEAN THIS UP\n";
   print "TO DO - add nuggit log entry\n";
-  print "TO DO - consider folding in to the nuggit branch command?\n"
+  print "TO DO - consider folding in to the nuggit branch command?\n";
   
 
   `ngt foreach git push origin --delete $branch_to_delete`;
