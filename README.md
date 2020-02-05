@@ -93,7 +93,7 @@ and delete it in the remote repository
   - `nuggit_branch_delete_merged.pl <branch to delete>`
 - example
   - `nuggit_branch_delete_merged.pl JIRA-XYZ`
-- TO DO - fold this into another nuggut commmand, i.e. "nuggit branch -d <branch name>"
+- TO DO - fold this into another nuggut commmand, i.e. `nuggit branch -d <branch name>`
 
 
 
