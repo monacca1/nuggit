@@ -10,10 +10,11 @@ defined below.  Tab auto-completion is optionally available for this wrapper.
 
 The nuggit.sh or nuggit.csh shell should be sourced to add nuggit to
 your path for bash or csh respectively.  These files can be used as an
-example if needed to adopt for other shell environments.  
+example if needed to adopt for other shell environments.
 
 Usage information for most scripts is available with a "--man" or
 "--help"  parameter.  For example, "ngt --man" or "ngt status --man".
+
 
 ### Point of Contact
 Contact Chris Monaco (chris.monaco@jhuapl.edu) or David Edell (david.edell@jhuapl.edu) for more information
@@ -26,9 +27,11 @@ Minimum requirements for Nuggit are:
 - Command-line Git tools, version 2.13.2 or later.  For best results, 
 - Perl version 5.10 or later
 
+
 ### Automated (not yet available)
 TODO: A Makefile.PL will be added in the future to enable standard
-Perl installation.
+Perl 
+installation.
 
 ### Manual via CPAN
 Install Perl module dependencies using CPAN, or CPANM.  CPANM can be installed and run without root
@@ -42,11 +45,13 @@ Source the appropriate shell script in your profile to add Nuggit to
 your path and enable auto-completion of commands (ie: "ngt status").
 Scripts are provided for bash and cshell.
 
+
 #### Optional: CPANM Setup
 The following commands will install cpanm and all required dependencies locally.  This may take a few minutes if none are already installed.  Running cpanm as root will install packages globally.
 - curl -L https://cpanmin.us/ -o cpanm && chmod +x cpanm
 - ./cpanm JSON Term::ReadKey DateTime Git::Repository HTTP::Request LWP::UserAgent
 - ./cpanm --local-lib=~/perl5 local::lib && eval $(perl -I ~/perl5/lib/perl5/ -Mlocal::lib)
+
 
 ### Manual
 No non-standard modules requiring compialtion are utilized by this
@@ -63,7 +68,8 @@ directory.
 - Add the bin folder to your path (ie: source the provided
 nuggit.[c]sh script)
 
-    
+ 
+
 # Nuggit Commands:
 
 NOTICE: The listing below may not be up to date or may be incomplete.
@@ -74,26 +80,83 @@ Commands can be run with their full names as shown below, or through
 the nuggit wrapper as described above.
 
 ### nuggit add
-- Add the specified files to the staging area
+- Add the specified files to the staging area.  This can be done without regard to which submodule the files are located in.  nuggit
+will figure it out based on the location of the file.  In other words, you do not need to switch directory into the submodule containing
+the file in order to "add" it to the staging area for that submodule.  
+- The output of the nuggit status command will shw the relative path of the files that you have changed.  The paths displayed are relative 
+to the current working directory of the shell.  The paths to the files being added using nuggit add should be relative to the current 
+working directory as well.  You can copy and paste the file/paths from the nuggit status command and use them in the nuggit add command.
 - example
   - `nuggit add ./fsw_core/apps/appx/file.c`
 - nuggit add command utilizes the "nuggit_log.txt".  Each file that is "added" to the staging area
 using "nuggit add" will result in a nuggit log entry.  See "nuggit log"
 
+
 ### nuggit branch
-- View the branches that exist and display if the same branch is checked out across all
-submodules or if there is a branch discrepancy
+- View the branches that exist and display if the same branch is checked out across all submodules (recursively) or if there is a 
+branch discrepancy.  The nuggit workflow requires that the root repository and all nested submodules are on the same branch for 
+development.  The default tracking branch is not required to be the same across all submodules but with the nuggit workflow, you 
+do not perform development on the default tracking branch directly (i.e master).  Instead you develop on a branch and then merge 
+to master on a remote collaboration server (i.e. bit bucket).
+- You can be anywhere in the nuggit (git) repo to execute this command.
 - example
   - `nuggit branch`
 
+
 ### nuggit_branch_delete_merged.pl
-- delete a specified branch that has already been merged.   Delete it in the local repository
-and delete it in the remote repository
+-This command will delete a specified branch that has already been merged.  It will delete it in the local repository AND in the 
+remote repository
+- Since nuggit creates branches across all submodules to allow the relevant work to be performed in whichever submodule may need 
+the work, it will result in the creation of the branch in submodules for which the work is not performed.  After a branch is merged 
+into the default tracking branch, this command can be used to delete the merged branches.  This includes the repos where work was 
+performed on that branch and it includes repos were no work was performed on that branch.
+- You can be anywhere in the nuggit (git) repo to execute this command.
 - Command sytax:
   - `nuggit_branch_delete_merged.pl <branch to delete>`
 - example
   - `nuggit_branch_delete_merged.pl JIRA-XYZ`
 - TO DO - fold this into another nuggut commmand, i.e. `nuggit branch -d <branch name>`
+
+
+### nuggit checkout
+- nuggit checkout is analagous to git checkout, however, when checking out a branch, it will attempt to checkout the branch, 
+not only in the base/root repository, but also recursively in the nested submodules.  Like the git command, you can use this 
+create a new branch.  Nuggit checkout should be used to create or checkout development branches rather than using git directly.
+
+- nuggit checkout can be used to checkout an existing branch, create a new branch, (to do) 
+checkout a file or (to do) checkout a specific commit of the repository.
+- checkout an existing branch
+  - this could be a branch that exists locally or created up stream and does not yet exist locally
+  - this will checkout the existing branch in all submodules and in the root repository.  It is assumed
+that this branch was created using nuggit and thus exists in all submodules.
+  - example
+    - `nuggit checkout JIRA-XYZ`
+  - NOTE that when checking out master, or whatever the default tracking branch is.  You should use `nuggit checkout --default` rather
+  than trying to checkout master explicitly.  This is because each submodule may have its own "default tracking" branch that and it
+  may not be called master.  The --default option is used to checkout the default tracking branch everywhere.  With this workflow 
+  model you do not work on master, however, for your workflow it maybe appropriate to merge into master (default tracking branch) and 
+  then push.
+- create and checkout a new branch
+  - this will create the branch in the root repository and in all submodules.
+  - example:
+    - `nuggit checkout -b JIRA-XYZ`
+- checkout an explicit file
+  - TO DO
+  - This will revert local modifications so that the file matches the committed
+  - a work around for this, while it has not yet been implemented is to use the `git checkout <file>` command in the same directory 
+  as the file you would like to checkout / revert
+- checkout a hash
+   - TO DO
+     - TO DO - this may need to use some of the logic implemented in: `nuggit_checkout.pl <branch> --follow-commit`
+
+
+- NOTE that if changes were pushed to this branch in a submodule using git directly (not using nuggit)
+AND the parent reposities were not updated to point to the new submodule commits, this checkout command
+will result a repository that reports local changes.
+
+
+
+
 
 
 
@@ -103,35 +166,14 @@ and delete it in the remote repository
     - `nuggit clone ssh://git@sd-bitbucket.jhuapl.edu:7999/fswsys/mission.git`
 - unlike with git, nuggit clone will populate all submodules
 
+
 ### nuggit init
 - Install the nuggit data structure to a preexisting repository.  If the repo was cloned
 using the native git clone you will need to "nuggit  init" in the root folder of the 
 git repository
         
 
-### nuggit checkout
-- nuggit checkout can be used to checkout an existing branch, create a new branch, (to do) 
-checkout a file or (to do) checkout a specific commit of the repository.
-- checkout an existing branch
- - this could be a branch that exists locally or created up stream and does not yet exist locally
- - this will checkout the existing branch in all submodules and in the root repository.  It is assumed
- that this branch was created using nuggit and thus exists in all submodules.
- - example
-  - `nuggit checkout JIRA-XYZ`
-- create and checkout a new branch
- - this will create the branch in the root repository and in all submodules.
- - example:
-  - `nuggit checkout -b JIRA-XYZ`
-- checkout a file
-  - TO DO
-  - This will revert local modifications so that the file matches the committed
-- checkout a hash
-   - TO DO
-     - TO DO - this may need to use some of the logic implemented in: `nuggit_checkout.pl <branch> --follow-commit`
 
-- NOTE that if changes were pushed to this branch in a submodule using git directly (not using nuggit)
-AND the parent reposities were not updated to point to the new submodule commits, this checkout command
-will result a repository that reports local changes.
       
 
 
