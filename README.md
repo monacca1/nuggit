@@ -133,7 +133,7 @@ that this branch was created using nuggit and thus exists in all submodules.
     - `nuggit checkout JIRA-XYZ`
   - NOTE that when checking out master, or whatever the default tracking branch is.  You should use `nuggit checkout --default` rather
   than trying to checkout master explicitly.  This is because each submodule may have its own "default tracking" branch that and it
-  may not be called master.  The --default option is used to checkout the default tracking branch everywhere.  With this workflow 
+  may not be called master.  The `--default` option is used to checkout the default tracking branch everywhere.  With this workflow 
   model you do not work on master, however, for your workflow it maybe appropriate to merge into master (default tracking branch) and 
   then push.
 - create and checkout a new branch
@@ -149,22 +149,62 @@ that this branch was created using nuggit and thus exists in all submodules.
    - TO DO
      - TO DO - this may need to use some of the logic implemented in: `nuggit_checkout.pl <branch> --follow-commit`
 
-
 - NOTE that if changes were pushed to this branch in a submodule using git directly (not using nuggit)
 AND the parent reposities were not updated to point to the new submodule commits, this checkout command
 will result a repository that reports local changes.
 
 
-
-
+###Checkout Default
+- Usually "master" is the default tracking branch, but not always.  And since each submodule can have its own default tracking branch, if
+we want to checkout the default tracking branch we cannot specify a single explicit branch name to check out.
+-"Checkout Default" is a concept which means to checkout the conceptual master branch rather than the explicit master branch.  In other 
+words, this is to check out the default tracking branch for your project.  Checkout out of the default tracking branch is acheieved with 
+the nuggit checkout command with the `--default` option. 
+- `nuggit checkout --default` will identify the tracking branch of the root/base repository and check it out.  It will then do 
+the same for each nested submodule recursively.  The result of this operation will be a repository where the root/base repository and 
+each submodule is checked out the latest of the tracking branch. 
+-This operation should be done instead of checking out master.
+-You can be anywhere in the nuggit (git) repo to execute this command.
+- See the command `nuggit checkout` with the `--default` option 
 
 
 
 ### nuggit clone
-- clone a repositoy 
+- Clone a repositoy 
+- Cloning a repository containing one or more nested submodules with git requires additional steps or arguments to populate the submodules.
+- Cloning a repository containing one or more nested submodules with nuggit is intended to be as simple as cloing a mono-repository with git.  
+- nuggit will perform the additional steps required to fully populate each nested submodule.  
+- nuggit clone will also initialize this git repository so that it can be used with the rest of the nuggit commands.  Specifically it adds a 
+.nuggit in the repo root directory to hold nuggit information and data structures.
   - i.e. 
     - `nuggit clone ssh://git@sd-bitbucket.jhuapl.edu:7999/fswsys/mission.git`
-- unlike with git, nuggit clone will populate all submodules
+- you can also specify a folder name to contain the cloned repository
+  - i.e.
+    - `nuggit clone ssh://url-to.repo:7999/project/repo.git folder_name`
+
+
+
+
+### nuggit commit
+-Commit all of the files that have previously be added to the staging area.  See nuggit add.  The commit will occur in any 
+submodule that has changes that have been added to the staging area.  The commit to the submodules will cause a commit to be 
+needed in the parent directory of that submodule which nuggit will automatically perform.  In other words, for each submodule 
+that has changes to be committed, the new/updated submodule will also be added and committed in the parent repository that 
+directly contains that submodule.  This will be recursively performed up the directory structure up to the root/base repository.  
+The nuggit commit may result in multiple commits if any submodule contained changes being committed.  In this case, each commit 
+will have the same commit message as that provided by the user in the nuggit commit command.
+-You can be anywhere in the nuggit (git) repo to execute this command.  
+-Command:
+`nuggit commit`
+-Example:
+`nuggit commit -m "made changes to submodule X, Y and Z to fix bug for JIRA FSWSYS-1234"`
+    
+    
+    
+    
+
+
+
 
 
 ### nuggit init
@@ -172,13 +212,6 @@ will result a repository that reports local changes.
 using the native git clone you will need to "nuggit  init" in the root folder of the 
 git repository
         
-
-
-      
-
-
-
-
 
 ### nuggit_diff.pl
 - get the differences between the working directory and the repository (of the entire nuggit repository)
@@ -237,14 +270,7 @@ the pull
 relative path is relative to the nuggit root repository.  This is so the file path and name
 can be copied and pasted into the command line of the nuggit_add.pl command
         
-### nuggit_commit.pl
-- commit all the files that have been added to the staging area across all of the
-repositores (root and nested submodules) into the checked out branch
-- example
-  - `nuggit_commit.pl -m "required commit message goes here"`
-- nuggit_commit.pl utilizes the "nuggit_log.txt".  Each nuggit_commit issued by the user
-and each underying commit performed by nuggit_commit.pl will result in a nuggit log entry
-        
+    
 ### nuggit_push.pl
 - identifies the checked out branch at the root repository and pushes the local
 branch from the local repository to the origin for each nested submodule recursively
