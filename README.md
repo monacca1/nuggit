@@ -16,7 +16,8 @@ Usage information for most scripts is available with a "--man" or
 "--help"  parameter.  For example, "ngt --man" or "ngt status --man".
 
 ### Point of Contact
-Contact Chris Monaco or David Edell for more information
+Contact Chris Monaco (chris.monaco@jhuapl.edu) or David Edell (david.edell@jhuapl.edu) for more information
+
 
 ## Installation
 Several installation options are documented below for convenience.
@@ -83,7 +84,7 @@ using "nuggit add" will result in a nuggit log entry.  See "nuggit log"
 - View the branches that exist and display if the same branch is checked out across all
 submodules or if there is a branch discrepancy
 - example
-  - 'nuggit branch'
+  - `nuggit branch`
 
 ### nuggit_branch_delete_merged.pl
 - delete a specified branch that has already been merged.   Delete it in the local repository 
@@ -91,8 +92,8 @@ and delete it in the remote repository
 - Command sytax:
   - nuggit_branch_delete_merged.pl <branch to delete>
 - example
-  - nuggit_branch_delete_merged.pl JIRA-XYZ
-TO DO - fold this into another nuggut commmand, i.e. "nuggit branch -d <branch name>"
+  - `nuggit_branch_delete_merged.pl JIRA-XYZ`
+- TO DO - fold this into another nuggut commmand, i.e. "nuggit branch -d <branch name>"
 
 
 
@@ -131,13 +132,13 @@ git repository
 - usage:
   - one argument: file with relative path from current directory (as displayed by nuggit status)
     - i.e.
-      - nuggit_diff.pl ../../../path/to/file.c
+      - `nuggit_diff.pl ../../../path/to/file.c`
   - one argument: a directory (or submodules directory) with relative path (as displayed by nuggit status)
     - i.e.
-      - nuggit_diff.pl ../../../path/to/dir
+      - `nuggit_diff.pl ../../../path/to/dir`
   - two arguments: two branches (not yet supported)
     - i.e.
-      - nuggit_diff.pl origin/branch branch
+      - `nuggit_diff.pl origin/branch branch`
         
         
 ### nuggit_rev_list.pl
