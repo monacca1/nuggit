@@ -87,10 +87,10 @@ submodules or if there is a branch discrepancy
   - `nuggit branch`
 
 ### nuggit_branch_delete_merged.pl
-- delete a specified branch that has already been merged.   Delete it in the local repository 
+- delete a specified branch that has already been merged.   Delete it in the local repository
 and delete it in the remote repository
 - Command sytax:
-  - nuggit_branch_delete_merged.pl <branch to delete>
+  - `nuggit_branch_delete_merged.pl <branch to delete>`
 - example
   - `nuggit_branch_delete_merged.pl JIRA-XYZ`
 - TO DO - fold this into another nuggut commmand, i.e. "nuggit branch -d <branch name>"
