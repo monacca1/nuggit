@@ -92,6 +92,7 @@ working directory as well.  You can copy and paste the file/paths from the nuggi
 using "nuggit add" will result in a nuggit log entry.  See "nuggit log"
 
 
+
 ### nuggit branch
 - View the branches that exist and display if the same branch is checked out across all submodules (recursively) or if there is a 
 branch discrepancy.  The nuggit workflow requires that the root repository and all nested submodules are on the same branch for 
@@ -101,6 +102,7 @@ to master on a remote collaboration server (i.e. bit bucket).
 - You can be anywhere in the nuggit (git) repo to execute this command.
 - example
   - `nuggit branch`
+
 
 
 ### nuggit_branch_delete_merged.pl
@@ -116,6 +118,9 @@ performed on that branch and it includes repos were no work was performed on tha
 - example
   - `nuggit_branch_delete_merged.pl JIRA-XYZ`
 - TO DO - fold this into another nuggut commmand, i.e. `nuggit branch -d <branch name>`
+- TO DO - add verification to make sure that the branch has been merged in across all submodules.  In other words, make sure that there
+are not commits that are not in common with master (?)  Do a pull of default and the branch in order to be sure that this is true 
+on the remote too
 
 
 ### nuggit checkout
@@ -152,6 +157,7 @@ that this branch was created using nuggit and thus exists in all submodules.
 - NOTE that if changes were pushed to this branch in a submodule using git directly (not using nuggit)
 AND the parent reposities were not updated to point to the new submodule commits, this checkout command
 will result a repository that reports local changes.
+
 
 
 #### Checkout Default
@@ -253,43 +259,35 @@ in the git-fu that may be required to get out of a sticky situation.
 It will show the branch, date/time, directory, commit message and which submodule references were also added and committed upoon a nuggit commit.
 -Command:
   - `nuggit log`
--Example:
+- Example:
   - Show the entire nuggit log: `nuggit log`
   - Show he nuggit commands AND the git commands that were executed: `nuggit log -a`
   - Clear the nuggit log: `nuggit -c` or `nuggit -clear`
   
   
+  
 ### nuggit merge
-- Merge the specified branch into the currently checked out branch in the root repository and all nested submodules.  NOTE: there is a nuance
-when attempting to merge master into the checked out branch.  More specifically, master is typically used as the "default tracking branch", 
-however this is not always the case.  And since each submodule could technically have a different (name for the) default tracking branch, 
-there is a special form for the merge command for the case when we want to merge the "default tracking branch" into the working branch.
-- to merge one working branch into another working branch, or to merge the working branch into the default tracking branch (i.e. master), 
+- Merge the specified branch into the currently checked out branch in the root repository and all nested submodules.  
+- To merge one working branch into another working branch, or to merge the working branch into the default tracking branch (i.e. master), 
 first check out the destination branch, then execute `nuggit merge <source branch name>`
-- to merge a branch "foo" into the default tracking branch (i.e. master), check out the default tracking branch (`nuggit checkout --default`), 
-then `nuggit merge foo`
-
-----******************************
-
-
-
-- TO DO - NOT FINISHED.
-- example
-  - `nuggit_merge.pl <branch_name> -m "commit message"`
-  - TO DO - RIGHT NOW THE COMMIT MESSAGE IS NOT HONORED.
-        
-### nuggit_merge_default.pl
-- merge the default branch into the working branch recursively
-- no arguments provided.
-- this script will identify the default branch for the root repo and the
-submodules individually
-- this is intended to be done before pushing changes prior to merging the
-working branch back into the default branch.
+- To merge a branch into the default tracking branch (i.e. master), check out the default tracking branch (`nuggit checkout --default`), 
+then `nuggit merge <branch>`
+- To merge master or default tracking branch into a working branch, first ensure that the intended destination branch is checked out (meaning
+that it is the working branch).  Instead of explicitly merging master into the checked out branch we merge the default tracking branch
+into the working branch.  The command to do this is `nuggit merge --default`.   It is a good idea to do this before trying to merge your working
+branch into master (or default tracking branch). 
+#### Handling merge conflicts
+- if there is a merge conflict the output will indicate:
+`>nuggit merge --default
+No branch specified for merge, assuming default remote
+Source branch is: 
+Destination branch is the current branch: JIRA-BARNEY-1
+CONFLICT (content): Merge conflict in sm2.txt
+Merge aborted with conflicts.  Please resolve (stash or edit & stage) then run "nuggit_merge.pl --continue" to continue. at /project/sie/users/monacca1/nuggit_sandbox/bin/nuggit_merge.pl line 358.`
 
 
 
 
-merge
 
 pull
 
