@@ -286,7 +286,26 @@ branch into master (or default tracking branch).
                 CONFLICT (content): Merge conflict in sm2.txt
                 Merge aborted with conflicts.  Please resolve (stash or edit & stage) then run "nuggit_merge.pl --continue" to continue. at /project/sie/users/monacca1/nuggit_sandbox/bin/nuggit_merge.pl line 358.
 
+  - performing nuggit status after a merge conflict was detected will show what files had the conflict as in the following:
+                > nuggit status
+                Nuggit Merge in Progress.  Complete with "ngt merge --resume" or "ngt merge --abort"
+                On branch JIRA-BARNEY-1 (c553af5fe904804689987672df1995f5f3d43081)
+                Summary Status Working: conflicted(1), Staged: conflicted(1)
+                
+                 M  sm2 Modified
+                 UU sm2/sm2.txt
 
+  - Identify the conflicts:
+    - `nuggit diff <file>` or other method if one is available
+    - resove the conflict by opening the file, identifying the conflicts and preparing the file to be committed
+    - add the files that have been resolved to the staging area
+      - `nuggit add <resolved file>`
+  - continue the merge with the command `nuggit merge --continue`
+  - this is an iterative process.  The merge will pause once for each submodule that has a conflict and you will need to resolve those
+    conflicts, add the files and continue the merge until you reach the root repository.
+  - if you finish by resolving conflicts in the root repo you may have to commit in the root directory to complete the merge
+  - push, if desired, or continue with work on the merged branch
+  - TO DO - resolve the meaning of the `--resume` argument, this didnt work for me, but `--continued` did
 
 
 
