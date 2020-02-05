@@ -8,13 +8,15 @@ etc. without requring the user to do extra magic just for submodules.
 A wrapper script. "ngt" can be used to invoke all of the capabilities
 defined below.  Tab auto-completion is optionally available for this wrapper.
 
-
 The nuggit.sh or nuggit.csh shell should be sourced to add nuggit to
 your path for bash or csh respectively.  These files can be used as an
 example if needed to adopt for other shell environments.  
 
 Usage information for most scripts is available with a "--man" or
 "--help"  parameter.  For example, "ngt --man" or "ngt status --man".
+
+### Point of Contact
+Contact Chris Monaco or David Edell for more information
 
 ## Installation
 Several installation options are documented below for convenience.
@@ -71,45 +73,42 @@ Commands can be run with their full names as shown below, or through
 the nuggit wrapper as described above.
 
 ### nuggit add
-- add the specified files to the staging area
+- Add the specified files to the staging area
 - example
   - `nuggit add ./fsw_core/apps/appx/file.c`
 - nuggit add command utilizes the "nuggit_log.txt".  Each file that is "added" to the staging area
 using "nuggit add" will result in a nuggit log entry.  See "nuggit log"
 
 ### nuggit branch
-- view the branches that exist and display if the same branch is checked out across all
+- View the branches that exist and display if the same branch is checked out across all
 submodules or if there is a branch discrepancy
 - example
   - 'nuggit branch'
 
-### nuggit branch delete merged
-- delete a specified branch that has already been merged.   Delete it in the local repository
+### nuggit_branch_delete_merged.pl
+- delete a specified branch that has already been merged.   Delete it in the local repository 
 and delete it in the remote repository
 - Command sytax:
   - nuggit_branch_delete_merged.pl <branch to delete>
 - example
   - nuggit_branch_delete_merged.pl JIRA-XYZ
+TO DO - fold this into another nuggut commmand, i.e. "nuggit branch -d <branch name>"
+
 
 
 ### nuggit clone
 - clone a repositoy 
   - i.e. 
     - `nuggit clone ssh://git@sd-bitbucket.jhuapl.edu:7999/fswsys/mission.git`
+- unlike with git, nuggit clone will populate all submodules
 
-### nuggit_init
+### nuggit init
 - Install the nuggit data structure to a preexisting repository.  If the repo was cloned
-using the native git clone you will need to "nuggit_init" in the root folder of the 
+using the native git clone you will need to "nuggit  init" in the root folder of the 
 git repository
         
 
-### nuggit_checkout_default.pl
-- this will recursively checkout the default branch, starting in the root repo and recursing
-down into each submodule.  Note that the default branch of a submodule may be different from
-the default branch of the root repo.  The default branch in one submodule may be different 
-from the default branch in another submodule.
-
-### nuggit_checkout.pl
+### nuggit checkout
 - checkout a branch.  There are some variations described here:
   - `nuggit_checkout.pl <branch_name>`
     - checkout a branch that already exists OR
@@ -223,5 +222,13 @@ of nuggit or to address other potentially inconsistencies.
     - `nuggit_log.pl --show <n>`
   - clear the nuggit log in your repository (sandbox)
     - `nuggit_log.pl -c`
-        
-                        
+
+
+       
+# Internal
+
+### nuggit_checkout_default.pl
+- this will recursively checkout the default branch, starting in the root repo and recursing
+down into each submodule.  Note that the default branch of a submodule may be different from
+the default branch of the root repo.  The default branch in one submodule may be different 
+from the default branch in another submodule.                  
