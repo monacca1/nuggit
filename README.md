@@ -278,12 +278,12 @@ into the working branch.  The command to do this is `nuggit merge --default`.   
 branch into master (or default tracking branch). 
 #### Handling merge conflicts
 - if there is a merge conflict the output will indicate:
-`>nuggit merge --default
-No branch specified for merge, assuming default remote
-Source branch is: 
-Destination branch is the current branch: JIRA-BARNEY-1
-CONFLICT (content): Merge conflict in sm2.txt
-Merge aborted with conflicts.  Please resolve (stash or edit & stage) then run "nuggit_merge.pl --continue" to continue. at /project/sie/users/monacca1/nuggit_sandbox/bin/nuggit_merge.pl line 358.`
+                `>nuggit merge --default
+                No branch specified for merge, assuming default remote
+                Source branch is: 
+                Destination branch is the current branch: JIRA-BARNEY-1
+                CONFLICT (content): Merge conflict in sm2.txt
+                Merge aborted with conflicts.  Please resolve (stash or edit & stage) then run "nuggit_merge.pl --continue" to continue. at /project/sie/users/monacca1/nuggit_sandbox/bin/nuggit_merge.pl line 358.`
 
 
 
