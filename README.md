@@ -123,11 +123,11 @@ checkout a file or (to do) checkout a specific commit of the repository.
  - example:
   - `nuggit checkout -b JIRA-XYZ`
 - checkout a file
- - TO DO
- - This will revert local modifications so that the file matches the committed
+  - TO DO
+  - This will revert local modifications so that the file matches the committed
 - checkout a hash
- - TO DO
-   - TO DO - this may need to use some of the logic implemented in: `nuggit_checkout.pl <branch> --follow-commit`
+   - TO DO
+     - TO DO - this may need to use some of the logic implemented in: `nuggit_checkout.pl <branch> --follow-commit`
 
 - NOTE that if changes were pushed to this branch in a submodule using git directly (not using nuggit)
 AND the parent reposities were not updated to point to the new submodule commits, this checkout command
