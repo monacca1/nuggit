@@ -65,7 +65,7 @@ Getopt::Long::GetOptions(
     "man"             => \$man,
                            "cached|staged"  => \$cached_bool, # Allow --cached or --staged
                            "unstaged"=> \$unstaged_bool,
-                           "verbose!" => \$verbose,
+                           "verbose|v!" => \$verbose,
                            "uno!" => \$flags->{uno},
                            "ignored!" => \$flags->{ignored},
                            'dump' => \$do_dump,
