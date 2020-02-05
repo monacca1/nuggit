@@ -114,31 +114,28 @@ git repository
 checkout a file or (to do) checkout a specific commit of the repository.
 - checkout an existing branch
  - this could be a branch that exists locally or created up stream and does not yet exist locally
+ - this will checkout the existing branch in all submodules and in the root repository.  It is assumed
+ that this branch was created using nuggit and thus exists in all submodules.
  - example
   - `nuggit checkout JIRA-XYZ`
 - create and checkout a new branch
+ - this will create the branch in the root repository and in all submodules.
  - example:
-  - nuggit checkout -b JIRA-XYZ
+  - `nuggit checkout -b JIRA-XYZ`
 - checkout a file
  - TO DO
+ - This will revert local modifications so that the file matches the committed
 - checkout a hash
  - TO DO
+   - TO DO - this may need to use some of the logic implemented in: `nuggit_checkout.pl <branch> --follow-commit`
+
+- NOTE that if changes were pushed to this branch in a submodule using git directly (not using nuggit)
+AND the parent reposities were not updated to point to the new submodule commits, this checkout command
+will result a repository that reports local changes.
+      
 
 
- meaning it will revert local modifications so that the file matches the committed
-version.
-checkout a branch.  There are some variations described here:
-  - `nuggit checkout  <branch_name>`
-    - checkout a branch that already exists OR
-    - checkout a branch that was created remotely and has not previously been locally checked out.
-    - this will create this branch locally in all submodules and check that branch out in the
-      root repository and all submodules
-    - NOTE that if changes were pushed to this branch in a submodule using git directly (not using nuggit)
-      AND the parent reposities were not updated to point to the new submodule commits, this checkout command
-      will result a repository that reports local changes.
-  - `nuggit_checkout.pl -b <branch_name>`
-    - create a brand new branch and check it out in the root repository and all nested submodules
-  - `nuggit_checkout.pl <branch> --follow-commit`
+
 
 
 ### nuggit_diff.pl
