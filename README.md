@@ -154,17 +154,17 @@ AND the parent reposities were not updated to point to the new submodule commits
 will result a repository that reports local changes.
 
 
-###Checkout Default
+#### Checkout Default
 - Usually "master" is the default tracking branch, but not always.  And since each submodule can have its own default tracking branch, if
 we want to checkout the default tracking branch we cannot specify a single explicit branch name to check out.
 -"Checkout Default" is a concept which means to checkout the conceptual master branch rather than the explicit master branch.  In other 
 words, this is to check out the default tracking branch for your project.  Checkout out of the default tracking branch is acheieved with 
 the nuggit checkout command with the `--default` option. 
-- `nuggit checkout --default` will identify the tracking branch of the root/base repository and check it out.  It will then do 
-the same for each nested submodule recursively.  The result of this operation will be a repository where the root/base repository and 
-each submodule is checked out the latest of the tracking branch. 
--This operation should be done instead of checking out master.
--You can be anywhere in the nuggit (git) repo to execute this command.
+- `nuggit checkout --default` will identify the tracking branch of the root/base repository and check it out.  It will then do 
+the same for each nested submodule recursively.  The result of this operation will be a repository where the root/base repository and 
+each submodule is checked out the latest of the tracking branch.
+- This operation should be done instead of checking out master.
+- You can be anywhere in the nuggit (git) repo to execute this command.
 - See the command `nuggit checkout` with the `--default` option 
 
 
@@ -184,40 +184,27 @@ each submodule is checked out the latest of the tracking branch. 
 
 
 
-
 ### nuggit commit
--Commit all of the files that have previously be added to the staging area.  See nuggit add.  The commit will occur in any 
+- Commit all of the files that have previously be added to the staging area.  See `nuggit add`.  The commit will occur in any 
 submodule that has changes that have been added to the staging area.  The commit to the submodules will cause a commit to be 
 needed in the parent directory of that submodule which nuggit will automatically perform.  In other words, for each submodule 
 that has changes to be committed, the new/updated submodule will also be added and committed in the parent repository that 
-directly contains that submodule.  This will be recursively performed up the directory structure up to the root/base repository.  
-The nuggit commit may result in multiple commits if any submodule contained changes being committed.  In this case, each commit 
+directly contains that submodule.  This will be recursively performed up the directory structure up to the root/base repository.  
+The nuggit commit may result in multiple commits if any submodule contained changes being committed.  In this case, each commit 
 will have the same commit message as that provided by the user in the nuggit commit command.
--You can be anywhere in the nuggit (git) repo to execute this command.  
--Command:
+- You can be anywhere in the nuggit (git) repo to execute this command.
+- Command:
 `nuggit commit`
--Example:
+- Example:
 `nuggit commit -m "made changes to submodule X, Y and Z to fix bug for JIRA FSWSYS-1234"`
-    
-    
-    
-    
 
 
-
-
-
-### nuggit init
-- Install the nuggit data structure to a preexisting repository.  If the repo was cloned
-using the native git clone you will need to "nuggit  init" in the root folder of the 
-git repository
-        
 
 ### nuggit_diff.pl
-- get the differences between the working directory and the repository (of the entire nuggit repository)
-- get the differences between the working copy of a file and the file in the repository
-- get the differences between the working copy of a directory (or submodule) and the same in the repository
-- (to do) get the differences between two branches
+- Show the differences between the working directory and the repository (of the entire nuggit repository)
+- Show the differences between the working copy of a file and the file in the repository
+- Show the differences between the working copy of a directory (or submodule) and the same in the repository
+- Show the differences between two branches (not yet supported)
 - usage:
   - one argument: file with relative path from current directory (as displayed by nuggit status)
     - i.e.
@@ -228,7 +215,37 @@ git repository
   - two arguments: two branches (not yet supported)
     - i.e.
       - `nuggit_diff.pl origin/branch branch`
+     
+
         
+### nuggit fetch
+-fetches everything in the root and submodules recursively.
+- "git fetch": downloads commits, files, and refs from a remote repository to your local repository. 
+- Fetching is what you do when you want to see what everyone else has been working on.
+- Note: nuggit pull is the same as nuggit fetch followed by nuggit merge
+
+- Command:
+`nuggit fetch`
+- Example:
+`nuggit fetch`
+
+
+
+### nuggit init
+- nuggit init will take an existing git repository and iniitialize it to be used with nuggit.  This action
+occurrs automatically when cloning a repository using nuggit.  This is conceptually similar to git init where you 
+are acting on a pre-existing directtory and initializing it as a git repository.  This should be done at the root 
+level of the repository.  This will also install the .nuggit in the current directory (the root of the repo).  If the repo was cloned
+using the native git clone you will need to `nuggit init` in the root folder of the git repository in order to use nuggit with
+this repository. 
+- Note the .nuggit is part of the gitignore so it will not be managed by git.
+- Command:
+`nuggit init`
+-Example:
+`nuggit init`
+        
+
+   
         
 ### nuggit_rev_list.pl
 - show the differences in between the origin branch and the local branch.  If there are non-zero
@@ -248,11 +265,7 @@ numbers in both columns, the repository needs to be merged.
                 1       4
                 Entering 'fsw_core/apps/appy'
                 0       0
-        
-### nuggit_fetch.pl
--fetches everything in the root and submodules recursively.
-- "git fetch": downloads commits, files, and refs from a remote repository to your local repository. 
-- Fetching is what you do when you want to see what everyone else has been working on.
+
         
 ### nuggit_pull.pl
 - pull the checked out branch from origin for the root repository.  Then foreach
