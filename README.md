@@ -320,24 +320,25 @@ the pull
 - Example:
   - `nuggit pull`
 
-- Note on pushing too master or default tracking branch.  We do not normally push to master, but for some workflows that is acceptable.  
-An example of that workflow may be: complete the work (and test) in a branch, merge default back into the working branch (test), then when 
-satisfied, merge the working branch back into the default tracking branch and push.  
-  - At the moment you should not use the push command to push to the default tracking branch.  The work around is a script "nuggit_push_default.pl"
-  This script will push to whatever the checked out branch is, and if you checked out with `nuggit checkout --default`, it should be the default 
-  tracking branch for each submodule.
+
+### nuggit push
+- nuggit push will push the working branch to the remote and do this recursively (in the root repo and all submodules).  It will identify the 
+working branch and push it explicitly by name to ensure that it is pushing to the same branch across all submodules (and root repo)
+
+#### Pushing to master (or default tracking branch)
+- Since the nuggit push identifies the working brach by name and pushes to the root repo and all submodules recursively, if you have checked
+out the default tracking branch, you may not be on the same explicitly named branch across the entire repo (of submodules). There is a seperate
+script (for now) to push to the default tracking branch: `nuggit_push_default.pl`.  This script will push to whatever the checked out branch 
+is, and if you checked out with `nuggit checkout --default`, it should be the default  tracking branch for each submodule.
   - Example:
     - `nuggit_push_default.pl`
 
 
 
+### nuggit rebase
+- Not yet implemented
 
 
-
-
-push
-
-rebase
 
 relink
 
@@ -367,10 +368,6 @@ relative path is relative to the nuggit root repository.  This is so the file pa
 can be copied and pasted into the command line of the nuggit_add.pl command
         
     
-### nuggit_push.pl
-- identifies the checked out branch at the root repository and pushes the local
-branch from the local repository to the origin for each nested submodule recursively
-             
 
 
 
@@ -379,7 +376,10 @@ branch from the local repository to the origin for each nested submodule recursi
 - This is to be used to correct when the submodule linkages get updated outside
 of nuggit or to address other potentially inconsistencies.
 
-       
+
+
+
+
 # Internal
 
 ### nuggit_checkout_default.pl
