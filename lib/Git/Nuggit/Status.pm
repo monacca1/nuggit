@@ -176,6 +176,16 @@ sub _get_status
                         $rtv->{'commit.date'} = $date;
                         $rtv->{'commit.msg'} = $cm;
                     }
+
+                    # And matching tags/branches (exact matches only)
+                    my $tags = `git tag --points-at $rtv->{'branch.oid'}`; 
+                    chomp($tags);
+                    $rtv->{'commit.tags'} = [split('\n',$tags)] if $tags;
+                    
+                    my $branches = `git branch --points-at $rtv->{'branch.oid'}`;
+                    chomp($branches);
+                    $rtv->{'commit.branches'} = [split('\n', $branches)] if $branches;
+
                 }
             }
             next;
@@ -305,7 +315,6 @@ sub _get_status
 
     # Query any missing submodules, if all-submodules mode.
     if ($opts->{all}) {
-        #my $subs = main::list_submodules_here(); # TODO: This needs to be moved into Nuggit namespace
         my $subs = get_submodule_status();
 
         if ($subs) {
@@ -339,7 +348,7 @@ sub _get_status
                     } else {
                         # Otherwise Load Submodule Status as usual
                         my $tmppath = getcwd();
-                        chdir($subname);
+                        chdir($subname) || die "Can't cd to $subname";
                         _get_status( $obj, $flags, $opts );
                         chdir($tmppath);
                         
@@ -427,6 +436,14 @@ sub pretty_print_status
         } else {
             say colored("\t Warning: Commit details unavailable.", $badColor);
         }
+        say "Matching Tags: ".join(', ',@{$status->{'commit.tags'}}) if $status->{'commit.tags'};
+        if ($status->{'commit.branches'}) {
+            # Print Branches as a comma-delimited list
+            say "Matching Branches: ".join(', ',
+                                  # Making active branch name bold
+                                  map { $_ =~ /^\*\s+([\w\/]+)/ ? colored($1,'bold') : $_ } @{$status->{'commit.branches'}}
+                );
+        }
 
     }
     
@@ -501,6 +518,16 @@ sub do_pretty_print_status {
                     my $msg = $obj->{'commit.msg'};
                     $msg = substr($msg,0,67)."..." if length($msg) > 70; # Truncate long messages
                     say "\tMessage: $msg";
+
+                    say "\tTags: ".join(', ',@{$obj->{'commit.tags'}}) if $obj->{'commit.tags'};
+                    if ($obj->{'commit.branches'}) {
+                        # Print Branches as a comma-delimited list
+                        say "\tBranches: ".join(', ',
+                                                # Making active branch name bold
+                                                map { $_ =~ /^\*\s+([\w\/]+)/ ? colored($1,'bold') : $_ } @{$obj->{'commit.branches'}}
+                            );
+                    }
+
                 } else {
                     say colored("\t Warning: Commit details unavailable.", $badColor);
                 }
@@ -619,7 +646,7 @@ sub get_submodule_status {
     
     my @rtv;
     foreach my $sub (@lines) {
-        my ($state,$hash,$name,$branch) = $sub =~ /([\s\+\-])([0-9a-fA-F]+)\s+(\w+)\s*(.+)?/;
+        my ($state,$hash,$name,$branch) = $sub =~ /([\s\+\-])([0-9a-fA-F]+)\s+([\w\\\/\-]+)\s*(.+)?/;
         # Note: branch is the result of "git describe", which finds the nearest match to hash
 
         push(@rtv, {
