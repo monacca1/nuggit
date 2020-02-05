@@ -286,7 +286,7 @@ branch into master (or default tracking branch).
                 CONFLICT (content): Merge conflict in sm2.txt
                 Merge aborted with conflicts.  Please resolve (stash or edit & stage) then run "nuggit_merge.pl --continue" to continue. at /project/sie/users/monacca1/nuggit_sandbox/bin/nuggit_merge.pl line 358.
 
-  - performing nuggit status after a merge conflict was detected will show what files had the conflict as in the following:
+- performing nuggit status after a merge conflict was detected will show what files had the conflict as in the following:
                 > nuggit status
                 Nuggit Merge in Progress.  Complete with "ngt merge --resume" or "ngt merge --abort"
                 On branch JIRA-BARNEY-1 (c553af5fe904804689987672df1995f5f3d43081)
@@ -295,21 +295,45 @@ branch into master (or default tracking branch).
                  M  sm2 Modified
                  UU sm2/sm2.txt
 
-  - Identify the conflicts:
-    - `nuggit diff <file>` or other method if one is available
-    - resove the conflict by opening the file, identifying the conflicts and preparing the file to be committed
-    - add the files that have been resolved to the staging area
-      - `nuggit add <resolved file>`
-  - continue the merge with the command `nuggit merge --continue`
-  - this is an iterative process.  The merge will pause once for each submodule that has a conflict and you will need to resolve those
-    conflicts, add the files and continue the merge until you reach the root repository.
-  - if you finish by resolving conflicts in the root repo you may have to commit in the root directory to complete the merge
-  - push, if desired, or continue with work on the merged branch
-  - TO DO - resolve the meaning of the `--resume` argument, this didnt work for me, but `--continued` did
+- Identify the conflicts:
+  - `nuggit diff <file>` or other method if one is available
+  - resove the conflict by opening the file, identifying the conflicts and preparing the file to be committed
+  - add the files that have been resolved to the staging area
+    - `nuggit add <resolved file>`
+- continue the merge with the command `nuggit merge --continue`
+- this is an iterative process.  The merge will pause once for each submodule that has a conflict and you will need to resolve those
+  conflicts, add the files and continue the merge until you reach the root repository.
+- if you finish by resolving conflicts in the root repo you may have to commit in the root directory to complete the merge
+- push, if desired, or continue with work on the merged branch
+- TO DO - resolve the meaning of the `--resume` argument, this didn't work for me, but `--continue` did
+
+
+       
+### nuggit pull
+- pull the checked out branch from origin for the root repository.  Then foreach
+submodule pull from origin.
+- Any local, uncommitted changes will trigger a warning and will prevent git from completing
+the pull
+- Note: pull is essentially a fetch followed by a merge.
+- Command:
+  - `nuggit pull`
+- Example:
+  - `nuggit pull`
+
+- Note on pushing too master or default tracking branch.  We do not normally push to master, but for some workflows that is acceptable.  
+An example of that workflow may be: complete the work (and test) in a branch, merge default back into the working branch (test), then when 
+satisfied, merge the working branch back into the default tracking branch and push.  
+  - At the moment you should not use the push command to push to the default tracking branch.  The work around is a script "nuggit_push_default.pl"
+  This script will push to whatever the checked out branch is, and if you checked out with `nuggit checkout --default`, it should be the default 
+  tracking branch for each submodule.
+  - Example:
+    - `nuggit_push_default.pl`
 
 
 
-pull
+
+
+
 
 push
 
@@ -324,16 +348,6 @@ stash
 status
 
 tag
-
-
-
-
-       
-### nuggit pull
-- pull the checked out branch from origin for the root repository.  Then foreach
-submodule pull from origin.
-- Any local, uncommitted changes will trigger a warning and will prevent git from completing
-the pull
 
 
 
