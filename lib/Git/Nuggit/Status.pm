@@ -164,6 +164,19 @@ sub _get_status
                 $rtv->{'branch.behind'} = shift(@parts);
             } else {
                 $rtv->{$key} = shift(@parts);
+
+                if ($key eq "branch.oid" && $opts->{details}) {
+                    # If requested, query commit details
+                    my $msg = `git show $rtv->{'branch.oid'} --pretty=format:"%aN\n%ar\n%s" -s`;
+                    if ($?) {
+                        # Failed to query
+                    } else {
+                        my ($author, $date, $cm) = split('\n', $msg);
+                        $rtv->{'commit.author'} = $author;
+                        $rtv->{'commit.date'} = $date;
+                        $rtv->{'commit.msg'} = $cm;
+                    }
+                }
             }
             next;
         }
@@ -356,7 +369,8 @@ sub pretty_print_status
 {
     my $status = shift;
     my $relative_path = shift;
-    my $verbose = shift;
+    my $flags = shift;
+    my $verbose = $flags->{verbose};
 
     my $root_branch = $status->{'branch.head'};
 
@@ -400,11 +414,27 @@ sub pretty_print_status
             say "behind by ".abs($behind)." commits.";
         }
     }
+
+    if ($flags->{details}) {
+        say "\nCommit Details:";
+        say "SHA: ".$status->{'branch.oid'};
+        say "Description: ".$status->{'commit_described'} if $status->{'commit_described'}; # Only if -a
+
+        if (defined($status->{'commit.author'})) {
+            say "Author: $status->{'commit.author'}";
+            say "Date: $status->{'commit.date'}";
+            say "Message: $status->{'commit.msg'}";
+        } else {
+            say colored("\t Warning: Commit details unavailable.", $badColor);
+        }
+
+    }
+    
     say "";
-    do_pretty_print_status($status, $relative_path, $root_branch, $verbose);
+    do_pretty_print_status($status, $relative_path, $root_branch, $flags);
 }
 
-=head2 do_pretty_print_status($status, $relative_path, $root_path, $verbose)
+=head2 do_pretty_print_status($status, $relative_path, $root_path, $flags)
 
 Output details on all objects in this $status object and it's children (submodules).
 
@@ -420,7 +450,8 @@ sub do_pretty_print_status {
     my $status = shift;
     my $relative_path = shift;
     my $root_branch = shift;
-    my $verbose = shift;
+    my $flags = shift;
+    my $verbose = $flags->{verbose};
 
     foreach my $key (sort keys(%{$status->{'objects'}})) {
         my $obj = $status->{objects}->{$key};
@@ -458,7 +489,25 @@ sub do_pretty_print_status {
                 print " )";
             }
             print "\n";
-            do_pretty_print_status($obj, File::Spec->catdir($relative_path,$obj->{'path'}), $root_branch, $verbose);
+
+            if ($flags->{details}) { # Details View
+                say "\tSHA: ".$obj->{'branch.oid'};
+                say "\tDescription: ".$obj->{'commit_described'} if $obj->{'commit_described'}; # Only if -a
+
+                if (defined($obj->{'commit.author'})) {
+                    say "\tAuthor: $obj->{'commit.author'}";
+                    say "\tDate: $obj->{'commit.date'}";
+
+                    my $msg = $obj->{'commit.msg'};
+                    $msg = substr($msg,0,67)."..." if length($msg) > 70; # Truncate long messages
+                    say "\tMessage: $msg";
+                } else {
+                    say colored("\t Warning: Commit details unavailable.", $badColor);
+                }
+            }
+
+            # Recurse into any nested submodules
+            do_pretty_print_status($obj, File::Spec->catdir($relative_path,$obj->{'path'}), $root_branch, $flags);
         } else {
             print "\n";
         }        

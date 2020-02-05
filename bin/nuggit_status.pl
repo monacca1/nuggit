@@ -36,6 +36,7 @@ use strict;
 use warnings;
 use v5.10;
 use Getopt::Long;
+Getopt::Long::Configure ("bundling"); # ie: to allow "status -ad"
 use Pod::Usage;
 use Cwd qw(getcwd);
 use FindBin;
@@ -70,7 +71,9 @@ Getopt::Long::GetOptions(
                            'dump' => \$do_dump,
                          'json' => \$do_json,
                          'all|a!' => \$flags->{all},
-     );
+                         'details|d!' => \$flags->{details},
+                        );
+$flags->{verbose} = $verbose;
 pod2usage(1) if $help;
 pod2usage(-exitval => 0, -verbose => 2) if $man;
 
@@ -117,7 +120,7 @@ else
     if (-e "$root_dir/.nuggit/merge_conflict_state") {
         say colored("Nuggit Merge in Progress.  Complete with \"ngt merge --resume\" or \"ngt merge --abort\"",'red');
     }
-    pretty_print_status($status, $relative_path_to_root, $verbose);
+    pretty_print_status($status, $relative_path_to_root, $flags);
     #say colored("Warning: Above output may not reflect if submodules are not initialized, on the wrong branch, or out of sync with upstream", $warnColor);
 }
 
