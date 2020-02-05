@@ -104,11 +104,11 @@ to master on a remote collaboration server (i.e. bit bucket).
 
 
 ### nuggit_branch_delete_merged.pl
--This command will delete a specified branch that has already been merged.  It will delete it in the local repository AND in the 
+-This command will delete a specified branch that has already been merged. It will delete it in the local repository AND in the 
 remote repository
 - Since nuggit creates branches across all submodules to allow the relevant work to be performed in whichever submodule may need 
-the work, it will result in the creation of the branch in submodules for which the work is not performed.  After a branch is merged 
-into the default tracking branch, this command can be used to delete the merged branches.  This includes the repos where work was 
+the work, it will result in the creation of the branch in submodules for which the work is not performed. After a branch is merged 
+into the default tracking branch, this command can be used to delete the merged branches. This includes the repos where work was 
 performed on that branch and it includes repos were no work was performed on that branch.
 - You can be anywhere in the nuggit (git) repo to execute this command.
 - Command sytax:
