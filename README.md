@@ -340,43 +340,47 @@ is, and if you checked out with `nuggit checkout --default`, it should be the de
 
 
 
-relink
-
-reset
-
-stash
-
-status
-
-tag
-
-
-
-
-
-
-
-
-### nuggit_status.pl
-- two variations: 
-- `nuggit_status.pl`
-  - for each submodule show the status 
-- `nuggit_status.pl --cached`
-  - show the changes that were added to the staging area that will be committed on the next nuggit commit
-- the output will show the relative path of each file that has a status.  The 
-relative path is relative to the nuggit root repository.  This is so the file path and name
-can be copied and pasted into the command line of the nuggit_add.pl command
-        
-    
-
-
-
-
 ### nuggit_relink_submodules.pl
 - This is to be used to correct when the submodule linkages get updated outside
-of nuggit or to address other potentially inconsistencies.
+of nuggit or to address other potentially inconsistencies.  The nuggit workflow enforces development on the same branch across all submodules.
+If a repository is manipulated outside of the nuggit tools / worflow, or in unexpected/undesirable conditions using nuggit, the submodule reference
+from the parent repo may point to a comit within the submodule that is not the head of that same branch within the submodule.  
+`nuggit_relink_submodules.pl` will, for each submodule that has changes,`git add` the submodule in its parent repository.  This needs to be
+followed up with a `nuggit commit`.
+
+- Command:
+  - `nuggit_relink_submodules.pl`
+- Example:
+  - `nuggit_relink_submodules.pl`
 
 
+### nuggit reset
+- The nuggit reset command will unstage changes that have been "added".  Staged changes are the changes that have been added using using `nuggit add`
+- TO DO - implement the ability to reset without argument to reset ALL staged changes
+- TO DO - implement the ability to unstage a new file that has been added.  This currently does not work. 
+
+
+### stash
+- Not implemented yet
+
+
+### nuggit status
+- Show the status of the nuggit repository.  This will show the current branch and any submodules or files that are new, modified, deleted, 
+conflicted, similar to git status, however, `nuggit status` will operate across submodule boundaries and recurse into nested submodules.  The 
+output of nuggit status shows the relative paths of the file or submodule (relative to the current working directory).  This is so you can
+copy and paste the path/file name back intoo the command line for `nuggit add` OR to `nuggit diff`
+
+- Command: 
+  - `nuggit status`
+- Example:
+  - `nuggit status`
+
+
+
+### nuggit tag
+- nuggit tag can be used to see the tags in the repository
+- TO DO - implement the ability to apply tags to the current checked out branch.
+ 
 
 
 
