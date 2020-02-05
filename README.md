@@ -1,4 +1,4 @@
-# Nuggit (prototype)
+# Nuggit
 
 Nuggit is a wrapper for git that makes repositories consisting of submodules (or nested submodules) 
 work more like mono-repositories.  This is, in part, achieved by doing work on the same branch across
