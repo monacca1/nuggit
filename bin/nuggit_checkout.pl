@@ -12,7 +12,9 @@ use Git::Nuggit;
 
 =head1 SYNOPSIS
 
-nuggit checkout <branch_name>
+Checkout a given commit object (hash, branch name, or tag name), or checkout (aka revert) a given file to HEAD.  To checkout a file that has been deleted (or to checkout a directory), explicitly include the "--file" flag to avoid ambiguities.
+
+nuggit checkout <object|file>
 
 The following additional options are supported:
 
@@ -50,6 +52,10 @@ If set (default), a "git submodule update --init" will be automatically executed
 
 Consequently, if enabled, changes may be lost if uncommitted submodule references exist in the current workspace in some cases.  It is generally recommended that all changes should be committed prior to changing branches, however if that is not the case executing with '--no-init-submodules' may be beneficial.
 
+=item --file
+
+Specify this flag to un-ambiguously specify that you wish to checkout/restore a file, and not a branch.  This option is required to unambiguously checkout a deleted file.
+
 =back
 
 =cut
@@ -61,6 +67,7 @@ my $cwd = getcwd();
 my $create_branch_bool = 0;
 my $follow_branch_bool = 1; # Follow branch, or follow commit
 my $checkout_default_bool = 0;
+my $checkout_file_flag = 0;
 my $verbose = 0;
 my $do_init_submodules = 1;
 
@@ -77,12 +84,29 @@ die("Not a nuggit!\n") unless $ngt;
 $ngt->start(level => 1, verbose => $verbose); # Open Logger for loggable-command mode
 my $root_dir = $ngt->root_dir();
 
+# Special case: Allow reversion of a single file
+if (@ARGV == 1 && !$create_branch_bool && (-f $ARGV[0] || $checkout_file_flag )) {
+    my $file = $ARGV[0];
+    say "Checkout file $file";
+    
+    # Get name of parent dir
+    my ($vol, $dir, $fn) = File::Spec->splitpath( $file );
+
+    if ($dir) {
+        chdir($dir) || die ("Error: Can't enter file's parent directory: $dir");
+    }
+    $ngt->run("git checkout $fn");
+
+    exit 1;
+}
+
 check_merge_conflict_state(); # Checkout not permitted while merge in progress
 
 chdir($root_dir) || die("Can't enter $root_dir");
 
 # Handle Branch checkout/creation at root level (special case)
 if ($create_branch_bool) {
+    say "Creating new branch - $branch";
     my $branch_state = does_branch_exist_at_root($branch);
     
     # Mirror Git behavior if branch exists with -b flag
@@ -98,6 +122,7 @@ else
 {
     if ($checkout_default_bool && !defined($branch)) 
     {
+        say "Checking out default branch . . . ";
         if (defined($branch)) {
             # User explicitly specified default branch for root
             $default_branch = $branch;
@@ -113,6 +138,7 @@ else
     }
     else
     {
+        say "Switch to existing branch - $branch";
         my $branch_state = does_branch_exist_at_root($branch);
         
         # Check that branch already exists (locally or remotely)
@@ -170,14 +196,15 @@ sub ParseArgs()
   #
   ######################################################################################################
   Getopt::Long::GetOptions(
-                           "help"             => \$help,
-                           "man"              => \$man,
-                           "b"               => \$create_branch_bool,
-                           "follow-branch!"  => \$follow_branch_bool,
-                           "follow-commit!" => \$follow_commit_bool,
-                           "verbose!"       => \$verbose,
-                           "default!"       => \$checkout_default_bool,
-                           "init-submodules!" => \$do_init_submodules,
+      "help"             => \$help,
+      "man"              => \$man,
+      "b"               => \$create_branch_bool,
+      "follow-branch!"  => \$follow_branch_bool,
+      "follow-commit!" => \$follow_commit_bool,
+      "verbose!"       => \$verbose,
+      "default!"       => \$checkout_default_bool,
+      "init-submodules!" => \$do_init_submodules,
+      "file!" => \$checkout_file_flag,
                           );
     pod2usage(1) if $help;
     pod2usage(-exitval => 0, -verbose => 2) if $man;
@@ -195,24 +222,8 @@ sub ParseArgs()
 
     if($follow_branch_bool == 1)
     {
-        say "Follow branch flag provided";
+        say "Follow branch flag provided" if $verbose;
     }
-
-    # the -b argument means to create the branch just like in git
-    if($create_branch_bool)
-    { 
-        print "Creating new branch -  $branch\n";  
-    }
-    elsif($checkout_default_bool)
-    {
-        say "Checking out default branch";
-    }
-    else
-    { 
-        # Use existing branch
-        print "Switch to existing branch - $branch\n";
-    }
-
 }
 
 
