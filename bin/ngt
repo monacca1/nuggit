@@ -40,7 +40,7 @@ my %files =
              completion_list => [qw(save pop list show drop apply branch)]
             },
  status     => {cmd => "nuggit_status.pl", completion_type => "file"},
- tag     => "nuggit_foreach.pl git tag",
+ tag        => {cmd => "nuggit_foreach.pl", args => [ qw( --no-break-on-error git tag )]},
  
  # For Advanced Users
  foreach => {cmd => "nuggit_foreach.pl",

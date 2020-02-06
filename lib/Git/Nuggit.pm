@@ -133,7 +133,7 @@ sub submodule_foreach {
       $label = substr($words[2], 1, -1) if defined($words[2]); # Label may not always exist
 
       # Enter submodule
-      chdir($name);      
+      chdir($name) || die "submodule_foreach can't enter $name";
 
       # Pre-traversal callback (breadth-first)
       if (defined($opts) && defined($opts->{breadth_first_fn}) ) {
