@@ -43,7 +43,6 @@ Additional use cases may be added in the future.  For example, a "ngt reset HEAD
 my $patch_flag = 0;
 my $quiet_flag = 0;
 my $mode = "";
-use Data::Dumper; # DEBUG
 
 my ($root_dir, $relative_path_to_root) = find_root_dir();
 my $log = Git::Nuggit::Log->new(root => $root_dir);
@@ -81,7 +80,9 @@ if ($argc == 0) {
         my ($vol, $dir, $file) = File::Spec->splitpath( $arg );
 
         # Enter it. We do not currently handle case where parent dir was deleted (TODO)
-        chdir($dir) || die ("Error: $dir doesn't exist");
+        if ($dir) {
+            chdir($dir) || die ("Error: $dir doesn't exist");
+        }
         
         my $cmd = "$base_cmd $file";
         system($cmd);
