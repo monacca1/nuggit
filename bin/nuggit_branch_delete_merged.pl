@@ -57,8 +57,12 @@ else
   print "TO DO - consider folding in to the nuggit branch command?\n";
   
 
-  `ngt foreach git push origin --delete $branch_to_delete`;
-  `ngt foreach git branch -d $branch_to_delete`;
+  `ngt foreach git push origin --delete $branch_to_delete || :`;
+  `ngt foreach git branch -d $branch_to_delete || :`;
+
+# that didnt work for me just now.  Not sure why.  I had to use:
+# git submodule foreach git push origin --delete $branch_to_delete
+# git foreach git branch -d $branch_to_delete
 
 }
 
