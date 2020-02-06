@@ -246,6 +246,12 @@ sub start
 
     die("Error: Can't initialize file logging without a valid file/path") unless (defined($self->{file}));
     
+    # Prepare single-command detailed log
+    my $last_cmd_file = $self->{file}.".last_cmd";
+    rename($last_cmd_file, $last_cmd_file.".old") if -f $last_cmd_file;
+    open(my $log_detail_fh, '>>', $last_cmd_file) || die "Can't open last_cmd_log.txt for writing";
+    $self->{log_detail_fh} = $log_detail_fh;
+
     # Nothing to do if logging is diabled (by verbosity or log-level)
     return if ($level == 0 && !$self->{file_verbose});
  
@@ -320,6 +326,28 @@ sub cmd
     return unless defined($fh); # Fail silently if file is not open
     
     say $fh ",,CWD,$cwd,CMD,$cmd";
+}
+
+sub cmd_full
+{
+    my $self = shift;
+    my $cmd = shift;
+    my $stdout = shift;
+    my $stderr = shift;
+    my $rtv = shift;
+    my $fh = $self->{log_detail_fh};
+
+    return unless defined($fh);
+    say $fh colored($cmd, 'bold');
+    say $fh colored("ERROR Return Value: $rtv", 'bold red') if $rtv;
+    if ($stdout) {
+         say $fh colored("STDOUT:", 'bold italic');
+         say $fh $stdout;
+    }
+    if ($stderr) {
+         say $fh colored("STDERR:", 'bold italic');
+         say $fh $stderr;
+     }
 }
 
 1;

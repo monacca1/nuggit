@@ -32,6 +32,7 @@ my $write_msg;
 my $clear_nuggit_log  = 0;
 my $show_raw_bool     = 0;
 my $show_summary_bool = 1;
+my $show_last_cmd = 0;
 
 my $filter_first_timestamp;
 my $filter_last_timestamp;
@@ -53,6 +54,10 @@ if($clear_nuggit_log == 1)
 {
     $log->clear(); # Empty existing log
     $log->start(1); # And record a new entry indicating truncation (this command)
+}
+elsif($show_last_cmd == 1)
+{
+    exec("less -R ".$log->get_filename().".last_cmd");
 }
 elsif($show_raw_bool == 1)
 {
@@ -131,7 +136,8 @@ sub ParseArgs()
         "verbose|v!"      => \$verbose,
         "all|v!"          => \$verbose,
         "show=s"   => \$show_n_entries,
-
+        "last!" => \$show_last_cmd,
+                             
         # Filtering Options (incomplete)
         "today!"  => \$filter_today,
         "days|d=i" => \$filter_last_days,
@@ -172,6 +178,10 @@ Write the specified message to the log file
 If set (default), only the primary entries of nuggit commands executed will be shown.  Otherwise, any additional records, for example of git commands logged by nuggit actions, will also be shown.
 
 Viewing all entries may also be enabled with --verbose, --all, -v, or -a
+
+=item --last
+
+Display details on the last command logged.
 
 =item --clear
 

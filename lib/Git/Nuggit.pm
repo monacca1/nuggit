@@ -584,6 +584,7 @@ sub run {
         say $stderr if $stderr;
     }
 
+    $self->{logger}->cmd_full($cmd, $stdout, $stderr);
     
     return ($?, $stdout, $stderr);
 }
