@@ -126,8 +126,8 @@ if ($merge_continue_flag) {
         # Use remote for current branch; This is the default git behavior
         say "No branch specified for merge, assuming default remote";
         $source = "";
-        # TODO/VERIFY
     }
+    
     # TODO: Need to handle merge from master with varying branches
 
     chdir($root_dir);
@@ -137,8 +137,12 @@ if ($merge_continue_flag) {
                  "submodules" => get_submodules(),
                  "merge_default" => $merge_remote_head,
                 };
-    
-    print "Source branch is: $source_branch\n";
+
+    if ($merge_remote_head) {
+        say "Source Branch: Remote Default (per-repository)";
+    } else {
+        say "Source branch is: $source";
+    }
     say "Destination branch is the current branch: ".$merge->{destination};
 
     do_merge_recursive($merge);
