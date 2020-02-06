@@ -118,7 +118,7 @@ if ($do_json) {
 else
 {
     if (-e "$root_dir/.nuggit/merge_conflict_state") {
-        say colored("Nuggit Merge in Progress.  Complete with \"ngt merge --resume\" or \"ngt merge --abort\"",'red');
+        say colored("Nuggit Merge in Progress.  Complete with \"ngt merge --continue\" or \"ngt merge --abort\"",'red');
     }
     pretty_print_status($status, $relative_path_to_root, $flags);
     #say colored("Warning: Above output may not reflect if submodules are not initialized, on the wrong branch, or out of sync with upstream", $warnColor);
