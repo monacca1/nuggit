@@ -28,6 +28,10 @@ Defaults to recursively executing on all nested submodules.
 
 By default, operations will abort on the first command that fails. If this option is disabled, the specified command will be executed against all submodules, regardless of success.
 
+=item --log_level
+
+Determine Nuggit logging level.  If set to 0, then the executed command will not be logged.  Default value is 1, with full log results viewab le with "ngt log".  
+
 =back
 
 =cut
@@ -48,6 +52,9 @@ my $opts = {
             "recursive" => 1,
            };
 my $verbose = 0;
+my $ngt = Git::Nuggit->new();
+my $log_level = 1; # Set to 0 to disable logging
+my ($help, $man);
 
 # Parse Command-line arguments.  Arguments must be the first argument, and must end with a '--' if child args to follow
 GetOptions(
@@ -56,6 +63,7 @@ GetOptions(
            "verbose!" => \$verbose,
            "break-on-error!" => \$break_on_error,
            "recursive!" => \$opts->{'recursive'},
+           "log_level=i" => \$log_level,
           );
 pod2usage(1) if $help;
 pod2usage(-exitval => 0, -verbose => 2) if $man;
@@ -65,19 +73,17 @@ my $cmd = join(' ', @ARGV); # $Pass all remaining arguments on
 say "Nuggit Wrapper; $cmd";
 
 # Start at root Nuggit repo
-my ($root_dir, $relative_path_to_root) = find_root_dir();
-die("Not a nuggit!\n") unless $root_dir;
+my $root_dir = $ngt->root_dir();
+$ngt->start(level => $log_level, verbose => $verbose);
+$ngt->run_die_on_error($break_on_error);
+
 chdir $root_dir || die("Error: Can't enter root; $root_dir");
 
 
 submodule_foreach(sub {
                       my ($parent, $name, $status, $hash, $label) = (@_);
                       say colored("$parent/$name - Executing $cmd", 'green');
-                      system($cmd);
-
-                      if ($break_on_error) {
-                          die("Command failed") if $? != 0;
-                      }
+                      $ngt->run($cmd);
                   }, $opts);
 say colored("Root ($root_dir) - $cmd", 'green');
 system($cmd);
