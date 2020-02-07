@@ -146,10 +146,7 @@ that this branch was created using nuggit and thus exists in all submodules.
   - example:
     - `nuggit checkout -b JIRA-XYZ`
 - checkout an explicit file
-  - TO DO
   - This will revert local modifications so that the file matches the committed
-  - a work around for this, while it has not yet been implemented is to use the `git checkout <file>` command in the same directory 
-  as the file you would like to checkout / revert
 - checkout a hash
    - TO DO
      - TO DO - this may need to use some of the logic implemented in: `nuggit_checkout.pl <branch> --follow-commit`
@@ -375,6 +372,9 @@ copy and paste the path/file name back intoo the command line for `nuggit add` O
 - Example:
   - `nuggit status`
 
+Additional flags to nuggit status exist to show additional information
+- `-a` to list all submodules, event those with no active changes.  This will triiger the detectons for repsitories on the wrong branch or in detached head state
+- `-d` to list additional details about each submodule including the SHA, log message, author of the most recent ccommit, date of commit, and branches
 
 
 ### nuggit tag
