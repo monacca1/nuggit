@@ -4,7 +4,9 @@
 
 Recursively push changes in root repository and all submodules.
 
-No arguments are supported for this command at present beyond --help and --man to show this dialog.
+Use "--help" or "--man" to display this help dialog.
+
+Specify "--all" to push all branches, not just the currently checked out one.
 
 =cut
 
@@ -24,10 +26,11 @@ use Git::Nuggit::Log;
 
 my $root_dir = do_upcurse();
 my $log = Git::Nuggit::Log->new(root => $root_dir);
-my ($help, $man);
+my ($help, $man, $all_flag);
 GetOptions(
-    "help"            => \$help,
-    "man"             => \$man,
+           "help"            => \$help,
+           "man"             => \$man,
+           "all!"            => \$all_flag,
           );
 pod2usage(1) if $help;
 pod2usage(-exitval => 0, -verbose => 2) if $man;
@@ -44,14 +47,16 @@ chdir $root_dir;
 
 
 my $branch = get_selected_branch_here();
+my $opts = "";
+$opts .= "--all " if $all_flag;
 
 print "nuggit_push.pl\n";
 
-print `git submodule foreach --recursive git push --set-upstream origin $branch`;
+print `git submodule foreach --recursive git push $opts --set-upstream origin $branch`;
 
 die "Failed to push one or more submodules" unless $? == 0;
 
-print `git push --set-upstream origin $branch`;
+print `git push $opts --set-upstream origin $branch`;
 
 exit $?;
 
