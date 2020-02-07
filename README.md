@@ -147,6 +147,7 @@ that this branch was created using nuggit and thus exists in all submodules.
     - `nuggit checkout -b JIRA-XYZ`
 - checkout an explicit file
   - This will revert local modifications so that the file matches the committed
+  - Example: `nuggit checkout ../sm/file.c`
 - checkout a hash
    - TO DO
      - TO DO - this may need to use some of the logic implemented in: `nuggit_checkout.pl <branch> --follow-commit`
