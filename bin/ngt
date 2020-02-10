@@ -29,7 +29,7 @@ my %files =
  diff      => {cmd => "nuggit_diff.pl", completion_type => "file"},
  difftool  =>  {cmd => "nuggit_foreach.pl", args => [ qw( --log_level 0 git difftool) ] },
  fetch     => "nuggit_fetch.pl",
- init      => "nuggit_init",
+ init      => "nuggit_init.pl",
  log       => "nuggit_log.pl",
  merge     => "nuggit_merge.pl",
  mergetool => {cmd => "nuggit_foreach.pl", args => [ qw( git mergetool) ] },
@@ -48,11 +48,6 @@ my %files =
  foreach => {cmd => "nuggit_foreach.pl",
              completion_type => "system" # Use system default completion
             },
- 
- # Helper Aliases for special cases/details
- git_status => {cmd => "nuggit_foreach.pl git status",
-                description => "Recursively invoke native git status (DEBUG)"
-               },
  
 );
 
