@@ -280,7 +280,7 @@ sub get_selected_branch($)
   $selected_branch = $root_repo_branches;
   $selected_branch =~ m/\*.*/;
   $selected_branch = $&;
-  $selected_branch =~ s/\* //;  
+  $selected_branch =~ s/\* // if $selected_branch;
   
   return $selected_branch;
 }
@@ -541,6 +541,12 @@ sub new
     return $instance;
 }
 
+sub run_die_on_error
+{
+    my $self = shift;
+    $self->{run_die_on_error} = shift;
+}
+
 sub root_dir
 {
     my $self = shift;
@@ -575,6 +581,7 @@ sub run {
     if ($self->{run_die_on_error} && $?) {
         say $stderr if $stderr;
         my ($package, $filename, $line) = caller;
+        $self->{logger}->cmd_full($cmd, $stdout, $stderr, $?);
         my $cwd = getcwd(); # TODO: Convert to relative path
         die("$cmd failed with $? at $package $filename:$line in $cwd");
     }

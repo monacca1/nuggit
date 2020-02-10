@@ -339,6 +339,7 @@ sub cmd_full
 
     return unless defined($fh);
     say $fh colored($cmd, 'bold');
+    say $fh colored("\t at ".getcwd(), 'bold');
     say $fh colored("ERROR Return Value: $rtv", 'bold red') if $rtv;
     if ($stdout) {
          say $fh colored("STDOUT:", 'bold');
