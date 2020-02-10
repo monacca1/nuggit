@@ -11,6 +11,7 @@ use Git::Nuggit::Log;
 use Getopt::Long;
 use Pod::Usage;
 
+my $prune_mode = 0;
 my $root_dir = do_upcurse();
 
 my $log = Git::Nuggit::Log->new(root => $root_dir);

@@ -24,14 +24,31 @@ Contact Chris Monaco (chris.monaco@jhuapl.edu) or David Edell (david.edell@jhuap
 Several installation options are documented below for convenience.
 
 Minimum requirements for Nuggit are:
-- Command-line Git tools, version 2.13.2 or later.  For best results, 
+- Command-line Git tools, version 2.13.2 or later.
 - Perl version 5.10 or later
 
 
-### Automated (not yet available)
-TODO: A Makefile.PL will be added in the future to enable standard
-Perl 
-installation.
+### Makefile.PL
+
+- perl Makefile.PL
+- make
+- make test     # Optional
+- make install
+
+### CPAN (from Tar file)
+
+This package has not yet been submitted to CPAN.
+
+A CPAN-compatible distribution can be generated with "perl Makefile.PL
+&& make && make test && make manifest && make dist"
+
+To use CPAN to install a module and it's dependencies from a packaged .tar.gz:
+
+- tar -xvf Git-Nuggit-0.xx.tar.gz
+- cd Git-Nuggit-0.xx
+- cpan .
+
+
 
 ### Manual via CPAN
 Install Perl module dependencies using CPAN, or CPANM.  CPANM can be installed and run without root

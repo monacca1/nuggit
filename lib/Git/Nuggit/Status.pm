@@ -1,6 +1,6 @@
 #!/usr/bin/env perl
 package Git::Nuggit::Status;
-our $VERSION = 0.01;
+our $VERSION = 0.02;
 
 use v5.10;
 use strict;

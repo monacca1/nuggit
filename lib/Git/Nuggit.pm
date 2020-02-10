@@ -1,5 +1,5 @@
 #!/usr/bin/env perl
-our $VERSION = 0.01;
+our $VERSION = 0.02;
 # TIP: To format documentation in the command line, run "perldoc nuggit.pm"
 
 use v5.10;
