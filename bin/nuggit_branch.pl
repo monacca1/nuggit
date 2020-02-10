@@ -145,7 +145,7 @@ sub display_branches
     $selected_branch    = get_selected_branch($root_repo_branches);
     
     # Note: If showing merged/no-merged, selected branch may be unknown
-    say "Root repo is on branch: ".colored($selected_branch, 'bold italic') if $selected_branch;
+    say "Root repo is on branch: ".colored($selected_branch, 'bold') if $selected_branch;
     if ($root_repo_branches) {
         print color('bold');
         print "All " if $show_all_flag;
