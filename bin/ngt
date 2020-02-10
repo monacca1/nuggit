@@ -132,6 +132,8 @@ if (defined($ENV{'COMP_LINE'}) || defined($ENV{'COMMAND_LINE'}) ) {
     exit;
 } elsif (defined($cmd) && $cmd =~ /(help|man)$/) {
     show_help();
+} elsif (defined($cmd) && $cmd eq "generatedocs") {
+    generate_help();
 } elsif (defined($cmd) && defined($files{$cmd})) {
     # Execute specified file directly
     my $rawcmd = $FindBin::Bin.'/';
@@ -198,6 +200,95 @@ sub show_help {
         }
         print "\n";
     }
+}
+
+sub generate_help {
+    # Conditionally include (so we don't break other functions if not available)
+    eval "use Pod::Simple::HTMLBatch"; die $@ if $@;
+    eval "use Pod::Simple::XHTML"; die $@ if $@;
+    use List::Util qw(first);
+
+    mkdir './html';
+
+    my $convert = Pod::Simple::HTMLBatch->new;
+    $convert->html_render_class('Pod::Simple::XHTML');
+    $convert->add_css('http://www.perl.org/css/perl.css');
+    $convert->css_flurry(1);
+    $convert->javascript_flurry(1);
+    $convert->contents_file(1);    
+    $convert->batch_convert(['./pod','./bin','./lib/Git'], './html');
+
+    # Open Directory and get list of generated HTML files.
+    chdir('html');
+    my @htmlfiles = glob( '*.html */*.html');
+
+    open(my $idx, '>', "index.html") || die("Can't create index.html");
+    say $idx "<HTML><HEAD><TITLE>Nuggit Help</TITLE></HEAD><BODY>";
+    say $idx "<H1>Nuggit; A Git Utility for submodule-based workflows</H1>";
+    say $idx <<EOF;
+
+    <p><b>Usage:</b> ngt <cmd> <args></p>
+
+    <p>"ngt" is a wrapper for available nuggit commands.  Use "ngt help" to list a version of this help page, or "ngt check" to verify your installation.  "ngt generatedocs" can be used to generate this documentation.</p>
+
+    <p>Commands for 'ngt' can be autocompleted by pressing the tab key, while a list
+  of all matches can be returned by pressing tab twice. This will work
+  on Bash and CSH terminals only, providing that the nuggit.[c]sh script
+  has been sourced.</p>
+
+  <p>Most of the commands below have their own help page accessible
+ from the command line as 'ngt <cmd> --help' for abbreviated usage or
+ 'ngt <cmd> --man' for detailed usage information, with HTML versions
+ linked below.</p>
+
+
+EOF
+
+    say $idx "<h2>Commands:</h2><ul>";
+    foreach my $file (sort keys %files) {
+        my $obj = $files{$file};
+        print $idx "<li><p>";
+
+        # If a matching HTML file exists, link to it.
+        my $index = first { $htmlfiles[$_] eq "nuggit_$file.html" } 0..$#htmlfiles;
+        #my $index = first { $_ eq "nuggit_$file.html" } @htmlfiles;
+        if (defined($index)) {
+            print $idx "<a href=".$htmlfiles[$index].">$file</a> ";
+            splice(@htmlfiles, $index, 1);
+        } else {
+            print $idx $file." ";
+        }
+        
+        if (ref($obj)) {
+            if ($obj->{'completion_list'}) {
+                my $first = 0;
+                foreach my $subcmd (@{$obj->{'completion_list'}}) {
+                    print $idx "|" unless !$first;
+                    print $idx $subcmd;
+                    $first++;
+                }
+            } elsif (defined($obj->{'completion_type'})) {
+                if ($obj->{'completion_type'} eq "file") {
+                    print $idx "<file>";
+                }
+            }
+            print $idx "&mdash;".$obj->{'description'} if defined($obj->{'description'});
+        }
+        say $idx "</p></li>";
+    }
+    say $idx "</ul>";
+        
+    say $idx "<h2>Other Documentation:</h2><ul>";
+    foreach my $file (@htmlfiles) {
+        say $idx "<li><a href=\"$file\">$file</a></li>";
+    }
+    say $idx "</ul>";
+ 
+    say $idx "</BODY>";
+    
+    
+    close($idx);
+    say "Help Pages have been generated";
 }
 
 sub file_complete {
