@@ -341,11 +341,11 @@ sub cmd_full
     say $fh colored($cmd, 'bold');
     say $fh colored("ERROR Return Value: $rtv", 'bold red') if $rtv;
     if ($stdout) {
-         say $fh colored("STDOUT:", 'bold italic');
+         say $fh colored("STDOUT:", 'bold');
          say $fh $stdout;
     }
     if ($stderr) {
-         say $fh colored("STDERR:", 'bold italic');
+         say $fh colored("STDERR:", 'bold');
          say $fh $stderr;
      }
 }
