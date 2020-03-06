@@ -121,9 +121,9 @@ to master on a remote collaboration server (i.e. bit bucket).
   - `nuggit branch`
 - The nuggit branch command can be used to delete branches as well.
   - To delete a branch that has already been merged, first delete it in the remote repository using the command:
-    - `nuggit branch -rd <branch-name>
+    - `nuggit branch -rd <branch-name>`
   - After the branch has been deleted in the remote repository, you can delete it locally using the command:
-    - `nuggit branch -d <branch-name>
+    - `nuggit branch -d <branch-name>`
 
 
 
