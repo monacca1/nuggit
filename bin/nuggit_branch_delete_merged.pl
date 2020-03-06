@@ -55,7 +55,7 @@ else
   print "TO DO - CLEAN THIS UP\n";
   print "TO DO - add nuggit log entry\n";
 
-  print "TO DO - add error checking: make sure the currently checked out branch is NOT the branch to delete\n"
+  print "TO DO - add error checking: make sure the currently checked out branch is NOT the branch to delete\n";
   print "TO DO - add error checking: make sure branch has been merged and does not contain commits that are not in master (on remote and local)\n";
   `nuggit branch -rd $branch_to_delete`;
   `nuggit branch -d  $branch_to_delete`;
