@@ -119,6 +119,11 @@ to master on a remote collaboration server (i.e. bit bucket).
 - You can be anywhere in the nuggit (git) repo to execute this command.
 - example
   - `nuggit branch`
+- The nuggit branch command can be used to delete branches as well.
+  - To delete a branch that has already been merged, first delete it in the remote repository using the command:
+    - `nuggit branch -rd <branch-name>
+  - After the branch has been deleted in the remote repository, you can delete it locally using the command:
+    - `nuggit branch -d <branch-name>
 
 
 
@@ -129,15 +134,22 @@ remote repository
 the work, it will result in the creation of the branch in submodules for which the work is not performed. After a branch is merged 
 into the default tracking branch, this command can be used to delete the merged branches. This includes the repos where work was 
 performed on that branch and it includes repos were no work was performed on that branch.
+- This is a helper script that will help with the deletion of merged branches. This script calls other nuggit commands to perform the effect..
+- This script does the following:
+  - Check to make sure that you are not currently on the branch that is going to be deleted.  If the checked-out branch is
+the branch to be deleted, the delete will not work.
+  - Check to make sure that, for all repositories and submodules where the branch exists, that it has been merged (both locally and in the remote).
+  - Delete the branch in all repositories and submodules on the remote (central repo) where the branch exists and has already been merged.
+  - Delete the branch locally from all repositories and submodules where the branch exists and has already been merged.
 - You can be anywhere in the nuggit (git) repo to execute this command.
 - Command sytax:
   - `nuggit_branch_delete_merged.pl <branch to delete>`
 - example
   - `nuggit_branch_delete_merged.pl JIRA-XYZ`
-- TO DO - fold this into another nuggut commmand, i.e. `nuggit branch -d <branch name>`
-- TO DO - add verification to make sure that the branch has been merged in across all submodules.  In other words, make sure that there
-are not commits that are not in common with master (?)  Do a pull of default and the branch in order to be sure that this is true 
+- TO DO - add verification to make sure that the branch has been merged in across all submodules before attempting the delete.  In other words, make sure that there
+are no commits that are not in common with master (?)  Do a pull of default and the branch in order to be sure that this is true 
 on the remote too
+- TO DO - allow this script to continue without error even if there are some submodules where the branch does not exist. 
 
 
 ### nuggit checkout
