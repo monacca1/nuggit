@@ -60,6 +60,11 @@ else
   `nuggit branch -rd $branch_to_delete`;
   `nuggit branch -d  $branch_to_delete`;
 
+  # this next command will remove local knowlege of the remote branch if the branch has been deleted remotely
+  `git submodule foreach --recursive git fetch -p`
+  `git fetch -p`
+  
+
 # TBD - in case the commands above fail and the branch has been partially 
 #  deleted... (in some repos but not all)
 #    The "|| :" at the end of the following commands means if there is an error do not abort and keep going on to the next submodule
