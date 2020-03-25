@@ -172,7 +172,10 @@ that this branch was created using nuggit and thus exists in all submodules.
   model you do not work on master, however, for your workflow it maybe appropriate to merge into master (default tracking branch) and 
   then push.
 - create and checkout a new branch
-  - this will create the branch in the root repository and in all submodules.
+  - `nuggit checkout -b <branch_name>`
+  - This will create the branch in the root repository and in all submodules based on the currently checked out branch and commit.  
+  This is analgous to the git checkout -b command but operates across all submodules.
+  - This command can be executed anywhere in the repository and the behavior is not specific to the location where the command is executed.
   - example:
     - `nuggit checkout -b JIRA-XYZ`
 - checkout an explicit file
