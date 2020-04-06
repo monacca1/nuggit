@@ -10,6 +10,7 @@ use Pod::Usage;
 use FindBin;
 use lib $FindBin::Bin.'/../lib'; # Add local lib to path
 use Git::Nuggit;
+use Git::Nuggit::Status;
 use Git::Nuggit::Log;
 
 
