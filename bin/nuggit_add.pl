@@ -42,6 +42,7 @@ chdir($cwd);
 my $argc = @ARGV;  # get the number of arguments.
   
 if ($argc == 0) {
+    chdir($root_dir);
     # This is only valid if -A flag was set
     if ($add_all_bool) {
         # Run "git add -A" for each submodule that has been modified.
