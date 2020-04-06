@@ -10,8 +10,6 @@ use Pod::Usage;
 use FindBin;
 use lib $FindBin::Bin.'/../lib'; # Add local lib to path
 use Git::Nuggit;
-use Git::Nuggit::Status;
-use Git::Nuggit::Log;
 
 
 # usage: 
@@ -26,15 +24,17 @@ sub add_file($);
 my $cwd = getcwd();
 my $add_all_bool = 0;
 my $patch_bool = 0;
+my $ngt = Git::Nuggit->new();
+$ngt->run_die_on_error(1);
 
 print "nuggit_add.pl\n";
 
-my ($root_dir, $relative_path_to_root) = find_root_dir();
+my $root_dir = $ngt->root_dir();
 die("Not a nuggit!") unless $root_dir;
 my $log = Git::Nuggit::Log->new(root => $root_dir);
 
 ParseArgs();
-$log->start(1);
+$ngt->start(level=>1);
 
 chdir($cwd);
 
@@ -46,8 +46,7 @@ if ($argc == 0) {
     # This is only valid if -A flag was set
     if ($add_all_bool) {
         # Run "git add -A" for each submodule that has been modified.
-        my $status = get_status({uno => 1});
-        add_all($status);
+        add_all();
     } else {
         say "Error: No files specified";
         pod2usage(1);
@@ -81,15 +80,12 @@ sub ParseArgs()
 
 sub add_all
 {
-    my $status = shift;
-
-    # Foreach submodule with active changes
-    foreach my $child (@{$status->{children}}) {
-        add_all($child);
-    }
-
-    # And for self
-    git_add();
+  submodule_foreach(sub {
+                        $ngt->run("git add --all");
+                    });
+    
+  # And for self
+  $ngt->run("git add --all");
 }
 
 
@@ -128,9 +124,7 @@ sub git_add {
     $cmd .= " -p " if $patch_bool;
     $cmd .= " -A " if $add_all_bool;
     $cmd .= " $file" if $file; # support for -A option
-    system($cmd);
-    $log->cmd($cmd);
-    die "Add of $file failed: $?" if $?;
+    $ngt->run($cmd);
 }
 
 =head1 Nuggit add
