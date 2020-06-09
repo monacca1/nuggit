@@ -1,4 +1,5 @@
 #!/usr/bin/env perl
+package Git::Nuggit;
 our $VERSION = 0.02;
 # TIP: To format documentation in the command line, run "perldoc nuggit.pm"
 
@@ -7,6 +8,12 @@ use strict;
 use warnings;
 use Cwd qw(getcwd);
 use Term::ANSIColor;
+use Git::Nuggit::Log;
+use Cwd qw(getcwd);
+use IPC::Run3;
+our @ISA = qw(Exporter);
+our @EXPORT = qw(get_submodules list_submodules_here submodule_foreach find_root_dir nuggit_init get_remote_tracking_branch get_selected_branch_here get_selected_branch do_upcurse nuggit_status check_merge_conflict_state get_branches);
+
 
 # TODO: This should become an Object where:
 # - constructor finds root dir and relative path
@@ -18,13 +25,13 @@ use Term::ANSIColor;
 
 This library provides common utility functions for interacting with repositories using Nuggit.
 
-=head1 Methods
+=head1 Procedural Methods
 
 =cut
 
 =head2 get_submodules()
 
-Return an array of all submodules from current (or specified) directory and below listed depth-first.
+Return an array of all submodules from current (or specified) directory and below listed depth-first, queried via git submodule foreach.
 
 NOTE: Direct usage of submodule_foreach() is preferred when possible.
 
@@ -41,6 +48,27 @@ sub get_submodules {
     chdir($old_dir) if defined($dir);
 
     return \@modules;
+}
+
+=head2 list_submodules_here([path])
+
+Return an array listing all submodules of the current (or specified) directory.  This function uses 'git config' to parse the .gitmodules file and is NOT recursive.
+
+=cut
+
+sub list_submodules_here {
+    my $path = shift;
+    my $file = ".gitmodules";
+    $file = File::Spec->catfile($path, $file) if $path;
+
+    return undef unless -e $file;
+
+    my $rtv = `git config --file $file --get-regexp path | awk '{ print \$2 }'`;
+    chomp($rtv);
+
+    my @rtv = split('\n', $rtv);
+
+    return \@rtv;
 }
 
 
@@ -89,6 +117,19 @@ Hash containing list of user options.  Currently supported options are:
 =over
 
 =item recursive If false, do not recurse into nested submodules
+
+=item breadth_first_fn
+If defined, execute this callback function prior to recursing into nested submodules.
+
+The main callback function is executed after visiting all nested submodules.
+
+=item recursive
+
+If set, or undefined, recurse into any nested submodules. If set to 0, only visit submodules of the current repository.
+
+=item TODO/FUTURE: parallel
+
+If defined, parse each submodule in parallel using fork/wait
 
 =item FUTURE: Option may include a check if .gitmodules matches list reported by git submodule
 
@@ -283,6 +324,60 @@ sub get_selected_branch($)
   $selected_branch =~ s/\* // if $selected_branch;
   
   return $selected_branch;
+}
+
+=head2 get_branches
+
+Get a listing of all branches in the current repository/directory.
+
+Supported options (passed directly to git) include:
+- get_branches() - Return a list of all local branches
+- get_branches("-a") - Return a list of all local+remote branches (ie: $branch or remotes/origin/$branch)
+- get_branches("-r") - Return a list of all remote branches (ie: origin/$branch)
+- get_branches("--merged")
+- get_branches("--no-merged")
+
+Returns a hash where key is branch name and value will be a hash with any known details.
+
+=cut
+
+sub get_branches
+{
+    my $opts = shift;
+    my $cmd = "git branch -vv ";
+    $cmd .= $opts if $opts;
+    say "DBG: $cmd";
+    # execute git branch
+    my $raw = `$cmd`;
+    my %rtv;
+    my @lines = split("\n", $raw);
+
+    foreach my $line (@lines) {
+        if ($line =~ /HEAD detached at ([0-9a-fA-F]+)/) {
+            # Special handling
+            $rtv{'HEAD'} = {commit => $1};
+        } elsif ($line =~ /HEAD\s+->\s/) {
+            my ($name, $link) = $line =~ m{([\d\w\-\_/]+)\s+->\s+(.+)};
+            $rtv{$name} = {name => $name, link => $link};
+        } else {
+            my ($selected, $name, $commit, $upstream, $msg) = $line =~ m{^(\*?)\s+([\d\w\-\_/]+)\s+([0-9a-fA-F]+)\s+(\[[\d\w\-\_/]+\])?\s*(.*)};
+            my $obj = {name => $name, selected => $selected, commit => $commit, upstream => $upstream, msg => $msg};
+
+            # Aide parsing when -a is used
+            if ($name =~ m{remotes/([\w+])/(.+)}) {
+                $obj->{remote} = $1;
+                $obj->{remote_branch} = $2;
+            } elsif ($opts && $opts eq "-r") { # or -r
+                my ($remote,$branch) = $name =~ m{(\w+)/(.+)};
+                $obj->{remote} = $1;
+                $obj->{remote_branch} = $2;
+                $obj->{remote_full_name} = $name;
+                $name = $obj->{remote_branch};
+            }
+            $rtv{$name} = $obj;
+        }
+    }
+    return \%rtv;
 }
 
 =head2 do_upcurse
@@ -485,7 +580,7 @@ sub _nuggit_status
     return $rtv;
 }
 
-=head1 check_merge_conflict_state()
+=head2 check_merge_conflict_state()
 
 Checks if a merge operation is in progress, and dies if it is.
 
@@ -501,12 +596,12 @@ sub check_merge_conflict_state
     }
 }
 
-# The following is an initial cut at an OOP interface.  The OOP interface is incomplete at this stage
-#  and serves as a convenience wrapper for other commands, and Nuggit::Log
-package Git::Nuggit;
-use Git::Nuggit::Log;
-use Cwd qw(getcwd);
-use IPC::Run3;
+=head1 Object Oriented Interface
+
+The following is an initial cut at an OOP interface.  The OOP interface is incomplete at this stage
+ and serves primarily as a convenience wrapper for other commands, and Nuggit::Log
+
+=cut
 
 sub new
 {
@@ -562,6 +657,18 @@ sub start
 sub logger {
     my $self = shift;
     return $self->{logger};
+}
+
+sub run_foreach {
+    my $self = shift;
+    my $cmd = shift;
+
+    submodule_foreach(sub {
+                          $self->run($cmd);
+                      }
+       );
+    $self->run($cmd);
+
 }
 
 # Usage: my ($status, $stdout, $stderr) = run($cmd [,@args]);  # TODO: @args to be added later, for now single string expected
