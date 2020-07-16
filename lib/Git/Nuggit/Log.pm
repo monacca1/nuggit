@@ -122,9 +122,6 @@ Log the speciied commmand.  The current working directory will be included in th
 
 =cut
 
-my $nuggit_log_fh; # TODO: This should be a blessed var, once nuggit is converted to OOP
-my $cached_root_dir; # Scaffold until we make this an object
-
 sub new
 {
     my ($class,%args) = @_;

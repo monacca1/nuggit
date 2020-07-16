@@ -31,6 +31,7 @@ use v5.10;
 use Getopt::Long;
 use Pod::Usage;
 use Cwd qw(getcwd);
+use Term::ANSIColor;
 use File::Spec;
 use Git::Nuggit;
 
@@ -108,7 +109,7 @@ sub is_branch_selected_throughout($);
 sub create_new_branch($);
 sub get_selected_branch_here();
 
-my $ngt = Git::Nuggit->new();
+my $ngt = Git::Nuggit->new() || die("Not a nuggit!");
 
 my $cwd = getcwd();
 my $root_repo_branches;
@@ -213,6 +214,10 @@ sub ParseArgs()
     pod2usage(1) if $help;
     pod2usage(-exitval => 0, -verbose => 2) if $man;
 
+    if ( ($delete_branch_flag + $delete_merged_flag + $delete_remote_flag + $delete_merged_remote_flag) > 1) {
+        die "ERROR: Please specify only one version of delete flags (-d -D -rd -rD) at a time.";
+    }
+
     # If a single argument is specified, then it is a branch name. Otherwise user is requesting a listing.
     if (@ARGV == 1) {
         $selected_branch = $ARGV[0];
@@ -273,22 +278,23 @@ sub delete_merged_branch
     delete_branch(shift, "-D");
 }
 
+# Base function to (unconditionally) delete a local branch, failing on first error
 sub delete_branch
 {
   my $branch = shift;
   my $flag = shift || "-d";
 
-  $ngt->run("git submodule foreach --recursive git branch $flag $branch");
-  $ngt->run("git branch $flag $branch");
+  my $cmd = "git branch $flag $branch";
+
+  # Don't use native git submodule foreach, as it's error handling (aborting) is inconsistent
+  $ngt->run_foreach($cmd);
 }
+
+# Delete a remote branch (unconditionally)
 sub delete_remote_branch
 {
     my $branch = shift;
-    $ngt->run("git push origin --delete $branch");
-    submodule_foreach(sub {
-        $ngt->run("git push origin --delete $branch");
-                      }
-        );
+    $ngt->run_foreach("git push origin --delete $branch");
 }
 sub delete_merged_remote_branch
 {
