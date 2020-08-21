@@ -120,7 +120,7 @@ sub submodule_tree($$$)
   if($head_commit ne $ref_hash)
   {
     print p_indent($indent) . "************************************************************\n";
-    print p_indent($indent) . "submodule inconsistent with parent reference\n";
+    print p_indent($indent) . "* submodule inconsistent with parent reference\n";
     print p_indent($indent) . "************************************************************\n";
     
   }
@@ -143,6 +143,21 @@ sub submodule_tree($$$)
   {
     $submodule = $_;
 
+    # check if directory exists;
+    if(-e $dir . "/" . $submodule)
+    {
+    }
+    else
+    {
+       print p_indent($indent) . "************************************************************\n";
+       print p_indent($indent) . "* Submodule specified:\n";
+       print p_indent($indent) . "*    $submodule\n";
+       print p_indent($indent) . "* However, directory does not exist:\n";
+       print p_indent($indent) . "*    $dir/$submodule\n";
+       print p_indent($indent) . "* Bailing out\n";
+       print p_indent($indent) . "************************************************************\n";
+       exit();
+    }
 
 #    print p_indent($indent) . "Directory: " . getcwd() . "\n";
 #    print p_indent($indent) . "Executing command: git ls-tree -r $active_branch $submodule --abbrev=8\n";
