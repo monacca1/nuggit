@@ -38,7 +38,7 @@ use Data::Dumper; # Debug and --dump option
 use Git::Nuggit;
 
 sub p_indent($);
-sub submodule_tree($$);
+sub submodule_tree($$$);
 
 
 my $ngt = Git::Nuggit->new();
@@ -70,21 +70,28 @@ print `git ls-tree -r $active_branch | grep commit`;
 
 
 
-submodule_tree($root_dir, 0);
+submodule_tree($root_dir, "0000", 0);
 
 
 
-sub submodule_tree($$)
+sub submodule_tree($$$)
 {
-  my $dir = $_[0];
-  my $indent = $_[1];
+  my $dir      = $_[0];
+  my $ref_hash = $_[1];
+  my $indent   = $_[2];
+  
   my $start_dir;
   my $result_dir;
   my $submodule_count;
   my $submodule;
   my $submodule_status;
+  
   my $ls_tree_info;
   my @ls_tree_info_split;
+  
+  my $git_log_result;
+  my @git_log_result;
+  my $head_commit;
  
   $start_dir = getcwd(); 
 #  print "starting dir: " . $start_dir . "\n";
@@ -105,9 +112,18 @@ sub submodule_tree($$)
     }
   }
 
-
-  print p_indent($indent) . `git log -n1 HEAD | grep commit`;  
+  $git_log_result = `git log -n1 HEAD | grep commit`;
+  @git_log_result = split(" ", $git_log_result);
+  $head_commit = @git_log_result[1];
+  print p_indent($indent) . "Branch HEAD commit: " . $head_commit . "\n";
   
+  if($head_commit ne $ref_hash)
+  {
+    print p_indent($indent) . "************************************************************\n";
+    print p_indent($indent) . "submodule inconsistent with parent reference\n";
+    print p_indent($indent) . "************************************************************\n";
+    
+  }
   
 #  print `list_submodules.sh`;
   $submodules = `list_submodules.sh`;
@@ -133,11 +149,12 @@ sub submodule_tree($$)
     print p_indent($indent) . "Submodule $submodule\n";
     $ls_tree_info = `git ls-tree -r $active_branch $submodule`;
     @ls_tree_info_split = split(" ", $ls_tree_info);
-    print p_indent($indent) . "  SM ref commit hash: " . @ls_tree_info_split[2] . "\n";
+    $ref_hash = @ls_tree_info_split[2];
+    print p_indent($indent) . "  SM ref commit hash: " . $ref_hash . "\n";
 
 
 #    print "Recursing into submodule: " . $_ . "\n";
-    submodule_tree($dir . "/" . $submodule, $indent+1);
+    submodule_tree($dir . "/" . $submodule,  $ref_hash,   $indent+1);
     chdir $dir;
     
 
@@ -145,10 +162,6 @@ sub submodule_tree($$)
   }
 
   #nuggit_get_path_relation_to_root.pl
-
-
-  #submodule_tree($active_branch);
-
 
   #print `git log -n1 HEAD | grep commit`;
   #print `git ls-tree -r HEAD | grep commit`;
