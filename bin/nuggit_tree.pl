@@ -104,6 +104,10 @@ sub submodule_tree($$)
       exit();
     }
   }
+
+
+  print p_indent($indent) . `git log -n1 HEAD | grep commit`;  
+  
   
 #  print `list_submodules.sh`;
   $submodules = `list_submodules.sh`;
@@ -119,8 +123,6 @@ sub submodule_tree($$)
     return;
   }
 
-
-
   foreach(@submodules)
   {
     $submodule = $_;
@@ -129,7 +131,7 @@ sub submodule_tree($$)
 #    print p_indent($indent) . "Directory: " . getcwd() . "\n";
 #    print p_indent($indent) . "Executing command: git ls-tree -r $active_branch $submodule --abbrev=8\n";
     print p_indent($indent) . "Submodule $submodule\n";
-    $ls_tree_info = `git ls-tree -r $active_branch $submodule --abbrev=8`;
+    $ls_tree_info = `git ls-tree -r $active_branch $submodule`;
     @ls_tree_info_split = split(" ", $ls_tree_info);
     print p_indent($indent) . "  SM ref commit hash: " . @ls_tree_info_split[2] . "\n";
 
@@ -138,15 +140,7 @@ sub submodule_tree($$)
     submodule_tree($dir . "/" . $submodule, $indent+1);
     chdir $dir;
     
-    $submodule_status = `git status --porcelain $submodule`;
 
-    if($submodule_status ne "")
-    {
-      print "status: " . $submodule_status ;
-      
-      print `git add $submodule`;
-      
-    }
 
   }
 
