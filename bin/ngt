@@ -71,6 +71,7 @@ my %files =
  status    => {cmd => "nuggit_status.pl", completion_type => "file"},
  tag       => {cmd => "nuggit_foreach.pl", args => [ qw( --no-break-on-error git tag )]},
  tree      => "nuggit_tree.pl",
+ version   => "nuggit_version.pl",
  
  # For Advanced Users
  foreach => {cmd => "nuggit_foreach.pl",
