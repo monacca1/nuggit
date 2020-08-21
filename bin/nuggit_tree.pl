@@ -37,8 +37,8 @@ use lib $FindBin::Bin.'/../lib'; # Add local lib to path
 use Data::Dumper; # Debug and --dump option
 use Git::Nuggit;
 
-
-sub submodule_tree($);
+sub p_indent($);
+sub submodule_tree($$);
 
 
 my $ngt = Git::Nuggit->new();
@@ -64,25 +64,27 @@ print "head commit of root repo:\n";
 print `git log -n1 $active_branch | grep commit`;
 
 
-
 print `git ls-tree -r $active_branch | grep commit`;
 # OR replace grep commit with the submodule name:
 # git ls-tree -r <branch> <submodule_name>
 
 
 
-submodule_tree($root_dir);
+submodule_tree($root_dir, 0);
 
 
 
-sub submodule_tree($)
+sub submodule_tree($$)
 {
   my $dir = $_[0];
+  my $indent = $_[1];
   my $start_dir;
   my $result_dir;
   my $submodule_count;
   my $submodule;
   my $submodule_status;
+  my $ls_tree_info;
+  my @ls_tree_info_split;
  
   $start_dir = getcwd(); 
 #  print "starting dir: " . $start_dir . "\n";
@@ -117,13 +119,24 @@ sub submodule_tree($)
     return;
   }
 
+
+
   foreach(@submodules)
   {
     $submodule = $_;
-    
+
+
+#    print p_indent($indent) . "Directory: " . getcwd() . "\n";
+#    print p_indent($indent) . "Executing command: git ls-tree -r $active_branch $submodule --abbrev=8\n";
+    print p_indent($indent) . "Submodule $submodule\n";
+    $ls_tree_info = `git ls-tree -r $active_branch $submodule --abbrev=8`;
+    @ls_tree_info_split = split(" ", $ls_tree_info);
+    print p_indent($indent) . "  SM ref commit hash: " . @ls_tree_info_split[2] . "\n";
+
+
 #    print "Recursing into submodule: " . $_ . "\n";
-    submodule_tree($dir . "/" . $submodule);
-    chdir $start_dir;
+    submodule_tree($dir . "/" . $submodule, $indent+1);
+    chdir $dir;
     
     $submodule_status = `git status --porcelain $submodule`;
 
@@ -149,40 +162,16 @@ sub submodule_tree($)
 }
 
 
-# check all submodules to see if the branch exists
-sub submodule_tree_old($)
-{
-  my $root_dir = getcwd();
-  my $branch = $_[0];
-  my $branch_consistent_throughout = 1;
-  my $cnt = 0;
 
-  submodule_foreach(sub {
-      my $subname = File::Spec->catdir(shift, shift);
-      
-      my $active_branch = get_selected_branch_here();
-      
-      
-      print "Submodule name " . $subname . "\n";
-      
-         
-      if ($active_branch ne $branch) {
-          say colored("$subname is not on selected branch", 'bold red');
-          say "\t Currently on branch $active_branch";
-          $cnt++;
-                    
-          $branch_consistent_throughout = 0;
-      }
-                    });
-
-  if($branch_consistent_throughout == 1)
-  {
-      say "All submodules are are the same branch";
-  } else {
-      say "$cnt submodules are not on the same branch.";
-      say "If this is not desired, and no commits have been made to erroneous branches, please resolve with 'ngt checkout $branch'.";
-      say "If changes have been erroneously made to the wrong branch, manual resolution may be required in the indicated submodules to merge branches to preserve the desired state.";
-  }
+sub p_indent($)
+{ 
+  my $i;
+  my $indent = $_[0];
   
-  return $branch_consistent_throughout;
+  for($i = 0; $i < $indent; $i = $i + 1)
+  {
+    print "  ";
+  }
 }
+
+
