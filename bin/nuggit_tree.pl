@@ -43,8 +43,16 @@ sub submodule_tree($$$);
 
 my $ngt = Git::Nuggit->new();
 
+
+my ($root_dir, $relative_path_to_root) = find_root_dir();
+die("Not a nuggit!\n") unless $root_dir;
+
+
+
 my $cwd = getcwd();
-my $root_dir = $ngt->root_dir();
+
+$root_dir = $ngt->root_dir();
+
 my $submodules;
 
 
