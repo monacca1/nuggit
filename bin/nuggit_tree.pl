@@ -50,7 +50,9 @@ my $submodules;
 
 chdir $root_dir;
 
-# print $root_dir . "\n";
+print "==========================================================\n";
+print "Repository location:\n";
+print "    $root_dir \n";
 
 # print $cwd . "\n";
 
@@ -58,16 +60,12 @@ my $active_branch = get_selected_branch_here();
 
 # get branch of root repo
 
-print "On branch: " . $active_branch . "\n";
+print "On branch: \n";
+print "    $active_branch \n";
 
-print "head commit of root repo:\n";
-print `git log -n1 $active_branch | grep commit`;
-
-
-print `git ls-tree -r $active_branch | grep commit`;
-# OR replace grep commit with the submodule name:
-# git ls-tree -r <branch> <submodule_name>
-
+print "Branch HEAD commit for root repo:\n";
+print "    " . `git log -n1 $active_branch | grep commit`;
+print "==========================================================\n";
 
 
 submodule_tree($root_dir, "0000", 0);
@@ -90,7 +88,7 @@ sub submodule_tree($$$)
   my @ls_tree_info_split;
   
   my $git_log_result;
-  my @git_log_result;
+  my @git_log_result_split;
   my $head_commit;
  
   $start_dir = getcwd(); 
@@ -112,21 +110,23 @@ sub submodule_tree($$$)
     }
   }
 
-  $git_log_result = `git log -n1 HEAD | grep commit`;
-  @git_log_result = split(" ", $git_log_result);
-  $head_commit = @git_log_result[1];
+  $git_log_result       = `git log -n1 HEAD | grep commit`;
+  @git_log_result_split = split(" ", $git_log_result);
+  $head_commit = $git_log_result_split[1];
   print p_indent($indent) . "Branch HEAD commit: " . $head_commit . "\n";
-  
-  if($head_commit ne $ref_hash)
-  {
-    print p_indent($indent) . "************************************************************\n";
-    print p_indent($indent) . "* Submodule inconsistent with parent reference\n";
-    print p_indent($indent) . "* Parent points to commit: \n";
-    print p_indent($indent) . "*     $ref_hash\n";
-    print p_indent($indent) . "* HEAD of branch is commit: \n";
-    print p_indent($indent) . "*     $head_commit\n";
-    print p_indent($indent) . "************************************************************\n";
-    
+
+  if($dir ne $start_dir)
+  {  
+    if($head_commit ne $ref_hash)
+    {
+      print p_indent($indent) . "************************************************************\n";
+      print p_indent($indent) . "* Submodule inconsistent with parent reference\n";
+      print p_indent($indent) . "* Parent points to commit: \n";
+      print p_indent($indent) . "*     $ref_hash\n";
+      print p_indent($indent) . "* HEAD of branch is commit: \n";
+      print p_indent($indent) . "*     $head_commit\n";
+      print p_indent($indent) . "************************************************************\n";
+    }  
   }
   
 #  print `list_submodules.sh`;
@@ -168,16 +168,13 @@ sub submodule_tree($$$)
     print p_indent($indent) . "Submodule $submodule\n";
     $ls_tree_info = `git ls-tree -r $active_branch $submodule`;
     @ls_tree_info_split = split(" ", $ls_tree_info);
-    $ref_hash = @ls_tree_info_split[2];
+    $ref_hash = $ls_tree_info_split[2];
     print p_indent($indent) . "  SM ref commit hash: " . $ref_hash . "\n";
 
 
 #    print "Recursing into submodule: " . $_ . "\n";
     submodule_tree($dir . "/" . $submodule,  $ref_hash,   $indent+1);
     chdir $dir;
-    
-
-
   }
 
   #nuggit_get_path_relation_to_root.pl
