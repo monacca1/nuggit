@@ -372,18 +372,18 @@ is, and if you checked out with `nuggit checkout --default`, it should be the de
 
 
 
-### nuggit_relink_submodules.pl
+### nuggit relink
 - This is to be used to correct when the submodule linkages get updated outside
 of nuggit or to address other potentially inconsistencies.  The nuggit workflow enforces development on the same branch across all submodules.
 If a repository is manipulated outside of the nuggit tools / worflow, or in unexpected/undesirable conditions using nuggit, the submodule reference
 from the parent repo may point to a comit within the submodule that is not the head of that same branch within the submodule.  
-`nuggit_relink_submodules.pl` will, for each submodule that has changes,`git add` the submodule in its parent repository.  This needs to be
+`nuggit relink` will, for each submodule that has changes,`git add` the submodule in its parent repository.  This needs to be
 followed up with a `nuggit commit`.
 
 - Command:
-  - `nuggit_relink_submodules.pl`
+  - `nuggit relink`
 - Example:
-  - `nuggit_relink_submodules.pl`
+  - `nuggit relink`
 
 
 ### nuggit reset
@@ -415,7 +415,10 @@ Additional flags to nuggit status exist to show additional information
 ### nuggit tag
 - nuggit tag can be used to see the tags in the repository
 - TO DO - implement the ability to apply tags to the current checked out branch.
- 
+
+
+### nuggit tree
+- Show the status of the currently checked out branch from the perspective the submodule reference.  This command will show the HEAD commit for the current branch for the root repository.  It will then show the the submodule has for each submodule and for each submodule it will show the HEAD commit for the current branch.  If the parent repositories reference to the submodule is different from the HEAD of the branch for that submodule, this command will indicate this condition as an inconsistency.  If the repo is only manipulated using nuggit commands, the tree command will not find any inconsistencies. 
 
 
 
