@@ -421,6 +421,10 @@ Additional flags to nuggit status exist to show additional information
 - Show the status of the currently checked out branch from the perspective the submodule reference.  This command will show the HEAD commit for the current branch for the root repository.  It will then show the the submodule has for each submodule and for each submodule it will show the HEAD commit for the current branch.  If the parent repositories reference to the submodule is different from the HEAD of the branch for that submodule, this command will indicate this condition as an inconsistency.  If the repo is only manipulated using nuggit commands, the tree command will not find any inconsistencies. 
 
 
+### nuggit version
+- Show the version of the nuggit tool.
+- it is assumed that the nuggit tool exists as a git repository and nuggit version will print out the latest commit hash for the installed nuggit repository.
+
 
 # Internal
 
