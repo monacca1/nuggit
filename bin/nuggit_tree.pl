@@ -120,7 +120,11 @@ sub submodule_tree($$$)
   if($head_commit ne $ref_hash)
   {
     print p_indent($indent) . "************************************************************\n";
-    print p_indent($indent) . "* submodule inconsistent with parent reference\n";
+    print p_indent($indent) . "* Submodule inconsistent with parent reference\n";
+    print p_indent($indent) . "* Parent points to commit: \n";
+    print p_indent($indent) . "*     $ref_hash\n";
+    print p_indent($indent) . "* HEAD of branch is commit: \n";
+    print p_indent($indent) . "*     $head_commit\n";
     print p_indent($indent) . "************************************************************\n";
     
   }
