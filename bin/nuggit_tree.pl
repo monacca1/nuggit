@@ -25,6 +25,14 @@
 ##
 #*******************************************************************************/
 
+#
+# This script will output the state of the currenctly checked out branch
+#
+# to do - boil this down into a statement that indicates the repo is consistent or not
+# maybe make that the default behavior, or make a differt command the "check-tree"
+# maybe make the current output be the output for a -v (verbose) option?
+#
+
 use strict;
 use warnings;
 use v5.10;
