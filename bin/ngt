@@ -62,6 +62,7 @@ my %files =
  mv        => {cmd => "nuggit_mv.pl", completion_type => "file"},
  pull      => "nuggit_pull.pl",
  push      => "nuggit_push.pl",
+ remote    => "nuggit_remote.pl",
  reset     => {cmd => "nuggit_reset.pl", completion_type => "file"},
  rm        => {cmd => "nuggit_rm.pl", completion_type => "file"},
  stash     => {cmd => "nuggit_foreach.pl", args => [ qw( git stash) ],
