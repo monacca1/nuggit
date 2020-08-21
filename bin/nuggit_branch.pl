@@ -132,25 +132,35 @@ chdir $root_dir;
 
 if($delete_branch_flag)
 {
-    $ngt->start(level=> 1, verbose => $verbose);
+  $ngt->start(level=> 1, verbose => $verbose);
   say "Deleting merged branch across all submodules: " . $selected_branch;
   delete_branch($selected_branch);
-} elsif ($delete_merged_flag) {
+} 
+elsif ($delete_merged_flag) 
+{
     $ngt->start(level=> 1, verbose => $verbose);
     say "Deleting branch across all submodules: " . $selected_branch;
     delete_merged_branch($selected_branch);
-} elsif ($delete_remote_flag) {
+}
+elsif ($delete_remote_flag) 
+{
     $ngt->start(level=> 1, verbose => $verbose);
     say "Deleting branch from origin across all submodules: " . $selected_branch;
     delete_remote_branch($selected_branch);
-} elsif ($delete_merged_remote_flag) {
+}
+elsif ($delete_merged_remote_flag) 
+{
     $ngt->start(level=> 1, verbose => $verbose);
     say "Deleting merged branch from origin across all submodules: " . $selected_branch;
     delete_merged_remote_branch($selected_branch);
-} elsif (defined($selected_branch)) {
+}
+elsif (defined($selected_branch)) 
+{
     $ngt->start(level=> 1, verbose => $verbose);
     create_new_branch($selected_branch);
-} else {
+}
+else
+{
     $ngt->start(level=> 0, verbose => $verbose);
     display_branches();
 }
@@ -158,10 +168,14 @@ if($delete_branch_flag)
 sub display_branches
 {
     my $flag = ($show_all_flag ? "-a" : "");
-    if (defined($show_merged_bool)) {
-        if ($show_merged_bool) {
+    if (defined($show_merged_bool)) 
+    {
+        if ($show_merged_bool) 
+	{
             $flag .= " --merged";
-        } else {
+        }
+	else
+	{
             $flag .= " --no-merged";
         }
     }
@@ -171,13 +185,18 @@ sub display_branches
     
     # Note: If showing merged/no-merged, selected branch may be unknown
     say "Root repo is on branch: ".colored($selected_branch, 'bold') if $selected_branch;
-    if ($root_repo_branches) {
+    if ($root_repo_branches) 
+    {
         print color('bold');
         print "All " if $show_all_flag;
-        if (defined($show_merged_bool)) {
-            if ($show_merged_bool) {
+        if (defined($show_merged_bool))
+	{
+            if ($show_merged_bool) 
+	    {
                 print "Merged ";
-            } else {
+            }
+	    else
+	    {
                 print "Unmerged ";
             }
         }
@@ -191,7 +210,7 @@ sub display_branches
   # for any submodules that are not on the selected branch, display them
   # show the command to set each submodule to the same branch as root repo
   # --------------------------------------------------------------------------------------
-    is_branch_selected_throughout($selected_branch) if $selected_branch;
+  is_branch_selected_throughout($selected_branch) if $selected_branch;
 
 }
 

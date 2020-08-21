@@ -37,4 +37,18 @@ use lib $FindBin::Bin.'/../lib'; # Add local lib to path
 use Data::Dumper; # Debug and --dump option
 use Git::Nuggit;
 
-print `git ls-tree -r HEAD | grep commit`
+my $ngt = Git::Nuggit->new();
+
+my $cwd = getcwd();
+
+
+
+
+# get branch of root repo
+
+
+print `git log -n1 HEAD | grep commit`;
+
+print `git ls-tree -r HEAD | grep commit`;
+
+
