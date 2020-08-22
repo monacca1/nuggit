@@ -646,7 +646,7 @@ sub get_submodule_status {
     
     my @rtv;
     foreach my $sub (@lines) {
-        my ($state,$hash,$name,$branch) = $sub =~ /([\s\+\-])([0-9a-fA-F]+)\s+([\w\\\/\-]+)\s*(.+)?/;
+        my ($state,$hash,$name,$branch) = $sub =~ /([\s\+\-])([0-9a-fA-F]+)\s+([\w\\\/\-\.]+)\s*(.+)?/;
         # Note: branch is the result of "git describe", which finds the nearest match to hash
 
         push(@rtv, {
