@@ -316,7 +316,7 @@ branch into master (or default tracking branch).
                 Source branch is: 
                 Destination branch is the current branch: JIRA-BARNEY-1
                 CONFLICT (content): Merge conflict in sm2.txt
-                Merge aborted with conflicts.  Please resolve (stash or edit & stage) then run "nuggit_merge.pl --continue" to continue. at /project/sie/users/monacca1/nuggit_sandbox/bin/nuggit_merge.pl line 358.
+                Merge aborted with conflicts.  Please resolve (stash or edit & stage) then run "nuggit merge --continue" to continue. 
 
 - performing nuggit status after a merge conflict was detected will show what files had the conflict as in the following:
                 > nuggit status
@@ -384,6 +384,19 @@ followed up with a `nuggit commit`.
   - `nuggit relink`
 - Example:
   - `nuggit relink`
+
+
+### nuggit remote
+- The nuggit remote command has options for setting or getting the remote URL.  
+- nuggit remote set-url:
+  - This command will set the URL for the given remote for the nuggit root repository as well as all of the submodules.  
+as all of the submodules. This command is based on the git seet url and the git set-url command.  If the remote is not given, origin is changed by default.
+  - Command:
+    - `nuggit remote set-url [-v | --verbose] <remote name> <new url>
+- nuggit remote get-url:
+  - This command is used to get the URL for each submodule and check if it matches the pattern for the remote URL for the nuggit root repository.  It is desirable that all of the submodules be part of the same "project" or have the same ownership 
+  - Command:
+    - `nuggit remote get-url <remote name>
 
 
 ### nuggit reset

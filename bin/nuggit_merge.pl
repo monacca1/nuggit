@@ -144,7 +144,7 @@ if ($merge_continue_flag) {
     abort_merge_state();
     exit();
 } elsif (-e $merge_conflict_file) {
-    die "ERROR: Cannot start a new merge when one is already in progress.  Run 'nuggit_merge.pl --continue' to complete the merge, after resolving any conflicts, or with '--abort' to abandon it.";
+    die "ERROR: Cannot start a new merge when one is already in progress.  Run 'nuggit merge --continue' to complete the merge, after resolving any conflicts, or with '--abort' to abandon it.";
 } else { # Else start a fresh merge
     my $source = $ARGV[0];
     if (!defined($ARGV[0])) {
@@ -384,7 +384,7 @@ sub exit_save_merge_state
     store($obj, $merge_conflict_file) || die("Merge aborted with conflicts. Internal error saving nuggit state, resolve manually");
 
     # And exit; we 'die' since we want to exit with an error state
-    die("Merge aborted with conflicts.  Please resolve (stash or edit & stage) then run \"nuggit_merge.pl --continue\" to continue.");
+    die("Merge aborted with conflicts.  Please resolve (stash or edit & stage) then run \"nuggit merge --continue\" to continue.");
 }
 sub load_merge_state
 {
