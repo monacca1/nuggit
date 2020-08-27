@@ -95,7 +95,7 @@ my $checkout_default_bool = 0;
 my $checkout_file_flag = 0;
 my $verbose = 0;
 my $do_init_submodules = 1;
-
+my $use_force = 0;
 sub ParseArgs();
 sub does_branch_exist_throughout($);
 sub does_branch_exist_at_root($);
@@ -230,6 +230,7 @@ sub ParseArgs()
       "default!"       => \$checkout_default_bool,
       "init-submodules!" => \$do_init_submodules,
       "file!" => \$checkout_file_flag,
+      "force!" => \$use_force,
                           );
     pod2usage(1) if $help;
     pod2usage(-exitval => 0, -verbose => 2) if $man;
@@ -245,9 +246,33 @@ sub ParseArgs()
 
     die("--default flag is mutually exclusive with --follow-commit") if $follow_commit_bool && $checkout_default_bool;
 
-    if($follow_branch_bool == 1)
-    {
-        say "Follow branch flag provided" if $verbose;
+    if ($verbose) {
+        say "Follow branch flag provided" if ($follow_branch_bool);
+        say "Follow commit flag provided" if $follow_commit_bool;
+    }
+    if ($branch eq "master" && !$follow_commit_bool && !$use_force) {
+        say "You have requested to checkout 'master' at all levels. This may not be the default branch in all submodules.";
+        say "Are you sure this is what you want to do?";
+        while(1) {
+            say "Enter one of the following:";
+            say "\tyes - Proceed to checkout master at all levels. Specify '--force' in the future to bypass this prompt";
+            say "\tno  - Abort and exit [default]";
+            say "\tcommit - Follow commit references instead of checking out branches. This may result in detached heads and is equivalent to --follow-commit-bool.";
+            say "\tdefault - Proceed as if you specified '--default' instead of 'master'";
+
+            my $input = <STDIN>;
+            chomp($input);
+            last if ($input eq "yes");
+            die("Aborted") if $input eq "no";
+            if ($input eq "commit") {
+                $follow_branch_bool = 0; $follow_commit_bool=1;
+                last;
+            } elsif ($input eq "default") {
+                $branch = undef;
+                $checkout_default_bool = 1;
+                last;
+            }
+        }
     }
 }
 
