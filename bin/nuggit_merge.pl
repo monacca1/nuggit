@@ -145,7 +145,7 @@ if ($merge_continue_flag) {
     abort_merge_state();
     exit();
 } elsif (-e $merge_conflict_file) {
-    die "ERROR: Cannot start a new merge when one is already in progress.  Run 'nuggit_merge.pl --continue' to complete the merge, after resolving any conflicts, or with '--abort' to abandon it.";
+    die "ERROR: Cannot start a new merge when one is already in progress.  Run 'nuggit merge --continue' to complete the merge, after resolving any conflicts, or with '--abort' to abandon it.";
 } else { # Else start a fresh merge
     # First, verify that repository is in a clean state
     unless ($use_force) {
