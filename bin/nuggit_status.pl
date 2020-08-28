@@ -41,7 +41,7 @@ Display an abbreviated help menu
 
 Display detailed documentation.
 
-=item -uno
+=item --uno | -u
 
 Ignore untracked files
 
@@ -54,6 +54,16 @@ Show ignored files
 Show raw status structure in JSON format.
 
 =back
+
+=head2 Output Details
+
+=head3 Submodule State
+
+If a submodule's checked out commit does not match the committed reference, the status will show as "Delta-Commits".  If the "--details" or "-d" flag is specified, then details will be shown on both the currently checked out commit in this submodule, and the commit that the parent repository references.
+
+If a submodule's checked out commit is out of sync with the upstream branch, it will show as "Upstream-Delta( +x -y )" where x is the number of commits that the local copy is ahead of the remote, and y is the number of commits the upstream branch is ahead of the local version.  Note: Users should run "ngt fetch" prior to status to ensure an accurate reflection of the current Upstream state. 
+
+=head2
 
 =cut
 
@@ -85,19 +95,20 @@ my $flags = {
 my $color_submodule = 'yellow';
 
 my ($help, $man);
-Getopt::Long::GetOptions(
-    "help"            => \$help,
+my $rtv = Getopt::Long::GetOptions(
+    "help|h"            => \$help,
     "man"             => \$man,
                            "cached|staged"  => \$cached_bool, # Allow --cached or --staged
                            "unstaged"=> \$unstaged_bool,
                            "verbose|v!" => \$verbose,
-                           "uno!" => \$flags->{uno},
+                           "uno|u!" => \$flags->{uno},
                            "ignored!" => \$flags->{ignored},
                            'dump' => \$do_dump,
                          'json' => \$do_json,
                          'all|a!' => \$flags->{all},
                          'details|d!' => \$flags->{details},
-                        );
+   );
+if (!$rtv) { pod2usage(1); die("Unrecognized options specified"); }
 $flags->{verbose} = $verbose;
 pod2usage(1) if $help;
 pod2usage(-exitval => 0, -verbose => 2) if $man;
@@ -146,7 +157,6 @@ else
         say colored("Nuggit Merge in Progress.  Complete with \"ngt merge --continue\" or \"ngt merge --abort\"",'red');
     }
     pretty_print_status($status, $relative_path_to_root, $flags);
-    #say colored("Warning: Above output may not reflect if submodules are not initialized, on the wrong branch, or out of sync with upstream", $warnColor);
 }
 
 

@@ -69,25 +69,6 @@ If defined, show changes that have been staged.
 
 =cut
 
-# Notes
-#
-# git branch -a
-#
-# git diff origin/master master --name-status
-# git diff origin/master master --stat
-#
-# ????
-# git diff --submodule
-# git diff --cached --submodule
-
-
-# shows how many commits are on each side since the common ancestor?
-#bash-4.2$ git rev-list --left-right --count origin/master...master
-#0       2
-
-# git fetch
-# git status
-
 
 sub ParseArgs();
 
@@ -106,7 +87,6 @@ my $diff_object2 = "";
 my $ngt = Git::Nuggit->new("echo_always" => 0);
 $root_dir = $ngt->root_dir();
 
-print "nuggit root directory is: $root_dir\n" if $verbose;
 
 ParseArgs();
 $ngt->start(level => 0);
@@ -116,24 +96,24 @@ if($arg_count == 0)
 {
     chdir($root_dir);
     do_diff();
-    submodule_foreach(sub {
+    submodule_foreach(undef,{'breadth_first_fn' => sub {
         my ($parent, $name, $substatus, $hash, $label, $opts) = (@_);
         if ($parent eq ".") {
             do_diff($name);
         } else {
             do_diff("$parent/$name/");
         }
-    });
+    }});
 
 }
 elsif($arg_count == 1)
 {
   # get the diff of one file
-  print "Get the diff of one object: $diff_object1\n" if $verbose;
+  say "Get the diff of one object: $diff_object1" if $verbose;
 
   if(-e $diff_object1)
   {
-    print "object $diff_object1 exists!  yay!\n" if $verbose;
+    say "$diff_object1 is a file or directory" if $verbose;
 
     my ($vol, $dir, $file) = File::Spec->splitpath( $diff_object1 );
     if ($dir) {
@@ -145,18 +125,19 @@ elsif($arg_count == 1)
   }
   else
   {
-      # TODO: Validate argument as branch, or diff between branches.  SHA1 diffs not supported by nuggit
+      # TODO: Validate argument as branch, or diff between branches.
+      # Future: SHA1 diffs would have to follow submodule references
 
       chdir($root_dir);
       do_diff(undef, $diff_object1);
-      submodule_foreach(sub {
+      submodule_foreach({'breadth_first_fn' => sub {
              my ($parent, $name, $substatus, $hash, $label, $opts) = (@_);
              if ($parent eq ".") {
                  do_diff($name, $diff_object1);
              } else {
                  do_diff("$parent/$name/", $diff_object1);
              }
-         });
+         }});
   }
 }
 elsif($arg_count == 2)
@@ -186,7 +167,15 @@ sub ParseArgs()
   pod2usage(-exitval => 0, -verbose => 2) if $man;
 
   $arg_count = @ARGV;
-  print "Number of arguments $arg_count \n" if $verbose;
+
+  if ($show_color) {
+      eval {
+          BEGIN {
+              $ENV{LESS} = "-R"; # If less is available, make sure we tell it to parse ANSI color codes
+          }
+          require IO::Page;
+      };
+  }
 
   if($arg_count >= 1)
   {

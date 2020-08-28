@@ -164,28 +164,8 @@ sub _get_status
                 $rtv->{'branch.behind'} = shift(@parts);
             } else {
                 $rtv->{$key} = shift(@parts);
-
                 if ($key eq "branch.oid" && $opts->{details}) {
-                    # If requested, query commit details
-                    my $msg = `git show $rtv->{'branch.oid'} --pretty=format:"%aN\n%ar\n%s" -s`;
-                    if ($?) {
-                        # Failed to query
-                    } else {
-                        my ($author, $date, $cm) = split('\n', $msg);
-                        $rtv->{'commit.author'} = $author;
-                        $rtv->{'commit.date'} = $date;
-                        $rtv->{'commit.msg'} = $cm;
-                    }
-
-                    # And matching tags/branches (exact matches only)
-                    my $tags = `git tag --points-at $rtv->{'branch.oid'}`; 
-                    chomp($tags);
-                    $rtv->{'commit.tags'} = [split('\n',$tags)] if $tags;
-                    
-                    my $branches = `git branch --points-at $rtv->{'branch.oid'}`;
-                    chomp($branches);
-                    $rtv->{'commit.branches'} = [split('\n', $branches)] if $branches;
-
+                    $rtv->{commit} = get_commit_info($rtv->{'branch.oid'});
                 }
             }
             next;
@@ -247,6 +227,10 @@ sub _get_status
         }
         else { die("ERROR: Illegal type in porcelain status for line: $line"); } # Debug
 
+        $obj->{'obj_name'} = $hh if $hh;
+        $obj->{'obj_name_staged'} = $h1 if $h1;
+        say "obj_name = $hh" if $hh;
+        
         if ($xy) {
             $obj->{'status_flag'} = substr($xy, 1, 2);
             $obj->{'status_flag'} = ' ' if $obj->{'status_flag'} eq ".";
@@ -285,6 +269,11 @@ sub _get_status
             
             _get_status( $obj, $flags, $opts );
 
+            # Reference Details, if details requested and does not match checked out commit
+            if ($obj->{sub_commit_delta} && $opts->{details}) {
+                $obj->{'ref'} = get_commit_info($obj->{'obj_name'});
+            }
+
             push(@{ $rtv->{children} }, $obj); # Add path to children array
             chdir($tmppath);
 
@@ -296,6 +285,7 @@ sub _get_status
             if ($obj->{'branch_status_flag'} || $rtv->{'branch.head'} ne $obj->{'branch.head'}) {
                 $rtv->{branch_status_flag} = 1 ;
             }
+            
         } else {
             # Not a submodule, increment count if state is > UNTRACKED
             $rtv->{unstaged_files_cnt}++ if $obj->{status} > STATE('UNTRACKED');
@@ -426,25 +416,8 @@ sub pretty_print_status
 
     if ($flags->{details}) {
         say "\nCommit Details:";
-        say "SHA: ".$status->{'branch.oid'};
-        say "Description: ".$status->{'commit_described'} if $status->{'commit_described'}; # Only if -a
-
-        if (defined($status->{'commit.author'})) {
-            say "Author: $status->{'commit.author'}";
-            say "Date: $status->{'commit.date'}";
-            say "Message: $status->{'commit.msg'}";
-        } else {
-            say colored("\t Warning: Commit details unavailable.", $badColor);
-        }
-        say "Matching Tags: ".join(', ',@{$status->{'commit.tags'}}) if $status->{'commit.tags'};
-        if ($status->{'commit.branches'}) {
-            # Print Branches as a comma-delimited list
-            say "Matching Branches: ".join(', ',
-                                  # Making active branch name bold
-                                  map { $_ =~ /^\*\s+([\w\/]+)/ ? colored($1,'bold') : $_ } @{$status->{'commit.branches'}}
-                );
-        }
-
+        say "\tInferred Branch: ".$status->{'commit_described'} if $status->{'commit_described'}; # Only if -a
+        show_commit_info($status->{'commit'});        
     }
     
     say "";
@@ -508,29 +481,17 @@ sub do_pretty_print_status {
             print "\n";
 
             if ($flags->{details}) { # Details View
-                say "\tSHA: ".$obj->{'branch.oid'};
-                say "\tDescription: ".$obj->{'commit_described'} if $obj->{'commit_described'}; # Only if -a
-
-                if (defined($obj->{'commit.author'})) {
-                    say "\tAuthor: $obj->{'commit.author'}";
-                    say "\tDate: $obj->{'commit.date'}";
-
-                    my $msg = $obj->{'commit.msg'};
-                    $msg = substr($msg,0,67)."..." if length($msg) > 70; # Truncate long messages
-                    say "\tMessage: $msg";
-
-                    say "\tTags: ".join(', ',@{$obj->{'commit.tags'}}) if $obj->{'commit.tags'};
-                    if ($obj->{'commit.branches'}) {
-                        # Print Branches as a comma-delimited list
-                        say "\tBranches: ".join(', ',
-                                                # Making active branch name bold
-                                                map { $_ =~ /^\*\s+([\w\/]+)/ ? colored($1,'bold') : $_ } @{$obj->{'commit.branches'}}
-                            );
-                    }
-
-                } else {
-                    say colored("\t Warning: Commit details unavailable.", $badColor);
+                if ($obj->{sub_commit_delta}) {
+                    say colored("\tCurrent Commit", 'green');
+                    
                 }
+                show_commit_info($obj->{commit});
+                
+                if ($obj->{sub_commit_delta} && $obj->{'ref'}) {
+                    say colored("\tReferenced Commit", 'green');
+                    show_commit_info($obj->{'ref'});
+                }
+                
             }
 
             # Recurse into any nested submodules
@@ -660,5 +621,62 @@ sub get_submodule_status {
     return \@rtv;
 }
 
+sub get_commit_info {
+    my $sha = shift;
+    if (!$sha) {
+        warn colored("WARNING: get_commit_info() on undefined commit. Possible internal error", "yellow");
+        return undef;
+    }
+
+    my $rtv = {'sha' => $sha};
+
+    # If requested, query commit details
+    my $msg = `git show $sha --pretty=format:"%aN\n%ar\n%s" -s`;
+    if ($?) {
+        # Failed to query
+    } else {
+        my ($author, $date, $cm) = split('\n', $msg);
+        $rtv->{'author'} = $author;
+        $rtv->{'date'} = $date;
+        $rtv->{'msg'} = $cm;
+    }
+    
+    # And matching tags/branches (exact matches only)
+    my $tags = `git tag --points-at $sha`; 
+    chomp($tags);
+    $rtv->{'tags'} = [split('\n',$tags)] if $tags;
+    
+    my $branches = `git branch --points-at $sha`;
+    chomp($branches);
+    $rtv->{'branches'} = [split('\n', $branches)] if $branches;
+
+    return $rtv;
+}
+sub show_commit_info {
+    my $obj = shift;
+    say "\tSHA: ".$obj->{'sha'};
+    #say "\tDescription: ".$obj->{'commit_described'} if $obj->{'commit_described'}; # Only if -a
+    
+    if (defined($obj->{'author'})) {
+        say "\tAuthor: $obj->{'author'}";
+        say "\tDate: $obj->{'date'}";
+        
+        my $msg = $obj->{'msg'};
+        $msg = substr($msg,0,67)."..." if length($msg) > 70; # Truncate long messages
+        say "\tMessage: $msg";
+
+        say "\tTags: ".join(', ',@{$obj->{'tags'}}) if $obj->{'tags'};
+        if ($obj->{'branches'}) {
+            # Print Branches as a comma-delimited list
+            say "\tBranches: ".join(', ',
+                                    # Making active branch name bold
+                                    map { $_ =~ /^\*\s+([\w\/]+)/ ? colored($1,'bold') : $_ } @{$obj->{'branches'}}
+                                   );
+        }
+        
+    } else {
+        say colored("\t Warning: Commit details unavailable. A 'ngt fetch' may be needed.", $badColor);
+    }
+}
 
 1;
