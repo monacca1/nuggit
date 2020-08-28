@@ -229,7 +229,6 @@ sub _get_status
 
         $obj->{'obj_name'} = $hh if $hh;
         $obj->{'obj_name_staged'} = $h1 if $h1;
-        say "obj_name = $hh" if $hh;
         
         if ($xy) {
             $obj->{'status_flag'} = substr($xy, 1, 2);
