@@ -245,9 +245,10 @@ sub start
     
     # Prepare single-command detailed log
     my $last_cmd_file = $self->{file}.".last_cmd";
-    rename($last_cmd_file, $last_cmd_file.".old") if -f $last_cmd_file;
+    rename($last_cmd_file, $last_cmd_file.".old") if -f $last_cmd_file && !$log_as_child;
     open(my $log_detail_fh, '>>', $last_cmd_file) || die "Can't open last_cmd_log.txt for writing";
     $self->{log_detail_fh} = $log_detail_fh;
+    $self->cmd_full($cmd);
 
     # Nothing to do if logging is diabled (by verbosity or log-level)
     return if ($level == 0 && !$self->{file_verbose});

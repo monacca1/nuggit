@@ -316,7 +316,7 @@ branch into master (or default tracking branch).
                 Source branch is: 
                 Destination branch is the current branch: JIRA-BARNEY-1
                 CONFLICT (content): Merge conflict in sm2.txt
-                Merge aborted with conflicts.  Please resolve (stash or edit & stage) then run "nuggit_merge.pl --continue" to continue. at /project/sie/users/monacca1/nuggit_sandbox/bin/nuggit_merge.pl line 358.
+                Merge aborted with conflicts.  Please resolve (stash or edit & stage) then run "nuggit merge --continue" to continue. 
 
 - performing nuggit status after a merge conflict was detected will show what files had the conflict as in the following:
                 > nuggit status
@@ -372,18 +372,31 @@ is, and if you checked out with `nuggit checkout --default`, it should be the de
 
 
 
-### nuggit_relink_submodules.pl
+### nuggit relink
 - This is to be used to correct when the submodule linkages get updated outside
 of nuggit or to address other potentially inconsistencies.  The nuggit workflow enforces development on the same branch across all submodules.
 If a repository is manipulated outside of the nuggit tools / worflow, or in unexpected/undesirable conditions using nuggit, the submodule reference
 from the parent repo may point to a comit within the submodule that is not the head of that same branch within the submodule.  
-`nuggit_relink_submodules.pl` will, for each submodule that has changes,`git add` the submodule in its parent repository.  This needs to be
+`nuggit relink` will, for each submodule that has changes,`git add` the submodule in its parent repository.  This needs to be
 followed up with a `nuggit commit`.
 
 - Command:
-  - `nuggit_relink_submodules.pl`
+  - `nuggit relink`
 - Example:
-  - `nuggit_relink_submodules.pl`
+  - `nuggit relink`
+
+
+### nuggit remote
+- The nuggit remote command has options for setting or getting the remote URL.  
+- nuggit remote set-url:
+  - This command will set the URL for the given remote for the nuggit root repository as well as all of the submodules.  
+as all of the submodules. This command is based on the git seet url and the git set-url command.  If the remote is not given, origin is changed by default.
+  - Command:
+    - `nuggit remote set-url [-v | --verbose] <remote name> <new url>
+- nuggit remote get-url:
+  - This command is used to get the URL for each submodule and check if it matches the pattern for the remote URL for the nuggit root repository.  It is desirable that all of the submodules be part of the same "project" or have the same ownership 
+  - Command:
+    - `nuggit remote get-url <remote name>
 
 
 ### nuggit reset
@@ -415,8 +428,15 @@ Additional flags to nuggit status exist to show additional information
 ### nuggit tag
 - nuggit tag can be used to see the tags in the repository
 - TO DO - implement the ability to apply tags to the current checked out branch.
- 
 
+
+### nuggit tree
+- Show the status of the currently checked out branch from the perspective the submodule reference.  This command will show the HEAD commit for the current branch for the root repository.  It will then show the the submodule has for each submodule and for each submodule it will show the HEAD commit for the current branch.  If the parent repositories reference to the submodule is different from the HEAD of the branch for that submodule, this command will indicate this condition as an inconsistency.  If the repo is only manipulated using nuggit commands, the tree command will not find any inconsistencies. 
+
+
+### nuggit version
+- Show the version of the nuggit tool.
+- it is assumed that the nuggit tool exists as a git repository and nuggit version will print out the latest commit hash for the installed nuggit repository.
 
 
 # Internal

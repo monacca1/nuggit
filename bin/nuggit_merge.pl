@@ -33,12 +33,9 @@ use Getopt::Long;
 use Cwd;
 use FindBin;
 use lib $FindBin::Bin.'/../lib'; # Add local lib to path
-use IPC::Run3; # Utility to execute application and capture both stdout and stderr
 use Storable qw(store retrieve); # Serialization of merge in progress state
-
 use Git::Nuggit;
 use Git::Nuggit::Status;
-use Git::Nuggit::Log;
 
 =head1 Nuggit Merge
 
@@ -90,6 +87,10 @@ Specify message to use for any commits upon merge
 
 If specified, this flag will be passed on to git such that the default merge message will be used for any commits.
 
+=item --use-force
+
+If set, bypass any user-safety checks or prompts.  This option is intended for advanced users only and may result in undesirable results.
+
 =back
 
 =head1 TODO
@@ -114,26 +115,26 @@ my $edit_flag = 1; # Mirrors Git's edit/no-edit flag
 my $help = 0; my $man = 0;
 my $log_as_pull; # For logging/tracing purposes only
 my $merge_remote_head = 0;
-
-my ($root_dir, $relative_path_to_root) = find_root_dir();
-my $log = Git::Nuggit::Log->new(root => $root_dir);
+my $use_force = 0; # If set, bypass any user-safety checks or prompts.  For advanced users only.
+my $ngt = Git::Nuggit->new("run_die_on_error" => 0) || die ("Not a nuggit"); # Initialize Nuggit & Logger prior to altering @ARGV
+my $root_dir = $ngt->root_dir();
 
 # Parse Options (positional arguments will be handled after)
 GetOptions(
-    "help"            => \$help,
+    "help|h"            => \$help,
     "man"             => \$man,
-    'verbose!' => \$verbose,
-    'continue' => \$merge_continue_flag,
+    "force|f!"   => \$use_force,
+    'verbose|v!' => \$verbose,
+    'continue|c' => \$merge_continue_flag,
     'abort'    => \$abort_merge_flag,
-    'message=s'  => \$commit_message, # Specify message to use for any commits upon merge (optional; primarily for purposes of automated testing). If omitted, user will be prompted for commit message.  An automated message will be used if a conflict has been automatically resolved.
+    'message|m=s'  => \$commit_message, # Specify message to use for any commits upon merge (optional; primarily for purposes of automated testing). If omitted, user will be prompted for commit message.  An automated message will be used if a conflict has been automatically resolved.
     'edit!' => \$edit_flag,
            'log-as-pull' => \$log_as_pull, # For logging purposes only in liueue of an OOP call from pull wrapper
-           'remote|default!' => \$merge_remote_head,
+           'remote|default!' => \$merge_remote_head, # TODO: Consider Splitting these into discrete flags. remote=refs/remotes/origin/HEAD while default is tracking branch in .gitmodules, or master if not defined (or root)
           );
 pod2usage(1) if $help;
 pod2usage(-exitval => 0, -verbose => 2) if $man;
-die("Not a nuggit!") unless $root_dir;
-$log->start(verbose => $verbose, level => 1, log_as_child => $log_as_pull);
+$ngt->start(verbose => $verbose, level => 1, log_as_child => $log_as_pull);
 
 my $merge_conflict_file = "$root_dir/.nuggit/merge_conflict_state";
 
@@ -144,13 +145,30 @@ if ($merge_continue_flag) {
     abort_merge_state();
     exit();
 } elsif (-e $merge_conflict_file) {
-    die "ERROR: Cannot start a new merge when one is already in progress.  Run 'nuggit_merge.pl --continue' to complete the merge, after resolving any conflicts, or with '--abort' to abandon it.";
+    die "ERROR: Cannot start a new merge when one is already in progress.  Run 'nuggit merge --continue' to complete the merge, after resolving any conflicts, or with '--abort' to abandon it.";
 } else { # Else start a fresh merge
+    # First, verify that repository is in a clean state
+    unless ($use_force) {
+        my $status = get_status({uno => 1});
+        if ($status->{'status'} >= STATE('UNTRACKED')) {
+            die("Please stash or commit all changes before beginning a merge operation. Run 'ngt status' to view current state, or rerun with '--force' to bypass this check (not recommended).");
+        }
+    }
+    
     my $source = $ARGV[0];
     if (!defined($ARGV[0])) {
         # Use remote for current branch; This is the default git behavior
         say "No branch specified for merge, assuming default remote";
         $source = "";
+    } elsif ($source eq "master" && !$use_force) { # TODO: Consider making this a generic default instead of explicitly master
+        say "You have requested to merge $source into your current branch. If you proceed, $source will be explicitly merged at all levels.  If you intended to merge the default branch, you should specify ('nuggit merge --default')";
+        while(1) {
+            say "Do you wish to proceed?  (Enter yes or no)";
+            my $prompt = <STDIN>;
+            chomp $prompt;
+            die("Aborting by user request") if ($prompt eq "no");
+            last if ($prompt eq "yes");
+        }
     }
     
     # TODO: Need to handle merge from master with varying branches
@@ -179,6 +197,7 @@ sub do_merge_recursive
     my $merge = shift;
     my $branch;
 
+
     if ($merge->{'merge_default'}) {
         # User has requested to merge against the tracking branch (ie: from .gitmodules)
         $branch = "refs/remotes/origin/HEAD"; # TODO: Make remote name configurable
@@ -187,22 +206,27 @@ sub do_merge_recursive
     }
 
     say colored("do_merge_recursive() at ".cwd(),'green') if $verbose;
+
+    my $start_dir = cwd();
     
     while(my $repo = shift(@{$merge->{submodules}} ) ) {
-        my $dir = File::Spec->catdir($root_dir,$repo);
+        # TODO: If $repo is an abs path (with last bugfix), then we should check we are still in the same workspace to avoid unexpected issues should someone move a folder during a merge conflict.
+        my $dir = $repo; # File::Spec->catdir($start_dir,$repo);
         
         $merge->{'conflicted'} = $repo; # log last repo parsed for easy save/restore
-        chdir($dir) || exit_save_merge_state("Internal Error: Failed to enter directory $repo");
+        chdir($dir) || exit_save_merge_state($merge, "Internal Error: Failed to enter directory ($repo) from ".cwd());
 
         do_merge($merge, $branch) || exit_save_merge_state($merge);
+        chdir($start_dir);
     }
-    chdir($root_dir);
     if ($merge->{'merge_default'} && !$merge->{'source'}) {
         $branch = "refs/remotes/origin/HEAD";
     } else {
         $branch = $merge->{'source'};
     }
     do_merge($merge, $branch) || exit_save_merge_state($merge);
+
+    say colored("Merge completed successfully", "green");
 
     return;
     
@@ -229,15 +253,13 @@ sub do_merge
 
     # Execute merge, capture STDOUT and STDERR as needed
     my $merge_cmd = "git merge $source_branch";
-    my ($stdout, $stderr);
-    run3($merge_cmd, undef, \$stdout, \$stderr);
-    $log->cmd($merge_cmd);
+    my ($err, $stdout, $stderr) = $ngt->run($merge_cmd);
 
     # Did merge fail due to specified branch/ref being invalid?
     # TODO
 
     # Are there any conflicts
-    if ($stdout =~ /Automatic merge failed/) {
+    if ($err || $stdout =~ /Automatic merge failed/) {
         # Split stdout into lines
         my @lines = split("\n",$stdout);
 
@@ -247,7 +269,7 @@ sub do_merge
         # Parse Output
         foreach my $line (@lines) {
             # Is this a submodule conflict?
-            if ($line =~ /CONFLICT \(submodule\)\: Merge conflict in ([\w\/\-]+)/) {                
+            if ($line =~ /CONFLICT \(submodule\)\: Merge conflict in (.+)$/) {                
                 # In Nuggit Workflow, we have pulled latest from branch, and therefore will assume current commit is valid
                 # NOTE: This will always work when invoked via pull, but MAY cause issues when merging branches in an atypical state.
 
@@ -261,11 +283,14 @@ sub do_merge
                 }
 
                 # Stage file and increment counter
-                my $cmd = "git add $conflicted";
-                system($cmd);
-                $log->cmd($cmd);
-                $num_submodule_conflicts++;
-                say "Automatically resolving submodule reference conflict for $conflicted";
+                my ($err, $stdout, $stderr) = $ngt->run("git add $conflicted");
+                if ($err) {
+                    say colored("Failed to automatically resolve conflict for submodule reference $conflicted");
+                    $num_unresolved_conflicts++;
+                } else {
+                    $num_submodule_conflicts++;
+                    say "Automatically resolving submodule reference conflict for $conflicted";
+                }
             } elsif ($line =~ /CONFLICT/) {
                 say $line;
                 $num_unresolved_conflicts++;
@@ -288,9 +313,11 @@ sub do_merge
 
     # If we reach this point, there are no unresolved conflicts
 
-    # Did this merge introduce any new submodules? If so, explicitly checkout/initialize them
-    # TODO: git submodule update --init $new_submodule_path
-    # TODO: Ensure nuggit consistency by checking out correct branch?
+    # TODO: Did this merge introduce any new submodules? If so, explicitly checkout/initialize them
+    # git submodule init
+    # Parse output. If any content is returned, parse each line and subsequently run "git submodule update $path" on it
+    # NOTE: This should be a common function shared with checkout
+    # NOTE: This must be a recursive function that is re-run for each new submodule
 
     return 1;
     
@@ -344,10 +371,12 @@ sub commit_conflict_resolution
             foreach my $file (keys %{$status->{'objects'}}) {
                 if (-d $file) {
                     # This is a directory, auto-stage it; this should be a submodule that's already been merged
-                    my $cmd = "git add $file";
-                    system($cmd);
-                    $log->cmd($cmd);
-                    say "Automatically staging $file";
+                    my ($err, $stdout, $stderr) = $ngt->run("git add $file");
+                    if ($err) {
+                        exit_save_merge_state($merge, "Error staging $file", $stdout);
+                    } else {
+                        say "Automatically staging $file";
+                    }
                 } else {
                     # This case indicates a bug in the merge algorithm or status check
                     say "Error completing merge (BUG?). Expected $file to be a submodule but it is not a directory";
@@ -364,27 +393,41 @@ sub commit_conflict_resolution
     } elsif (!$edit_flag) {
         $cmd .= " --no-edit";
     }
-    system($cmd);
-    $log->cmd($cmd);
+    my ($err, $stdout, $stderr) = $ngt->run($cmd);
+    if ($err && ($stdout !~ /nothing to commit/i) ) {
+        # VERIFY: Will this fail if there are no changes to commit? If so, we may need additional checks above.
+        exit_save_merge_state($merge, "Failed to commit conflict resolution", $stdout);
+    }
 
     # Re-test status to confirm success (ignore untracked)
     $status = get_status({uno => 1});
    
     #say "commit_conflict_resolution() status is: ".Dumper($status);
 
-    # TODO: We should probably save state here
-    die "Failed to resolve conflict at ".cwd().".  See above output for details." unless status_check($status);
+    exit_save_merge_state($merge, "Failed to resolve conflict at ".cwd().".  See above output for details.") unless status_check($status);
 
 }
 
 sub exit_save_merge_state
 {
     my $obj = shift; # Hashref of state to be saved
+    my $err = shift;
+    my $details = shift;
+    if ($err) {
+        $obj->{'err'} = $err;
+        say colored($err,'red');
+    }
+    if ($details) {
+        $obj->{'details'} = $details;
+        say $details
+    }
 
     store($obj, $merge_conflict_file) || die("Merge aborted with conflicts. Internal error saving nuggit state, resolve manually");
 
     # And exit; we 'die' since we want to exit with an error state
-    die("Merge aborted with conflicts.  Please resolve (stash or edit & stage) then run \"nuggit_merge.pl --continue\" to continue.");
+    say(colored("Currently in ".getcwd(), 'yellow'));
+    say(colored("Merge aborted with unresolved conflicts or other error.  Please resolve (stash or edit & stage) then run \"nuggit_merge.pl --continue\" to continue.", 'red'));
+    exit(1);
 }
 sub load_merge_state
 {

@@ -35,7 +35,7 @@ use Pod::Usage;
 use FindBin;
 use lib $FindBin::Bin.'/../lib'; # Add local lib to path
 use Git::Nuggit;
-
+use Term::ANSIColor;
 
 # usage: 
 #
@@ -49,8 +49,7 @@ sub add_file($);
 my $cwd = getcwd();
 my $add_all_bool = 0;
 my $patch_bool = 0;
-my $ngt = Git::Nuggit->new();
-$ngt->run_die_on_error(1);
+my $ngt = Git::Nuggit->new("run_die_on_error" => 0);
 
 print "nuggit_add.pl\n";
 
@@ -105,7 +104,17 @@ sub ParseArgs()
 
 sub add_all
 {
-  $ngt->run_foreach("git add --all");
+  $ngt->run_foreach(sub {
+                        my $parent = shift;
+                        my $name = shift;
+                        
+                        my ($err, $stdout, $stderr) = $ngt->run("git add --all");
+
+                        if ($err) {
+                            say colored("Failed to add all in $name.  Git reports;", 'red');
+                            say $stdout;
+                        }
+                    });
 }
 
 
@@ -144,7 +153,12 @@ sub git_add {
     $cmd .= " -p " if $patch_bool;
     $cmd .= " -A " if $add_all_bool;
     $cmd .= " $file" if $file; # support for -A option
-    $ngt->run($cmd);
+    my ($err, $stdout, $stderr) = $ngt->run($cmd);
+
+    if ($err) {
+        say colored("Failed to add $file in ".getcwd().".  Git reports;", 'red');
+        say $stdout;
+    }
 }
 
 =head1 Nuggit add

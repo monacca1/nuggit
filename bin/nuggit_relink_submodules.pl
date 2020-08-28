@@ -77,6 +77,8 @@ $log->start(1);
 
 relink($root_dir);
 
+print "Follow up this command with \"nuggit commit -m <msg>\"\n";
+
 
 sub relink
 {
@@ -110,7 +112,16 @@ sub relink
     
 #    print "submodule: " . $_ . "\n";
     relink($submodule);
-    chdir $dir;
+
+    if(-e $dir)
+    {
+      chdir $dir;    
+    }
+    else
+    {
+      print "ERROR: Directory ($dir) does not exist\n";
+      print "Check with nuggit tree\n";
+    }
     
     $submodule_status = `git status --porcelain $submodule`;
 

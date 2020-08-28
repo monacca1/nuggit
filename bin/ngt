@@ -62,13 +62,16 @@ my %files =
  mv        => {cmd => "nuggit_mv.pl", completion_type => "file"},
  pull      => "nuggit_pull.pl",
  push      => "nuggit_push.pl",
+ remote    => "nuggit_remote.pl",
+ relink    => "nuggit_relink_submodules.pl",
  reset     => {cmd => "nuggit_reset.pl", completion_type => "file"},
  rm        => {cmd => "nuggit_rm.pl", completion_type => "file"},
  stash     => {cmd => "nuggit_foreach.pl", args => [ qw( git stash) ],
-             completion_list => [qw(save pop list show drop apply branch)]
-            },
- status     => {cmd => "nuggit_status.pl", completion_type => "file"},
- tag        => {cmd => "nuggit_foreach.pl", args => [ qw( --no-break-on-error git tag )]},
+             completion_list => [qw(save pop list show drop apply branch)] },
+ status    => {cmd => "nuggit_status.pl", completion_type => "file"},
+ tag       => {cmd => "nuggit_foreach.pl", args => [ qw( --no-break-on-error git tag )]},
+ tree      => "nuggit_tree.pl",
+ version   => "nuggit_version.pl",
  
  # For Advanced Users
  foreach => {cmd => "nuggit_foreach.pl",
