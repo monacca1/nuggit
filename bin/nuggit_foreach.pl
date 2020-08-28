@@ -77,7 +77,7 @@ my $opts = {
             "recursive" => 1,
            };
 my $verbose = 0;
-my $ngt = Git::Nuggit->new();
+my $ngt = Git::Nuggit->new() || die("Not a nuggit!");
 my $log_level = 1; # Set to 0 to disable logging
 my ($help, $man);
 

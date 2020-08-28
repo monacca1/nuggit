@@ -105,12 +105,7 @@ sub ParseArgs()
 
 sub add_all
 {
-  submodule_foreach(sub {
-                        $ngt->run("git add --all");
-                    });
-    
-  # And for self
-  $ngt->run("git add --all");
+  $ngt->run_foreach("git add --all");
 }
 
 

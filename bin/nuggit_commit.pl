@@ -34,6 +34,7 @@ use v5.10;
 use Pod::Usage;
 use Getopt::Long;
 use Cwd qw(getcwd);
+use Term::ANSIColor;
 use FindBin;
 use lib $FindBin::Bin.'/../lib'; # Add local lib to path
 use Git::Nuggit;
