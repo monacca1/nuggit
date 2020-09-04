@@ -36,7 +36,7 @@ sub get_submodules {
     chdir($dir) if defined($dir);
     my @modules;
     submodule_foreach(sub {
-                          push(@modules, shift .'/'. shift );
+                          push(@modules, getcwd() );
                       });
     chdir($old_dir) if defined($dir);
 
@@ -491,6 +491,8 @@ Checks if a merge operation is in progress, and dies if it is.
 
 This function should be called with the path to the nuggit root repository or with that as the current working directory.
 
+DEPRECATED - Use $ngt->merge_conflict_state(1) instead
+
 =cut
 
 sub check_merge_conflict_state
@@ -501,8 +503,15 @@ sub check_merge_conflict_state
     }
 }
 
-# The following is an initial cut at an OOP interface.  The OOP interface is incomplete at this stage
-#  and serves as a convenience wrapper for other commands, and Nuggit::Log
+=head1 Nuggit OOP Interface
+
+Documentation TODO
+
+The following is an initial cut at an OOP interface.  The OOP interface is incomplete at this stage
+ and serves as a convenience wrapper for other commands, and Nuggit::Log
+
+=cut
+
 package Git::Nuggit;
 use Git::Nuggit::Log;
 use Cwd qw(getcwd);
@@ -531,7 +540,8 @@ sub new
         relative_path_to_root => $relative_path_to_root,
         verbose => $args{verbose},
         # Command execution defaults (TODO: setters)
-        run_die_on_error => 1,
+        run_die_on_error => defined($args{run_die_on_error}) ? $args{run_die_on_error} : 1,
+        run_error_fn => undef, # Consolidate error handling logic with a callback
         run_echo_always => defined($args{echo_always}) ? $args{echo_always} : 1,
         # level =>  (defined($args{level}) ? $args{level} : 0),
     }, $class;
@@ -582,8 +592,13 @@ sub run {
         say $stderr if $stderr;
         my ($package, $filename, $line) = caller;
         $self->{logger}->cmd_full($cmd, $stdout, $stderr, $?);
-        my $cwd = getcwd(); # TODO: Convert to relative path
-        die("$cmd failed with $? at $package $filename:$line in $cwd");
+
+        if ($self->{run_error_fn}) {
+            $self->{run_error_fn}($?, $stdout, $stderr);
+        } elsif ($self->{run_die_on_error}) {
+            my $cwd = getcwd(); # TODO: Convert to relative path
+            die("$cmd failed with $? at $package $filename:$line in $cwd");
+        }
     }
 
     if ($self->{run_echo_always}) {
@@ -594,6 +609,24 @@ sub run {
     $self->{logger}->cmd_full($cmd, $stdout, $stderr);
     
     return ($?, $stdout, $stderr);
+}
+
+=head2 merge_conflict_state()
+
+If no argument is specified, it returns true if a merge operation is in progress, false otherwise.
+
+If any parameter is defined, then we will die with an appropriate error if a merge is in progress.
+
+=cut
+
+sub merge_conflict_state {
+    my $self = shift;
+    my $die_if_conflict = shift;
+    if (-e $self->{root}."/.nuggit/merge_conflict_state") {
+        die "A merge is in progress.  Please complete with 'ngt merge --continue' or abort with 'ngt merge --abort' before proceeding.";
+    } else {
+        return undef;
+    }
 }
 
 
