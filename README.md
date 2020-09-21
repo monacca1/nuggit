@@ -386,17 +386,19 @@ followed up with a `nuggit commit`.
   - `nuggit relink`
 
 
+
 ### nuggit remote
-- The nuggit remote command has options for setting or getting the remote URL.  
+- The nuggit remote command has options for setting or getting the remote URL based on the git remote set-url and git remote get-url commands.  
 - nuggit remote set-url:
   - This command will set the URL for the given remote for the nuggit root repository as well as all of the submodules.  
-as all of the submodules. This command is based on the git seet url and the git set-url command.  If the remote is not given, origin is changed by default.
+as all of the submodules.  If the remote is not given, origin is changed by default.
   - Command:
-    - `nuggit remote set-url [-v | --verbose] <remote name> <new url>
+    - `nuggit remote set-url [-v | --verbose] <remote name> <new url>`
 - nuggit remote get-url:
-  - This command is used to get the URL for each submodule and check if it matches the pattern for the remote URL for the nuggit root repository.  It is desirable that all of the submodules be part of the same "project" or have the same ownership 
+  - This command is used to get the URL for each submodule and check if it matches the pattern for the remote URL for the nuggit root repository.  It is desirable that all of the submodules be part of the same "project" or have the same ownership. 
   - Command:
-    - `nuggit remote get-url <remote name>
+    - `nuggit remote get-url <remote name>`
+
 
 
 ### nuggit reset
