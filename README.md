@@ -293,7 +293,7 @@ It will show the branch, date/time, directory, commit message and which submodul
   - `nuggit log`
 - Example:
   - Show the entire nuggit log: `nuggit log`
-  - Show he nuggit commands AND the git commands that were executed: `nuggit log -a`
+  - Show the nuggit commands AND the git commands that were executed: `nuggit log -a`
   - Clear the nuggit log: `nuggit -c` or `nuggit -clear`
   
   
@@ -415,7 +415,7 @@ as all of the submodules.  If the remote is not given, origin is changed by defa
 - Show the status of the nuggit repository.  This will show the current branch and any submodules or files that are new, modified, deleted, 
 conflicted, similar to git status, however, `nuggit status` will operate across submodule boundaries and recurse into nested submodules.  The 
 output of nuggit status shows the relative paths of the file or submodule (relative to the current working directory).  This is so you can
-copy and paste the path/file name back intoo the command line for `nuggit add` OR to `nuggit diff`
+copy and paste the path/file name back into the command line for `nuggit add` OR to `nuggit diff`
 
 - Command: 
   - `nuggit status`
@@ -423,8 +423,8 @@ copy and paste the path/file name back intoo the command line for `nuggit add` O
   - `nuggit status`
 
 Additional flags to nuggit status exist to show additional information
-- `-a` to list all submodules, event those with no active changes.  This will triiger the detectons for repsitories on the wrong branch or in detached head state
-- `-d` to list additional details about each submodule including the SHA, log message, author of the most recent ccommit, date of commit, and branches
+- `-a` to list all submodules, event those with no active changes.  This will triger the detections for repositories on the wrong branch or in detached head state
+- `-d` to list additional details about each submodule including the SHA, log message, author of the most recent commit, date of commit, and branches
 
 
 ### nuggit tag
