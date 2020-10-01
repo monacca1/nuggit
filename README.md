@@ -2,8 +2,8 @@
 
 Nuggit is a wrapper for git that makes repositories consisting of submodules (or nested submodules) 
 work more like mono-repositories.  This is, in part, achieved by doing work on the same branch across
-all submodules and taking the approproate action when submodules are modified, added, pushed, pulled
-etc. without requring the user to do extra magic just for submodules.
+all submodules and taking the appropriate action when submodules are modified, added, pushed, pulled
+etc. without requiring the user to do extra magic just for submodules.
 
 A wrapper script. "ngt" can be used to invoke all of the capabilities
 defined below.  Tab auto-completion is optionally available for this wrapper.
@@ -71,12 +71,12 @@ The following commands will install cpanm and all required dependencies locally.
 
 
 ### Manual
-No non-standard modules requiring compialtion are utilized by this
+No non-standard modules requiring compilation are utilized by this
 suite permitting an alternative manual installation process if
 required.
 
 The following procedure is not recommended unless nominal installation
-ethods are unavailable.
+methods are unavailable.
 
 - Obtain this repository (ie: git clone ...)
 - Download the IPC::Run3 library.
@@ -100,7 +100,7 @@ the nuggit wrapper as described above.
 - Add the specified files to the staging area.  This can be done without regard to which submodule the files are located in.  nuggit
 will figure it out based on the location of the file.  In other words, you do not need to switch directory into the submodule containing
 the file in order to "add" it to the staging area for that submodule.  
-- The output of the nuggit status command will shw the relative path of the files that you have changed.  The paths displayed are relative 
+- The output of the nuggit status command will show the relative path of the files that you have changed.  The paths displayed are relative 
 to the current working directory of the shell.  The paths to the files being added using nuggit add should be relative to the current 
 working directory as well.  You can copy and paste the file/paths from the nuggit status command and use them in the nuggit add command.
 - example
@@ -143,7 +143,7 @@ the branch to be deleted, the delete will not work.
   - Delete the branch in all repositories and submodules on the remote (central repo) where the branch exists and has already been merged.
   - Delete the branch locally from all repositories and submodules where the branch exists and has already been merged.
 - You can be anywhere in the nuggit (git) repo to execute this command.
-- Command sytax:
+- Command syntax:
   - `nuggit_branch_delete_merged.pl <branch to delete>`
 - example
   - `nuggit_branch_delete_merged.pl JIRA-XYZ`
@@ -154,7 +154,7 @@ on the remote too
 
 
 ### nuggit checkout
-- nuggit checkout is analagous to git checkout, however, when checking out a branch, it will attempt to checkout the branch, 
+- nuggit checkout is analogous to git checkout, however, when checking out a branch, it will attempt to checkout the branch, 
 not only in the base/root repository, but also recursively in the nested submodules.  Like the git command, you can use this 
 create a new branch.  Nuggit checkout should be used to create or checkout development branches rather than using git directly.
 
@@ -173,7 +173,7 @@ that this branch was created using nuggit and thus exists in all submodules.
   then push.
 - create and checkout a new branch
   - This will create the branch in the root repository and in all submodules based on the currently checked out branch and commit.  
-This is analgous to the git checkout -b command but operates across all submodules.
+This is analogous to the git checkout -b command but operates across all submodules.
   - This command can be executed anywhere in the repository and the behavior is not specific to the location where the command is executed.
   - Syntax
     - `nuggit checkout -b <branch_name>`
@@ -187,7 +187,7 @@ This is analgous to the git checkout -b command but operates across all submodul
      - TO DO - this may need to use some of the logic implemented in: `nuggit_checkout.pl <branch> --follow-commit`
 
 - NOTE that if changes were pushed to this branch in a submodule using git directly (not using nuggit)
-AND the parent reposities were not updated to point to the new submodule commits, this checkout command
+AND the parent repositories were not updated to point to the new submodule commits, this checkout command
 will result a repository that reports local changes.
 
 
@@ -196,7 +196,7 @@ will result a repository that reports local changes.
 - Usually "master" is the default tracking branch, but not always.  And since each submodule can have its own default tracking branch, if
 we want to checkout the default tracking branch we cannot specify a single explicit branch name to check out.
 -"Checkout Default" is a concept which means to checkout the conceptual master branch rather than the explicit master branch.  In other 
-words, this is to check out the default tracking branch for your project.  Checkout out of the default tracking branch is acheieved with 
+words, this is to check out the default tracking branch for your project.  Checkout out of the default tracking branch is achieved with 
 the nuggit checkout command with the `--default` option. 
 - `nuggit checkout --default` will identify the tracking branch of the root/base repository and check it out.  It will then do 
 the same for each nested submodule recursively.  The result of this operation will be a repository where the root/base repository and 
@@ -208,9 +208,9 @@ each submodule is checked out the latest of the tracking branch.
 
 
 ### nuggit clone
-- Clone a repositoy 
+- Clone a repository 
 - Cloning a repository containing one or more nested submodules with git requires additional steps or arguments to populate the submodules.
-- Cloning a repository containing one or more nested submodules with nuggit is intended to be as simple as cloing a mono-repository with git.  
+- Cloning a repository containing one or more nested submodules with nuggit is intended to be as simple as cloning a mono-repository with git.  
 - nuggit will perform the additional steps required to fully populate each nested submodule.  
 - nuggit clone will also initialize this git repository so that it can be used with the rest of the nuggit commands.  Specifically it adds a 
 .nuggit in the repo root directory to hold nuggit information and data structures.
@@ -270,9 +270,9 @@ will have the same commit message as that provided by the user in the nuggit com
 
 
 ### nuggit init
-- nuggit init will take an existing git repository and iniitialize it to be used with nuggit.  This action
-occurrs automatically when cloning a repository using nuggit.  This is conceptually similar to git init where you 
-are acting on a pre-existing directtory and initializing it as a git repository.  This should be done at the root 
+- nuggit init will take an existing git repository and initialize it to be used with nuggit.  This action
+occurs automatically when cloning a repository using nuggit.  This is conceptually similar to git init where you 
+are acting on a pre-existing directory and initializing it as a git repository.  This should be done at the root 
 level of the repository.  This will also install the .nuggit in the current directory (the root of the repo).  If the repo was cloned
 using the native git clone you will need to `nuggit init` in the root folder of the git repository in order to use nuggit with
 this repository. 
@@ -287,8 +287,8 @@ this repository.
 ### nuggit log
 - nuggit log keeps track of the significant events performed on this nuggit repository.  This is to help recall what was done and if necessary assist
 in the git-fu that may be required to get out of a sticky situation.  
-- For eample, the nuggit log will show the current branch, date/time, directory of files being added to the staging area using nuggit add.
-It will show the branch, date/time, directory, commit message and which submodule references were also added and committed upoon a nuggit commit.
+- For example, the nuggit log will show the current branch, date/time, directory of files being added to the staging area using nuggit add.
+It will show the branch, date/time, directory, commit message and which submodule references were also added and committed upon a nuggit commit.
 -Command:
   - `nuggit log`
 - Example:
@@ -329,7 +329,7 @@ branch into master (or default tracking branch).
 
 - Identify the conflicts:
   - `nuggit diff <file>` or other method if one is available
-  - resove the conflict by opening the file, identifying the conflicts and preparing the file to be committed
+  - resolve the conflict by opening the file, identifying the conflicts and preparing the file to be committed
   - add the files that have been resolved to the staging area
     - `nuggit add <resolved file>`
 - continue the merge with the command `nuggit merge --continue`
@@ -358,8 +358,8 @@ the pull
 working branch and push it explicitly by name to ensure that it is pushing to the same branch across all submodules (and root repo)
 
 #### Pushing to master (or default tracking branch)
-- Since the nuggit push identifies the working brach by name and pushes to the root repo and all submodules recursively, if you have checked
-out the default tracking branch, you may not be on the same explicitly named branch across the entire repo (of submodules). There is a seperate
+- Since the nuggit push identifies the working branch by name and pushes to the root repo and all submodules recursively, if you have checked
+out the default tracking branch, you may not be on the same explicitly named branch across the entire repo (of submodules). There is a separate
 script (for now) to push to the default tracking branch: `nuggit_push_default.pl`.  This script will push to whatever the checked out branch 
 is, and if you checked out with `nuggit checkout --default`, it should be the default  tracking branch for each submodule.
   - Example:
@@ -375,8 +375,8 @@ is, and if you checked out with `nuggit checkout --default`, it should be the de
 ### nuggit relink
 - This is to be used to correct when the submodule linkages get updated outside
 of nuggit or to address other potentially inconsistencies.  The nuggit workflow enforces development on the same branch across all submodules.
-If a repository is manipulated outside of the nuggit tools / worflow, or in unexpected/undesirable conditions using nuggit, the submodule reference
-from the parent repo may point to a comit within the submodule that is not the head of that same branch within the submodule.  
+If a repository is manipulated outside of the nuggit tools / workflow, or in unexpected/undesirable conditions using nuggit, the submodule reference
+from the parent repo may point to a commit within the submodule that is not the head of that same branch within the submodule.  
 `nuggit relink` will, for each submodule that has changes,`git add` the submodule in its parent repository.  This needs to be
 followed up with a `nuggit commit`.
 
@@ -402,7 +402,7 @@ as all of the submodules.  If the remote is not given, origin is changed by defa
 
 
 ### nuggit reset
-- The nuggit reset command will unstage changes that have been "added".  Staged changes are the changes that have been added using using `nuggit add`
+- The nuggit reset command will unstage changes that have been "added".  Staged changes are the changes that have been added using `nuggit add`
 - TO DO - implement the ability to reset without argument to reset ALL staged changes
 - TO DO - implement the ability to unstage a new file that has been added.  This currently does not work. 
 
@@ -423,7 +423,7 @@ copy and paste the path/file name back into the command line for `nuggit add` OR
   - `nuggit status`
 
 Additional flags to nuggit status exist to show additional information
-- `-a` to list all submodules, event those with no active changes.  This will triger the detections for repositories on the wrong branch or in detached head state
+- `-a` to list all submodules, event those with no active changes.  This will trigger the detections for repositories on the wrong branch or in detached head state
 - `-d` to list additional details about each submodule including the SHA, log message, author of the most recent commit, date of commit, and branches
 
 
@@ -433,7 +433,7 @@ Additional flags to nuggit status exist to show additional information
 
 
 ### nuggit tree
-- Show the status of the currently checked out branch from the perspective the submodule reference.  This command will show the HEAD commit for the current branch for the root repository.  It will then show the the submodule has for each submodule and for each submodule it will show the HEAD commit for the current branch.  If the parent repositories reference to the submodule is different from the HEAD of the branch for that submodule, this command will indicate this condition as an inconsistency.  If the repo is only manipulated using nuggit commands, the tree command will not find any inconsistencies. 
+- Show the status of the currently checked out branch from the perspective the submodule reference.  This command will show the HEAD commit for the current branch for the root repository.  It will then show the submodule has for each submodule and for each submodule it will show the HEAD commit for the current branch.  If the parent repositories reference to the submodule is different from the HEAD of the branch for that submodule, this command will indicate this condition as an inconsistency.  If the repo is only manipulated using nuggit commands, the tree command will not find any inconsistencies. 
 
 
 ### nuggit version
