@@ -659,6 +659,7 @@ sub do_root_operation_breadth_first {
         $myop = "merge"; # TODO: support rebase flag
         
         # We must explicitly fetch the submodule being updated
+        say colored("Fetching changes for $in->{name}", 'info');
         my ($err, $stdout, $stderr) = $ngt->run("git fetch");
         if ($err) {
             say $stdout;
@@ -666,6 +667,7 @@ sub do_root_operation_breadth_first {
             say colored("WARNING: Failed to fetch $in->{name} (see above for details). This may cause additional errors", "warn");
         }
     }
+    say colored("Executing $op for $in->{name}", 'info'); # TODO: Less verbose method of outputting progress
 
     if ($in->{status} eq '-') {
         # This submodule is uninitialized.
