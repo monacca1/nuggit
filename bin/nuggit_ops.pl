@@ -134,6 +134,20 @@ if ($opts->{continue}) {
     die "ERROR: Cannot proceed when a merge is in progress. Run 'nuggit merge --continue' to complete the merge after resolving any conflicts, or 'ngt merge --abort' to abandon it.";
 }
 
+# Pre-operation status check applies to all.
+# NOTE: While git can handle uncommitted changes in many cases, doing so is likely to confuse Nuggit and may result in unexpected commits or other undefined behavior.
+if (!$opts->{'skip-status-check'}) {
+    my $status = get_status({uno => 1});
+    if (!status_check($status))
+    {
+        say colored("Local changes detected.  Please commit or stash all changes before proceeding.", 'error');
+
+        pretty_print_status($status, $ngt->{relative_path_to_root}, {user_dir => $ngt->{user_dir}});
+        
+        die colored("Pull aborted due to dirty working directory.  Please stash or commit and then re-run. This check can be bypassed with --skip-status-check, however doing so may result in undefined behavior.", 'warn')."\n";
+    }
+}
+
 if ($opts->{mode} eq "checkout") {
     if (defined($opts->{branch}) && -e $opts->{branch}) { # TODO: Or user flag given to indicate file (ie; to checkout a deleted file)
         # User requested checkout of a file or diectory
@@ -183,6 +197,7 @@ sub ParseArgs
                               "continue!",
                               "abort!",
                               "edit!",
+                              "skip-status-check!",
                               'message|m', # Specify message to use for any commits upon merge (optional; primarily for purposes of automated testing). If omitted, user will be prompted for commit message.  An automated message will be used if a conflict has been automatically resolved.
                 # TODO: remote flag.  For pull operation, this will cause a pull in the root, and a submodule update --remote in all submodules.  This is a more git-like version of the previous '--default' concept.
                 # TODO: Default flag.  For branch-first operations only.
@@ -193,8 +208,9 @@ sub ParseArgs
     
     # First unparsed argument indicates operation (ie: pull, merge, or checkout)
     if (@ARGV > 0) {
-        $opts->{mode} = $ARGV[0];
-        $opts->{branch} = $ARGV[1] if @ARGV > 1;
+        $opts->{mode} = shift @ARGV;
+        $opts->{remote} = shift @ARGV if @ARGV > 0 && $opts->{mode} eq "pull"; # Special case for pull
+        $opts->{branch} = shift @ARGV if @ARGV > 0;
     }
     
     if(!defined($opts->{mode}) || !defined($modes{$opts->{mode}})) {
@@ -569,6 +585,7 @@ sub root_operation {
         'parallel'      => 0, # Parallel operations are not practical in context of (interactive) conflict handling
         'recursive'     => 1, # Recuse into submodules. Breadth-first ensures we update a given submodule before recursing into it.
         'run_root'      => 0,
+        'modified_only' => ($opts->{strategy} eq "ref") ? 1 : 0, # For ref-first strategy, we don't need to check unmodified submodules here.  This check is run after breadth_first for a module, so it will pick up new changes
     });
 
     if ($opts->{states}->{totals}->{file_conflicts} == 0) {
@@ -767,6 +784,10 @@ sub do_operation_pre {
     } elsif ($op eq "pull") {
         $cmd = "git pull";
         # TODO: Optional support for additional git arguments for remote/repo and/or commit (likely ref-first strategy only)
+        if ($opts->{remote}) {
+            $cmd .= " $opts->{remote}";
+            $cmd .= " $opts->{branch}" if $opts->{branch}; # pull can only specify branch if remote is also specified
+        }
     } elsif ($op eq "rebase") {
         $cmd = "git rebase $branch";
         # TODO: Support for interactive flag? May require alt submodule handling
