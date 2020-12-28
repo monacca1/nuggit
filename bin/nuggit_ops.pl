@@ -869,6 +869,7 @@ sub do_operation_post {
         'depth_first' => sub {
             # Get status -uno for current repo only
             my $status = get_status({uno => 1, no_recurse => 1});
+            my $staged_cnt = 0;
             
             # If any files are modified/unstaged, abort
             if ($status->{'unstaged_files_cnt'} > 0) {
@@ -877,18 +878,24 @@ sub do_operation_post {
 
             # If any submodules are modified, auto-stage
             foreach my $file (keys %{$status->{'objects'}}) {
-
-                if ($status->{objects}{$file}{'status_flag'} eq ' ') {
+                my $obj = $status->{objects}{$file};
+                if ($obj->{'status_flag'} eq ' ') {
                     # No action needed, file should already be staged
                 } elsif (-d $file) {
-                    # This is a directory, auto-stage it; this should be a submodule that's already been merged
-                    my ($err, $stdout, $stderr) = $ngt->run("git add $file");
-                    if ($err) {
-                        exit_save_merge_state("Error staging $file", $stdout);
+                    exit_save_merge_state("Internal error: $file is a modified directory but not a submodule") unless $obj->{'is_submodule'};
+                    if ($obj->{'sub_commit_delta'}) {
+                        # This is a directory, auto-stage it; this should be a submodule that's already been merged
+                        my ($err, $stdout, $stderr) = $ngt->run("git add $file");
+                        if ($err) {
+                            exit_save_merge_state("Error staging $file", $stdout);
+                        } else {
+                            say "Automatically staging $file";
+                            $opts->{states}->{totals}->{'autostage_subs'}++;
+                            $staged_cnt++;
+                            # TODO: Log in opts->{states}->{repos} for summmary output
+                        }
                     } else {
-                        say "Automatically staging $file";
-                        $opts->{states}->{totals}->{'autostage_subs'}++;
-                        # TODO: Log in opts->{states}->{repos} for summmary output
+                        say colored("Submodule $file has modified or untracked files", 'warn');
                     }
                 } else {
                     # This case indicates a bug in the merge algorithm or status check
@@ -897,16 +904,18 @@ sub do_operation_post {
             }
 
             # If there are staged changes, commit them (if there isn't, then we shouldn't have reached this point)
-            my $cmd = "git commit";
-            if ($opts->{'message'}) {
-                $cmd .= " -m \"".$opts->{'message'}."\"";
-            } elsif (!$opts->{'edit'}) { 
-                $cmd .= " --no-edit";
-            }
-            my ($err, $stdout, $stderr) = $ngt->run($cmd);
-            if ($err && ($stdout !~ /nothing to commit/i) ) {
-                # VERIFY: Will this fail if there are no changes to commit? If so, we may need additional checks above.
-                exit_save_merge_state("Failed to commit conflict resolution at ".getcwd(), $stdout);
+            if ($staged_cnt > 0 || $status->{'staged_files_cnt'} > 0) {
+                my $cmd = "git commit";
+                if ($opts->{'message'}) {
+                    $cmd .= " -m \"".$opts->{'message'}."\"";
+                } elsif (!$opts->{'edit'}) { 
+                    $cmd .= " --no-edit";
+                }
+                my ($err, $stdout, $stderr) = $ngt->run($cmd);
+                if ($err && ($stdout !~ /nothing to commit/i) ) {
+                    # VERIFY: Will this fail if there are no changes to commit? If so, we may need additional checks above.
+                    exit_save_merge_state("Failed to commit conflict resolution at ".getcwd(), $stdout);
+                }
             }
             
         },
