@@ -35,7 +35,7 @@ use FindBin;
 use lib $FindBin::Bin.'/../lib'; # Add local lib to path
 use Git::Nuggit;
 use Git::Nuggit::Log;
-
+use Term::ANSIColor;
 
 # show or clear the contents of the nuggit log
 

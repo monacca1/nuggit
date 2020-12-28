@@ -1,3 +1,13 @@
+# ANSI Color Configuration / Accessibility
+The Nuggit scripts utilize ANSI terminal colors to clarify message
+output.  Output generally uses custom alias classes of 'error',
+'warn', 'info', and 'success'.
+
+Environment variables can be used to disable colored output entirely,
+or to customize the color scheme for personal preferences.  See
+https://perldoc.perl.org/Term::ANSIColor#ENVIRONMENT for details.
+
+
 # Nuggit
 
 Nuggit is a wrapper for git that makes repositories consisting of submodules (or nested submodules) 
@@ -9,15 +19,16 @@ A wrapper script. "ngt" can be used to invoke all of the capabilities
 defined below.  Tab auto-completion is optionally available for this wrapper.
 
 The nuggit.sh or nuggit.csh shell should be sourced to add nuggit to
-your path for bash or csh respectively.  These files can be used as an
-example if needed to adopt for other shell environments.
+your path for bash or csh respectively (required for auto-completion).
+These files can be used as an example if needed to adopt for other
+shell environments.
 
 Usage information for most scripts is available with a "--man" or
 "--help"  parameter.  For example, "ngt --man" or "ngt status --man".
 
 
 ### Point of Contact
-Contact Chris Monaco (chris.monaco@jhuapl.edu) or David Edell (david.edell@jhuapl.edu) for more information
+Please report any issues to the issue tracker.  Contact Chris Monaco (chris.monaco@jhuapl.edu) or David Edell (david.edell@jhuapl.edu) for more information
 
 
 ## Installation
@@ -27,6 +38,13 @@ Minimum requirements for Nuggit are:
 - Command-line Git tools, version 2.13.2 or later.
 - Perl version 5.10 or later
 
+### CPAN (local)
+
+Clone this repository and run "cpan ." from within the current folder
+to automatically install all dependencies.
+
+It is intended for this module to eventually be available from CPAN as
+"cpan Git::Nuggit"
 
 ### Makefile.PL
 
@@ -35,57 +53,25 @@ Minimum requirements for Nuggit are:
 - make test     # Optional
 - make install
 
-### CPAN (from Tar file)
+### Manual
+Simply run "source nuggit.sh" (or the equivalent for your platform) to
+install nuggit into you rsystem path.
 
-This package has not yet been submitted to CPAN.
+If the requisite dependencies have not already been installed, they
+must be installed manually using CPAN, CPANM, or other method.  A list
+of dependencies can be found in Makefile.PL
 
-A CPAN-compatible distribution can be generated with "perl Makefile.PL
-&& make && make test && make manifest && make dist"
+### Optional: CPANM Setup
+CPANM is an alternative to CPAN, which is particularly useful if
+running on a system where you do not have sudo privileges.
 
-To use CPAN to install a module and it's dependencies from a packaged .tar.gz:
-
-- tar -xvf Git-Nuggit-0.xx.tar.gz
-- cd Git-Nuggit-0.xx
-- cpan .
-
-
-
-### Manual via CPAN
-Install Perl module dependencies using CPAN, or CPANM.  CPANM can be installed and run without root
-privileges on most systems (see below)
-
-For run-time dependencies, "sudo cpan IPC::Run3" or "cpanm IPC::Run3".
-Additional dependencies are required for running the test suite.  See
-the test directory for details.
-
-Source the appropriate shell script in your profile to add Nuggit to
-your path and enable auto-completion of commands (ie: "ngt status").
-Scripts are provided for bash and cshell.
-
-
-#### Optional: CPANM Setup
 The following commands will install cpanm and all required dependencies locally.  This may take a few minutes if none are already installed.  Running cpanm as root will install packages globally.
 - curl -L https://cpanmin.us/ -o cpanm && chmod +x cpanm
+- ./cpanm --local-lib=~/perl5 local::lib
+- eval $(perl -I ~/perl5/lib/perl5/ -Mlocal::lib)
+  - # This command should be added to your .bashrc/.cshrc, or your PERL5LIB path manually updated.
 - ./cpanm JSON Term::ReadKey DateTime Git::Repository HTTP::Request LWP::UserAgent
-- ./cpanm --local-lib=~/perl5 local::lib && eval $(perl -I ~/perl5/lib/perl5/ -Mlocal::lib)
 
-
-### Manual
-No non-standard modules requiring compialtion are utilized by this
-suite permitting an alternative manual installation process if
-required.
-
-The following procedure is not recommended unless nominal installation
-ethods are unavailable.
-
-- Obtain this repository (ie: git clone ...)
-- Download the IPC::Run3 library.
-- Copy the IPC-Run/lib/IPC directory into this repository's 'lib'
-directory.
-- Add the bin folder to your path (ie: source the provided
-nuggit.[c]sh script)
-
- 
 
 # Nuggit Commands:
 

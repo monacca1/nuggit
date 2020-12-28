@@ -37,7 +37,7 @@ use FindBin;
 use lib $FindBin::Bin.'/../lib'; # Add local lib to path
 use Pod::Usage;
 use Git::Nuggit;
-
+warn "nuggit_pull.pl is DEPRECATED in favor of 'nuggit_ops.pl pull --strategy=branch', or 'nuggit_ops.pl pull' for recommended ref-first";
 my $skip_status_check = 1;
 my $commit_message;
 my $edit_flag = 1; # Mirrors Git's edit/no-edit flag

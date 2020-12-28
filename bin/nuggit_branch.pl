@@ -163,7 +163,13 @@ elsif (defined($selected_branch))
 else
 {
     $ngt->start(level=> 0, verbose => $verbose);
-    display_branches();
+    verbose_display_branches(); # DEBUG/Experiment - DO NOT COMMIT
+}
+use Data::Dumper;
+sub verbose_display_branches
+{
+    # Note: This may replace display_branches in the future.
+    say Dumper(get_branches("-a"));
 }
 
 sub display_branches
@@ -292,9 +298,15 @@ sub is_branch_selected_throughout($)
   return $branch_consistent_throughout;
 }
 
+# Delete a branch only if it is merged at all levels
 sub delete_merged_branch
 {
-    delete_branch(shift, "-D");
+    my $branch = shift;
+    if (check_branch_merged_all($branch)) {
+        delete_branch($branch, "-D");
+    } else {
+        die "This branch is not known, or has not been merged into HEAD.  Use '-D' to force deletion anyway.";
+    }
 }
 
 # Base function to (unconditionally) delete a local branch, failing on first error
@@ -315,15 +327,63 @@ sub delete_remote_branch
     my $branch = shift;
     $ngt->run_foreach("git push origin --delete $branch");
 }
+
+# Delete Remote branch, only if it is merged at all levels
 sub delete_merged_remote_branch
+{
+    my $branch = shift;
+    if (check_branch_merged_all($branch, "origin")) {
+        delete_remote_branch($branch); 
+    } else {
+        say "This branch is not known locally, or has not been merged into HEAD.  Use '-rD' to force deletion any<way.  It may not be possible to recover branches that have been deleted remotely.";
+    }
+}
+
+# TODO: Make this an option to call directly, ie: ngt branch -a --merged ? Or ngt branch --check-merged $branch
+# TODO: TEST
+sub check_branch_merged_all
+{
+    my $branch = shift;
+    my $remote = shift;
+    my $status = 1; # Consider it successful, unless we find a branch that is not merged
+
+    # TODO: Replace remotes with origin for local detection?
+    my $check_cmd = "git branch -a --merged | grep $branch";
+    
+    $ngt->run_foreach( sub {
+                           my $state = `$check_cmd`;
+                           if (!$state) {
+                               $status = 0;
+                               say "Branch not merged/found at ".getcwd() if $verbose;
+                           } else {
+                               my @lines = split('\n', $state);
+                               my $linefound = 0;
+                               foreach my $line (@lines) {
+                                   my ($lremote, $lbranch) = $line =~ /[\s\*]*(remotes\/(\w+)\/)?([\w\-\_\/]+)/;
+                                   if ($branch eq $lbranch && $remote eq $lremote) {
+                                       # Match found
+                                       #  Note: If $remote is undef, then we only match when corresponding match is as well.
+                                       $linefound = 1;
+                                   }
+                               }
+                               if (!$linefound) {
+                                   $status = 0;
+                                   say "Branch not merged/found at ".getcwd() if $verbose;
+                               }
+                           }
+                       });
+    return $status;
+}
+
+sub delete_merged_remote_branch_orig
 {
     my $branch = shift;
     my $delete = 1;
     my $check_cmd = "git branch -a --merged | grep 'remotes' | grep $branch";
 
-    say $check_cmd . " = " . `$check_cmd`;
     my $status = `$check_cmd`;
-    say "DBG: Not merged" unless $status;
+    
+    say "$check_cmd = $status" if $verbose;
     
     $delete = 0 unless `$check_cmd`;
     submodule_foreach(sub {
@@ -333,8 +393,7 @@ sub delete_merged_remote_branch
             $delete = 0;
             say "DBG: Branch not found in ".getcwd();
         }
-#        $delete = 0 unless `$check_cmd`;
-                      });
+    });
     
     if ($delete) {
         # Branch was merged locally, so it should be safe to delete remotely

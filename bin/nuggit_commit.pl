@@ -25,9 +25,9 @@
 ##
 #*******************************************************************************/
 
-# TODO: Support for amend? May be better to skip this one.
+# TODO: Support for amend? May be better to skip this one (advanced users can use git directly).
 # TODO: Option to prompt user before commit if unstaged changes exist?
-
+# TODO: If a submodule is not on the root branch, attempt a safe checkout (unless configured otherwise)
 use strict;
 use warnings;
 use v5.10;
@@ -59,41 +59,36 @@ my $need_to_commit_at_root = 0;
 my $branch_check = 1; # Check that all modified submodules are on the correct branch
 my $root_repo_branch;
 my $commit_all_files = 0; # Results in "git commit -a"
+my $use_force = 0;
 
-my ($root_dir, $relative_path_to_root) = find_root_dir();
-my $log = Git::Nuggit::Log->new(root => $root_dir);
+# Initialize Nuggit & Logger prior to altering @ARGV
+my $ngt = Git::Nuggit->new("run_die_on_error" => 0, "echo_always" => 0); 
+my $root_dir = $ngt->root_dir();
 
 ParseArgs();
 
-die("Not a nuggit!\n") unless $root_dir;
-$log->start(verbose => $verbose, level => 1);
+die("Not a nuggit!\n") unless $ngt;
+$ngt->start(level => 1, verbose => $verbose);
 
-say "nuggit root dir is: $root_dir" if $verbose;
-say "nuggit cwd is ".getcwd() if $verbose;
-say $relative_path_to_root if $verbose;
-
-say "changing directory to root: $root_dir" if $verbose;
-chdir $root_dir;
+chdir $root_dir || die("Can't enter root dir\n");
 
 check_merge_conflict_state(); # Do not proceed if merge in process; require user to commit via ngt merge --continue
 
 my $status = get_status({uno => 1}); # Get status, ignoring untracked files
 
-die "No changes to commit." if status_check($status);
+die "No changes to commit.\n" if status_check($status);
 
-if ($status->{'branch.head'}) {
-    $root_repo_branch = $status->{'branch.head'};
-    if ($root_repo_branch eq "(detached)" ) {
-        die "ERROR: Root repository is in a detached head state";
-    }
-} else {
-    die "ERROR: Unable to detect branch name.";
+
+if (!$use_force && $status->{'detached_heads_flag'}) {
+    pretty_print_status($status, $ngt->{relative_path_to_root}, {user_dir => $ngt->{user_dir}});
+    say colored("\nERROR: A detached HEAD state exists in one or more places.", 'error');
+    die colored("Please resolve (ie: 'ngt checkout --safe'), or (not recommended) re-run with '--force' to bypass this check.", 'info')."\n";
 }
 
-if ($branch_check) {
+if ($branch_check && !$use_force) {
     if ($status->{'branch_status_flag'}) {
-        pretty_print_status($status);
-        die "One or more submodules are not on branch $root_repo_branch.  Please resolve, or (with caution) rerun with --no-branch-check to ignore.";
+        pretty_print_status($status, $ngt->{relative_path_to_root}, {'user_dir' => $ngt->{user_dir}});
+        die "One or more submodules are not on branch $root_repo_branch.  Please resolve, or (with caution) rerun with --no-branch-check to ignore.\n";
     }
 }
 
@@ -126,11 +121,8 @@ sub recursive_commit( $ )
             if (recursive_commit($sub)) {
                 chdir($dir);
                 # A commit was triggered in this submodule, so it will be auto-staged
-                my ($errmsg, $stdout);
-                my $cmd = "git add $child";
-                run3($cmd, undef, \$stdout, \$errmsg);
-                die "Error ($?): Unable to autostage $child in $dir:\n\n $stdout \n $errmsg" if $?;
-                $log->cmd($cmd);
+                my ($err, $stdout, $errmsg) = $ngt->run("git add $child");
+                die "Error ($?): Unable to autostage $child in $dir:\n\n $stdout \n $errmsg\n" if $err;
                 
                 $need_to_commit_here = 1;
                 $autostaged_refs++;
@@ -175,6 +167,7 @@ sub ParseArgs()
                            "branch-check!" => \$branch_check,
                            "help"            => \$help,
                            "man"             => \$man,
+                           "force!"          => \$use_force,
                           );
     pod2usage(1) if $help;
     pod2usage(-exitval => 0, -verbose => 2) if $man;
@@ -209,26 +202,15 @@ sub nuggit_commit($)
 
    my $args = "";
    $args .= "-a " if $commit_all_files;
-   my ($stdout, $errmsg); # Git commit typically does not output to stderr
-   my $cmd = "git commit $args -m \"N:$root_repo_branch; $commit_message_string\"";
-   run3($cmd, undef, \$stdout, \$errmsg);
-   $log->cmd($cmd);
-   my $err = $?;
+   my ($err, $stdout, $errmsg) = $ngt->run("git commit $args -m \"N:$root_repo_branch; $commit_message_string\"");
 
-   say colored("Commit status in repo $repo:", 'green');
+   say colored("Commit in repo $repo:", 'success');
    say $stdout if $stdout;
    say $errmsg if $errmsg;
    
    if ($err) {
-       die("Error detected ($err), aborting nuggit commit");
+       die("Error detected ($err), aborting nuggit commit\n");
    }
-}
-
-sub run_cmd
-{
-    my $cmd = shift;
-    my ($stdout, $stderr);
-    run3($cmd, undef, \$stdout, \$stderr);
 }
 
 
@@ -259,6 +241,10 @@ If set, commit all modified files.
 =item --no-branch-check
 
 Bypass verification that all submodules are on the same branch.
+
+=item --force
+
+If specified, bypass all sanity checks, including detached HEAD and matching branch anmes
 
 =back
 

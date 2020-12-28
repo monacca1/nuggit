@@ -1,1 +1,3 @@
-ngt
+#!/usr/bin/env perl
+exec("ngt", @ARGV);
+

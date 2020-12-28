@@ -36,7 +36,8 @@ use lib $FindBin::Bin.'/../lib'; # Add local lib to path
 use Storable qw(store retrieve); # Serialization of merge in progress state
 use Git::Nuggit;
 use Git::Nuggit::Status;
-
+use Term::ANSIColor;
+warn "nuggit_merge.pl is DEPRECATED in favor of 'nuggit_ops.pl merge --strategy=branch', or 'nuggit_ops.pl merge' for recommended ref-first";
 =head1 Nuggit Merge
 
 This script performs a submodule-aware merge, automatically resolving submodule reference-only conflicts in a manner consistent with the nuggit workflow.  If the nuggit workflow is not being strictly followed, users should explicitly verify that any automatic merges completed as expected prior to pushing any changes.
@@ -115,7 +116,7 @@ my $edit_flag = 1; # Mirrors Git's edit/no-edit flag
 my $help = 0; my $man = 0;
 my $log_as_pull; # For logging/tracing purposes only
 my $merge_remote_head = 0;
-my $use_force = 0; # If set, bypass any user-safety checks or prompts.  For advanced users only.
+my $use_force = 1; # If set, bypass any user-safety checks or prompts.  For advanced users only.  DEBUG: Disable for easier testing
 my $ngt = Git::Nuggit->new("run_die_on_error" => 0) || die ("Not a nuggit"); # Initialize Nuggit & Logger prior to altering @ARGV
 my $root_dir = $ngt->root_dir();
 

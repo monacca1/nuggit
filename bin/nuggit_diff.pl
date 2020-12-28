@@ -84,7 +84,7 @@ my $path;
 my $diff_object1 = "";
 my $diff_object2 = "";
 
-my $ngt = Git::Nuggit->new("echo_always" => 0);
+my $ngt = Git::Nuggit->new("echo_always" => 0) || die("Not a nuggit");
 $root_dir = $ngt->root_dir();
 
 
@@ -95,14 +95,17 @@ $ngt->start(level => 0);
 if($arg_count == 0)
 {
     chdir($root_dir);
-    do_diff();
-    submodule_foreach(undef,{'breadth_first_fn' => sub {
-        my ($parent, $name, $substatus, $hash, $label, $opts) = (@_);
-        if ($parent eq ".") {
-            do_diff($name);
-        } else {
-            do_diff("$parent/$name/");
-        }
+
+    $ngt->foreach({'run_root' => 1, 'breadth_first' => sub {
+                       my $info = shift;
+                       my $parent = $info->{'parent'};
+                       my $name = $info->{'name'};
+
+                       if ($parent eq ".") {
+                           do_diff($name);
+                       } else {
+                           do_diff("$parent/$name/");
+                       }
     }});
 
 }

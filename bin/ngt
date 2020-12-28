@@ -46,10 +46,7 @@ my %files =
  add    => {cmd => "nuggit_add.pl",
             completion_type => "file"},
  branch => "nuggit_branch.pl",
- checkout => "nuggit_checkout.pl", # TODO: Autocomplete known (root-level) branches
- checkout_default => {cmd => "nuggit_checkout_default.pl",
-                      description => "Checkout default/tracked branch for each submodule"
-                     },
+ checkout => {cmd => "nuggit_ops.pl", args => ['checkout']}, # TODO: Autocomplete known (root-level) branches
  clone     => "nuggit_clone.pl",
  commit    => "nuggit_commit.pl",
  diff      => {cmd => "nuggit_diff.pl", completion_type => "file"},
@@ -57,24 +54,22 @@ my %files =
  fetch     => "nuggit_fetch.pl",
  init      => "nuggit_init.pl",
  log       => "nuggit_log.pl",
- merge     => "nuggit_merge.pl",
+ merge => {cmd => "nuggit_ops.pl", args => ['merge']},
  mergetool => {cmd => "nuggit_foreach.pl", args => [ qw( git mergetool) ] },
  mv        => {cmd => "nuggit_mv.pl", completion_type => "file"},
- pull      => "nuggit_pull.pl",
+ pull => {cmd => "nuggit_ops.pl", args => ['pull']},
  push      => "nuggit_push.pl",
+ rebase => {cmd => "nuggit_ops.pl", args => ['rebase']},
  remote    => "nuggit_remote.pl",
- relink    => "nuggit_relink_submodules.pl",
  reset     => {cmd => "nuggit_reset.pl", completion_type => "file"},
  rm        => {cmd => "nuggit_rm.pl", completion_type => "file"},
- stash     => {cmd => "nuggit_foreach.pl", args => [ qw( git stash) ],
-             completion_list => [qw(save pop list show drop apply branch)] },
+ stash     => {cmd => "nuggit_stash.pl",
+             completion_list => [qw(save pop save list show drop apply branch)]
+            },
  status    => {cmd => "nuggit_status.pl", completion_type => "file"},
  tag       => {cmd => "nuggit_foreach.pl", args => [ qw( --no-break-on-error git tag )]},
- tree      => "nuggit_tree.pl",
- version   => "nuggit_version.pl",
  
- # For Advanced Users
- foreach => {cmd => "nuggit_foreach.pl",
+ foreach => {cmd => "nuggit_foreach.pl", # Run without arguments to list submodule status
              completion_type => "system" # Use system default completion
             },
  
@@ -123,7 +118,7 @@ if (defined($ENV{'COMP_LINE'}) || defined($ENV{'COMMAND_LINE'}) ) {
     print format_completion($res);
     exit;
 
-} elsif (defined($cmd) && $cmd eq "check") {
+} elsif (defined($cmd) && ($cmd eq "check" || $cmd eq "version"))  {
     # Check for Nuggit Library
     eval "use Git::Nuggit::Status";
     die "Git::Nuggit::Status does not appear to be installed. Did you source nuggit.sh or equivalent?" if $@;
@@ -142,15 +137,20 @@ if (defined($ENV{'COMP_LINE'}) || defined($ENV{'COMMAND_LINE'}) ) {
     }
 
     #say "Using Git::Nuggit version " . $Git::Nuggit::VERSION; # Git::Nuggit not fully defined as package
-    say "Using Git::Nuggit::Status version " . $Git::Nuggit::Status::VERSION;
-
-    say "All compatibility checks have passed";
+    say "Using Git::Nuggit version " . $Git::Nuggit::VERSION;
 
     my ($root_dir, $relative_path_to_root) = find_root_dir();
+    
+    my $nuggit_dir = $FindBin::Bin.'/';
+    if (-d File::Spec->catdir($nuggit_dir, '../.git')) {
+        chdir($nuggit_dir);
+        say `git log -n1 --pretty=reference`;
+    }
+
     if ($root_dir) {
-        say "Nuggit Root Directory located at $root_dir  (aka $relative_path_to_root)";
+        say "Nuggit Workspace Root located at $relative_path_to_root (aka $root_dir)";
     } else {
-        say "Not current in a Nuggit workspace.";
+        say "Not currently in a Nuggit workspace.";
     }
     
     exit;

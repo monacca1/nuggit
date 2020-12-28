@@ -40,7 +40,7 @@ Display an abbreviated help menu
 =item --man
 
 Display detailed documentation.
-
+--
 =item --uno | -u
 
 Ignore untracked files
@@ -98,17 +98,18 @@ my ($help, $man);
 my $rtv = Getopt::Long::GetOptions(
     "help|h"            => \$help,
     "man"             => \$man,
-                           "cached|staged"  => \$cached_bool, # Allow --cached or --staged
-                           "unstaged"=> \$unstaged_bool,
-                           "verbose|v!" => \$verbose,
-                           "uno|u!" => \$flags->{uno},
-                           "ignored!" => \$flags->{ignored},
-                           'dump' => \$do_dump,
-                         'json' => \$do_json,
-                         'all|a!' => \$flags->{all},
-                         'details|d!' => \$flags->{details},
+    "cached|staged"  => \$cached_bool, # Allow --cached or --staged
+    "unstaged"=> \$unstaged_bool,
+    "verbose|v!" => \$verbose,
+    "uno|u!" => \$flags->{uno},
+    "ignored!" => \$flags->{ignored},
+    'dump' => \$do_dump,
+    'json' => \$do_json,
+    'all|a!' => \$flags->{all},
+    'details|d!' => \$flags->{details},
    );
 if (!$rtv) { pod2usage(1); die("Unrecognized options specified"); }
+
 $flags->{verbose} = $verbose;
 pod2usage(1) if $help;
 pod2usage(-exitval => 0, -verbose => 2) if $man;
@@ -116,8 +117,9 @@ pod2usage(-exitval => 0, -verbose => 2) if $man;
 
 my $root_repo_branch;
 
-my ($root_dir, $relative_path_to_root) = find_root_dir();
+my ($root_dir, $relative_path_to_root, $user_dir) = find_root_dir();
 die("Not a nuggit!\n") unless $root_dir;
+$flags->{'user_dir'} = $user_dir; # For pretty-printing relative paths
 
 print "nuggit root dir is: $root_dir\n" if $verbose;
 print "nuggit cwd is ".getcwd()."\n" if $verbose;
@@ -158,7 +160,6 @@ else
     }
     pretty_print_status($status, $relative_path_to_root, $flags);
 }
-
 
 
 
