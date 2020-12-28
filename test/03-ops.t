@@ -36,6 +36,7 @@ my @tests = (
     # Merge with submodule conflict
     
     # Pull Cases
+    ["Simple Pull", \&pull_test],
     );
 
 
@@ -274,7 +275,57 @@ sub merge_test2 {
 
 
 sub pull_test {
-    # Build upon merge_test
+    my $branch1 = "master";
+    my $branch2 = "branch2";
+    my $fn1 = "README.md";
+    my $fn2 = "sub2/README.md";
+    my $fn3 = "sub1/sub3/README.md";
+    # This is a single-user test
+    my $user = $drv->create_user("user1");
+    my $user2 = $drv->create_user("user2");
+
+    # Make a set of non-conflicting changes in user1 and push
+    $drv->cd_user('user1');
+    my $msg1 = $drv->test_write({title => "Root file write, user1", fn => $fn1});
+    my $msg2 = $drv->test_write({title => "Sub3 file write, user2", fn => $fn2});
+    # Note: test_write automatically invokes push
+
+    # Switch to second user and make set of non-conflicting changees
+    $drv->cd_user('user2');    
+    my $msg3 = $drv->test_write({title => "Sub3 file write, user2", fn => $fn3, 'skip_push' => 1});
+       
+    # Pull/Merge
+    ok($drv->cmd("ngt pull --no-edit"));
+
+    subtest "Validate Checkout Status" => sub {
+        my $status = get_status({'all' => 1});
+        ok( $status->{status} == STATE('CLEAN'), "Status is clean after changing branches" );
+        ok( $status->{unstaged_files_cnt} == 0 && $status->{staged_files_cnt}==0, "No untracked files or refs" );
+        ok( !$status->{detached_heads_flag}, "No detached heads");
+        ok( $status->{branch_status_flag} == 0, "No detached heads or submodules on wrong branch" );
+    };
+
+    
+    # Verify status
+    my $status = get_status();
+    ok( status_check($status) );
+
+    # Verify file contents
+    my $verify = sub {
+        my @lines;
+        ok( (@lines = read_file($fn1, chomp => 1))[-1] eq $msg1, "$fn1 ends with expected line");
+        ok( (@lines = read_file($fn2, chomp => 1))[-1] eq $msg2, "$fn2 ends with expected line");
+        ok( (@lines = read_file($fn3, chomp => 1))[-1] eq $msg3, "$fn3 ends with expected line");
+        done_testing;
+    };
+    subtest "Verify content after pull for user2" => $verify;
+
+    # Push changes from user2 and pull from user1
+    ok( $drv->cmd("ngt push") );
+
+    $drv->cd_user("user1");
+    ok( $drv->cmd("ngt pull --no-edit") );
+    subtest "Verify content after pull for user1" => $verify;
 }
 
 sub test_safe_exist

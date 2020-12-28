@@ -86,11 +86,18 @@ $ngt->foreach({'depth_first' => sub {
                    my $in = shift;
                    my $subname = $in->{'subname'} // 'root';
                    my $opts = "";
+
+                   my $branch = get_selected_branch_here();
+                   if ($branch =~ /HEAD detached/) {
+                       push(@errors, $subname);
+                       say colored("Error: $subname is in a DETACHED HEAD. Please resolve before pushing", 'warn');
+                       return;
+                   }
+                   
                    if ($all_flag) {
                        $opts .= "--all ";
                    } else {
                        # TODO: Support for alternate remotes
-                       my $branch = get_selected_branch_here();
                        $opts .= "--set-upstream origin $branch";
                    }
                    my ($err, $stdout, $stderr) = $ngt->run("git push $opts");
@@ -111,7 +118,7 @@ $ngt->foreach({'depth_first' => sub {
 if (scalar(@errors) > 0) {
     say colored('Push failed for '.scalar(@errors).' repositories/submodules', 'red');
     say "\t".join(',',@errors);
-    say colored('See above for details', 'yellow');
+    die colored('See above for details', 'yellow')."\n";
 } else {
     say colored("Push completed succssfully", 'green');
 }

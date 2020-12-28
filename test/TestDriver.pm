@@ -281,6 +281,16 @@ sub create_user {
     ok( $status->{branch_status_flag} == 0, "No detached heads or submodules on wrong branch" );
     return $ngt;
 }
+
+sub cd_user {
+    my $self = shift;
+    my $name = shift;
+    
+    my $dir = File::Spec->catdir($self->{'test-work'}, $name);
+    ok(-d $dir, "user $name exists");
+    ok(chdir($dir), "cd $name");
+}
+
 # Create a new repository at given path with some sample content
 sub create_repo {
     my $self = shift;
@@ -393,8 +403,10 @@ sub _test_write {
     # Push Changes
     if ($opts && $opts->{push_fail}) {
         dies_ok{$self->cmd("ngt push")} "Push all changes, expect conflict";
-    } else {
+    } elsif (!$opts || !$opts->{skip_push}) {
         ok($self->cmd("ngt push"), "Push all changes");
+    } else {
+        pass();
     }
    
 

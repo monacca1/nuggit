@@ -57,7 +57,7 @@ my $verbose;
 my $commit_message_string;
 my $need_to_commit_at_root = 0;
 my $branch_check = 1; # Check that all modified submodules are on the correct branch
-my $root_repo_branch;
+my $root_repo_branch = "(Branch Unknown)";
 my $commit_all_files = 0; # Results in "git commit -a"
 my $use_force = 0;
 
@@ -90,6 +90,10 @@ if ($branch_check && !$use_force) {
         pretty_print_status($status, $ngt->{relative_path_to_root}, {'user_dir' => $ngt->{user_dir}});
         die "One or more submodules are not on branch $root_repo_branch.  Please resolve, or (with caution) rerun with --no-branch-check to ignore.\n";
     }
+}
+
+if ($status->{'branch.head'}) {
+    $root_repo_branch = $status->{'branch.head'};
 }
 
 my $total_commits = 0; # Number of commits made (root+submodules)

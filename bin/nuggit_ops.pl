@@ -91,7 +91,7 @@ use Data::Dumper; # DEBUG Only. Delete before release
 # List of supported operation modes for this script.  
 my %modes = (
     "checkout" => 1,
-    "push"     => 0,
+    "pull"     => 0,
     "merge"    => 0,
     "rebase"   => 0,
     "view"     => 0, # View current conflict state (debug option)
@@ -636,10 +636,24 @@ sub do_root_operation_breadth_first {
     my @dir_parts = File::Spec->splitdir($in->{name});
     my $shortname = pop @dir_parts; # If submodule is in a subdirectory, we just want the last directory.
 
+    # op mode for submodule update (differs from $op for pull, or future switch and restore commands)
+    my $myop = $op;
+    if ($op eq "pull") {
+        $myop = "merge"; # TODO: support rebase flag
+        
+        # We must explicitly fetch the submodule being updated
+        my ($err, $stdout, $stderr) = $ngt->run("git fetch");
+        if ($err) {
+            say $stdout;
+            say $stderr;
+            say colored("WARNING: Failed to fetch $in->{name} (see above for details). This may cause additional errors", "warn");
+        }
+    }
+
     if ($in->{status} eq '-') {
         # This submodule is uninitialized.
         chdir("..");
-        my ($err, $stdout, $stderr) = $ngt->run("git submodule update --init --$op $shortname");
+        my ($err, $stdout, $stderr) = $ngt->run("git submodule update --init --$myop $shortname");
         if ($err) {
             $opts->{states}->{totals}->{'errors'}++;
             die "TODO: Error handling";
@@ -658,7 +672,7 @@ sub do_root_operation_breadth_first {
         chdir("..");
 
         # Let git update single submodule with merge or rebase strategy as appropriate
-        my ($err, $stdout, $stderr) = $ngt->run("git submodule update --$op $shortname");
+        my ($err, $stdout, $stderr) = $ngt->run("git submodule update --$myop $shortname");
         
         if ($err) {
             # Git should always return non-zero error code on conflicts, or other errors
@@ -892,7 +906,7 @@ sub do_operation_post {
             my ($err, $stdout, $stderr) = $ngt->run($cmd);
             if ($err && ($stdout !~ /nothing to commit/i) ) {
                 # VERIFY: Will this fail if there are no changes to commit? If so, we may need additional checks above.
-                exit_save_merge_state("Failed to commit conflict resolution at ".cwd(), $stdout);
+                exit_save_merge_state("Failed to commit conflict resolution at ".getcwd(), $stdout);
             }
             
         },
