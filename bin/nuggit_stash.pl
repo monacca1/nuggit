@@ -53,8 +53,6 @@ Common usage is:
 - ngt stash --man       Show the full documentation
 
 
-=over
-
 =head2 General Options
 
 The following optins are valid for all stash subcommands;
@@ -117,11 +115,11 @@ NOTE: Nuggit maintains it's own listing of nuggits and will not display any stas
 
 =head3 pop
 
-TODO
+Apply the last stash entry in the list.  If the operation completes without error, it will automatically be dropped.
 
 =head3 apply
 
-TODO
+Equivalent to pop, except that the entry will not be dropped from the stash listing (internally to Nuggit, or to git).
 
 =head3 drop
 
@@ -152,8 +150,8 @@ Note: This is NOT considered a user configuration file and the format may change
 - Stash behvior if run in a folder without any changes to stash (return code, stdout/stderr output)
 - Option for specifying a specific set of files or submodules to stash (or to exclude), and/or to add submodule to existing stash set
 
-- Version 1: File changes only
-- Version 2: Ability to stash changes to submodule references (ie: perform checkout of original reference commit for submodules)
+- Future: Ability to stash changes to submodule references (ie: perform checkout of original reference commit for submodules, when content of submodule is otherwise unmodified)
+
 =cut
 
 my ($help, $man, $verbose, $patch_flag, $force_flag, $keep_index_flag, $all_flag, $stash_msg);
