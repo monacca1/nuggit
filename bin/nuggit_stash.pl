@@ -188,6 +188,7 @@ my $cfg = $ngt->load_config("stash", {
 if ($mode eq "list" || !$mode) {
     stash_list();
 } elsif ($mode eq "save" || $mode eq "push") {
+    $stash_msg = shift @ARGV if (scalar(@ARGV) && !$stash_msg);
     stash_push();
 } elsif ($mode eq "pop") {
     stash_pop(0, shift(@ARGV) );

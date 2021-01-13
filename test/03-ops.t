@@ -108,7 +108,7 @@ sub base_merge_test1 {
 
     # Switch to second branch and make set of non-conflicting changees
     ok($drv->cmd("ngt checkout $branch1"), "Run Ngt checkout $branch1");
-    say "***DBG pre-create";
+
     ok($drv->create_file($fn2, $msg2));
 
     # Merge

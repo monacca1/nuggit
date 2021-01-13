@@ -138,13 +138,24 @@ if ($opts->{continue}) {
 # NOTE: While git can handle uncommitted changes in many cases, doing so is likely to confuse Nuggit and may result in unexpected commits or other undefined behavior.
 if (!$opts->{'skip-status-check'}) {
     my $status = get_status({uno => 1});
-    if (!status_check($status))
+
+    my $state = status_check($status);
+    
+    # For checkout-only, we can safely ignore unstaged refs-only status
+    if (!$state && $opts->{mode} eq "checkout") {
+        if ($status->{unstaged_files_cnt} == 0 && $status->{staged_files_cnt} == 0) {
+            $state = 1;
+            say colored('WARNING: Ignoring unstaged refs-only changes in workspace','warn');
+        }
+    }
+    
+    if (!$state)
     {
         say colored("Local changes detected.  Please commit or stash all changes before proceeding.", 'error');
 
         pretty_print_status($status, $ngt->{relative_path_to_root}, {user_dir => $ngt->{user_dir}});
         
-        die colored("Pull aborted due to dirty working directory.  Please stash or commit and then re-run. This check can be bypassed with --skip-status-check, however doing so may result in undefined behavior.", 'warn')."\n";
+        die colored("\n\u$opts->{mode} aborted due to dirty working directory.  Please stash or commit and then re-run. This check can be bypassed with --skip-status-check, however doing so may result in undefined behavior.", 'warn')."\n";
     }
 }
 
@@ -254,7 +265,9 @@ sub root_checkout_create_branch
     }
 
     # Run safe checkout on all submodules with the autocreate flag set
-    $ngt->foreach(sub { checkout_safe(branch => $branch, autocreate => 1); } );
+    $ngt->foreach(sub { my $in = shift;
+                        checkout_safe(branch => $branch, autocreate => 1, subname => $in->{'subname'});
+                    } );
 }
 
 sub root_checkout_safe
@@ -270,13 +283,12 @@ sub root_checkout_safe
     }
 
     my $warnings = {};
-    submodule_foreach(sub {
-                          my ($parent, $name, $status, $hash, $label) = (@_);
+    $ngt->foreach(sub {
+                      my $in = shift;
 
-                          $result = checkout_safe(branch => $branch, autocreate => 1);
+                      $result = checkout_safe(branch => $branch, autocreate => 1, $in->{'subname'});
                           if (!defined($result) || (defined($branch) && $result ne $branch) ) {
-                              my $sub = File::Spec->catdir($parent,$name);
-                              $warnings->{$sub} = $result;
+                          $warnings->{$in->{'subname'}} = $result;
                           }
                       });
     my @keys = keys %$warnings;
@@ -419,7 +431,7 @@ sub do_root_checkout_breadth_first {
         } else {
             chdir($shortname);
             # Run a safe checkout to resolve any detached heads
-            my $result = checkout_safe(branch => $branch, autocreate => 1);
+            my $result = checkout_safe(branch => $branch, autocreate => 1, subname => $subname);
             if (!defined($result) || $result ne $branch) {
                 $opts->{results}->{$subname} = $result;
             }
@@ -436,6 +448,12 @@ sub checkout_safe
     my %args = @_;
     my $tgt_branch = $args{branch};
     my $autocreate = defined($args{autocreate}) ? $args{autocreate} : 1; # Autocreate is used by default
+    if ($autocreate && $args{subname}) {
+        # Note: If subname was not defined in call, we won't check config for autocreate overrides
+        my $subcfgs = $ngt->cfg("submodules");
+        my $subcfg = $subcfgs->{$args{subname}};
+        $autocreate = 0 if defined($subcfg) && $subcfg->{exclude};
+    }
 
     say "Checkout Branch Safe at ".getcwd()." ".(defined($tgt_branch) ? $tgt_branch : "Fix Detached Heads Only") if $opts->{verbose};
     
@@ -472,7 +490,7 @@ sub checkout_safe
         if (scalar(@matches) == 2) { # origin and local branches both match, we are safe
             return checkout_local($tgt_branch);
         } elsif (scalar(@matches) == 0) { # No match in list
-            if ($args{autocreate}) {
+            if ($autocreate) {
                 # Branch doesn't exist or isn't safe. We'll test by trying to create it
                 my ($err, $stdout, $stderr) = $ngt->run("git checkout -b $tgt_branch");
                 if (!$err) {
@@ -799,7 +817,6 @@ sub do_operation_pre {
 
     my ($err, $stdout, $stderr) = $ngt->run($cmd);
 
-    # TODO: This parsing should be split into a sub-function to be shared with submodule update --merge version.
     if ($stdout =~ /Automatic merge failed/) {
         $rtv = handle_submodule_conflicts($stdout, $in);
     } elsif ($err) {

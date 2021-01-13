@@ -235,7 +235,7 @@ sub ParseArgs()
       "verbose!" => \$verbose,
       "help"            => \$help,
       "man"             => \$man,
-      );
+      ) || pod2usage(1);
     pod2usage(1) if $help;
     pod2usage(-exitval => 0, -verbose => 2) if $man;
 

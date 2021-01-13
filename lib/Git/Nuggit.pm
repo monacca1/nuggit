@@ -759,6 +759,23 @@ sub foreach {
   
 }
 
+# This is the getter/setter for all global Nuggit user cfg settings.
+#  It will return undef if no matching field is known.
+#  If the main Nuggit config file has not been loaded yet, and it exists, it will be parsed on first call
+sub cfg {
+    my $self = shift;
+    my $key = shift;
+    my $val = shift;
+
+    $self->{cfg} = $self->load_config("config.json",{}) unless defined($self->{cfg});
+
+    if (defined($val)) {
+        $self->{cfg}{$key} = $val;
+    } else {
+        return $self->{cfg}{$key};
+    }
+}
+
 # TODO: Option to merge with default instead of replacing and/or option to automatically check for a default file.  Perhaps if $default is a string and refers to a valid file, then always merge contents.  Or 3-way checek with params: global_file, local_file, app_default.  NOTE: home dir is $ENV{"HOME"} for unix, or File::HomeDir for a generic solution
 sub load_config {
     my $self = shift;
@@ -766,7 +783,9 @@ sub load_config {
     my $default = shift;
     my $fn = File::Spec->catfile($self->cfg_dir(), $name);
     if (-f $fn) {
-        return decode_json(read_file($fn));
+        my $raw = read_file($fn);
+        return $default unless $raw;
+        return decode_json($raw);
     } else {
         return $default;
     }
