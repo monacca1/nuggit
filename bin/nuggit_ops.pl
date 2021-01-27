@@ -203,6 +203,7 @@ sub ParseArgs
                               "man!",
                               "safe!",
                               "create|b!",
+                              "strategy|s=s",
                               "branch-first!",
                               "ref-first!",
                               "continue!",
@@ -286,14 +287,17 @@ sub root_checkout_safe
     $ngt->foreach(sub {
                       my $in = shift;
 
-                      $result = checkout_safe(branch => $branch, autocreate => 1, $in->{'subname'});
+                      $result = checkout_safe(branch => $branch,
+                                              autocreate => 1,
+                                              subname => $in->{'subname'});
                           if (!defined($result) || (defined($branch) && $result ne $branch) ) {
                           $warnings->{$in->{'subname'}} = $result;
                           }
                       });
     my @keys = keys %$warnings;
     if (scalar @keys > 0) {
-        say colored("Failed to safely checkout $branch in one or more submodules:\n", 'warn');
+        my $dbranch = ($branch) ? "checkout $branch" : "resolve detached HEADs";
+        say colored("Failed to safely checkout $dbranch in one or more submodules:\n", 'warn');
         printf "\t %-40s \t %-40s\n", "Submodule", "Current Branch";# "\t Submodule \t Current Branch";
         printf "\t %-40s \t %-40s\n", "---------", "--------------";
         foreach my $key (@keys) {
@@ -302,6 +306,7 @@ sub root_checkout_safe
                     (defined($warnings->{$key}) ? $warnings->{$key} : "Detached HEAD")
                     );
         }
+        say colored("Tip: You may wish to create a new branch (ngt checkout -b <branch>) or update submodules manually if the above state was not expected.", 'info');
     } elsif (defined($branch)) {
         say colored("$branch has been successfully checked out.", 'success');
     } else {
@@ -927,6 +932,8 @@ sub do_operation_post {
                         # This is a directory, auto-stage it; this should be a submodule that's already been merged
                         my ($err, $stdout, $stderr) = $ngt->run("git add $file");
                         if ($err) {
+                            say $stdout if $stdout;
+                            say $stderr if $stderr;
                             exit_save_merge_state("Error staging $file", $stdout);
                         } else {
                             say "Automatically staging $file";
