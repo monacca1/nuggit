@@ -20,6 +20,9 @@ Documentation is still being updated, and some functionality
    - ngt checkout HEAD~1
    - ngt merge $SHA_COMMIT
    - ngt diff taggedVersion
+   - ngt diff HEAD...HEAD~1
+   - ngt diff --strategy=branch feature/foo
+     - This variant will compare 'feature/foo' in each submodule to current, whereas omitting the strategy option will execute the comparison at the root level and follow differences in any submodule commit references.
 - Optimized pull operations to avoid unnecessary recursion into unmodified submodules
 - Checkout with ref-first will now work as expected for any SHA or tag known to the root repository
 - Cleaner user output throughout nuggit and consistent usage of ANSI Color Themes, which can be customized via environment variable

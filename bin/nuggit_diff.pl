@@ -67,9 +67,7 @@ If defined, show changes that have been staged.
 
 =item --strategy ref|branch
 
-Nuggit strategy to use when recursing into submodules.
-
-This applies only when requesting a diff of an object (tag, label, or commit). The default is ref-first.
+Nuggit strategy to use when recursing into submodules.  The default mode is ref-first.
 
 In ref-first mode, this is equivalent to "git diff --submodule=diff $obj", utilizing Git's native support for translating any submodule reference differences into their constituent changes.
 
@@ -110,7 +108,8 @@ if($arg_count == 0)
 {
     chdir($root_dir);
 
-    $ngt->foreach({'run_root' => 1, 'breadth_first' => sub {
+    if ($strategy eq 'branch') {
+        $ngt->foreach({'run_root' => 1, 'breadth_first' => sub {
                        my $info = shift;
                        my $parent = $info->{'parent'};
                        my $name = $info->{'name'};
@@ -120,7 +119,10 @@ if($arg_count == 0)
                        } else {
                            do_diff("$parent/$name/");
                        }
-    }});
+                   }});
+    } else {
+        submodule_diff();
+    }
 
 }
 elsif($arg_count == 1)
@@ -157,14 +159,7 @@ elsif($arg_count == 1)
                   }
               });
       } else {
-          # Use Git's native submodule diff option for comparing branches
-          my $cmd = "git diff --submodule=diff ";
-          $cmd .= " --color " if $show_color;
-          $cmd .= "$diff_object1";
-          
-          my ($err, $stdout, $stderr) = $ngt->run($cmd);
-          say $stdout if $stdout;
-          say $stderr if $stderr;
+          submodule_diff($diff_object1);
       }
   }
 }
@@ -246,9 +241,22 @@ sub do_diff
         # NOTE: We will always display paths relative to root for consistency in case user decides to use output as a patch file
     }
     if ($err) {
+        # TODO: Consider suppressing output if error is that $rel_path doesn't exist (unless true at all levels)
         say colored("Failed to execute diff of $rel_path",'error');
     }
 
+    say $stdout if $stdout;
+    say $stderr if $stderr;
+}
+
+# Executive Native Git Diff, with submodule=diff flag
+sub submodule_diff {
+    my $diff_object1 = shift;
+    my $cmd = "git diff --submodule=diff ";
+    $cmd .= " --color " if $show_color;
+    $cmd .= "$diff_object1" if $diff_object1;
+    
+    my ($err, $stdout, $stderr) = $ngt->run($cmd);
     say $stdout if $stdout;
     say $stderr if $stderr;
 }
