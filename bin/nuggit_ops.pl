@@ -273,7 +273,7 @@ sub root_checkout_create_branch
 
 sub root_checkout_safe
 {
-    my $branch = shift;
+    my $branch = shift // get_selected_branch_here();
 
     # Run checkout at root level.
     my $result = checkout_safe(branch => $branch, autocreate => 0);
