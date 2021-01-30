@@ -51,8 +51,6 @@ my $add_all_bool = 0;
 my $patch_bool = 0;
 my $ngt = Git::Nuggit->new("run_die_on_error" => 0);
 
-print "nuggit_add.pl\n";
-
 my $root_dir = $ngt->root_dir();
 die("Not a nuggit!") unless $root_dir;
 my $log = Git::Nuggit::Log->new(root => $root_dir);
@@ -72,7 +70,7 @@ if ($argc == 0) {
         # Run "git add -A" for each submodule that has been modified.
         add_all();
     } else {
-        say "Error: No files specified";
+        say colored("Error: No files specified",'error');
         pod2usage(1);
     }
 } else {
@@ -111,7 +109,7 @@ sub add_all
                         my ($err, $stdout, $stderr) = $ngt->run("git add --all");
 
                         if ($err) {
-                            say colored("Failed to add all in $name.  Git reports;", 'red');
+                            say colored("Failed to add all in $name.  Git reports;", 'error');
                             say $stdout;
                         }
                     });
@@ -122,7 +120,7 @@ sub add_file($)
 {
   my $relative_path_and_file = $_[0];
   
-  say "Adding file $relative_path_and_file";
+  say colored("Adding file $relative_path_and_file", 'info');
 
   my ($vol, $dir, $file) = File::Spec->splitpath( $relative_path_and_file );
 
@@ -156,7 +154,7 @@ sub git_add {
     my ($err, $stdout, $stderr) = $ngt->run($cmd);
 
     if ($err) {
-        say colored("Failed to add $file in ".getcwd().".  Git reports;", 'red');
+        say colored("Failed to add $file in ".getcwd().".  Git reports;", 'error');
         say $stdout;
     }
 }

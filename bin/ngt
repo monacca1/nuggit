@@ -319,14 +319,8 @@ sub file_complete {
     my $word = shift;
     my $rtv;
 
-    for(my $i = 0; $i < 10; $i++) { # Prevent infinite recursion
-        $rtv = complete_file(word => $word,
+    return complete_file(word => $word,
                              file_regex_filter => qr/^\./  # Hide hidden folders
                             );
-
-        # Continue the loop if sole-completion is a directory
-        $word = @{$rtv}[0];
-        last unless (@{$rtv}==1 && -d $word);
-    }
-    return $rtv;
+    
 }

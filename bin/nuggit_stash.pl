@@ -31,6 +31,7 @@ use v5.10;
 use Pod::Usage;
 use Getopt::Long;
 use Data::Dumper; # DEBUG - TODO delete later
+use Term::ANSIColor;
 use Cwd; # Also Debug
 use FindBin;
 use lib $FindBin::Bin.'/../lib'; # Add local lib to path
@@ -196,6 +197,8 @@ if ($mode eq "list" || !$mode) {
     stash_pop(1, shift(@ARGV) );
 } elsif ($mode eq "dbglist") {
     say Dumper(git_stash_list()); # Debug output of stashes in current repo
+} elsif ($mode eq "show") {
+    stash_show();
 } else {
     pod2usage("'$mode' is not a currently supported command of ngt stash.");
 }
@@ -212,9 +215,21 @@ sub stash_list {
     # - root_commit - SHA of root module at time of creation
     # - root_timestamp - Timestamp of root module commit at time of creation (included here for easy reference)
     # - branch - The branch checked out in the root module (and everywhere if using ngt branching scheme) at time of creation
-    say scalar(@{$cfg->{list}})." stashes currently known to Nuggit";
-    for my $entry (@{$cfg->{list}}) {
-        say Dumper($entry); # TODO; user-friendly output
+    if (scalar(@{$cfg->{list}})) {
+    
+        printf colored("%s \t %-25s \t %-40s \t %s \n","info"), "Index", "Date Created", "Origin Branch", "Message";
+
+        for my $entry (@{$cfg->{list}}) {
+            #say Dumper($entry); # TODO; user-friendly output
+            printf "%d   \t %-25s \t %-40s \t %s \n",
+                $entry->{idx},
+                $entry->{timestamp},
+                $entry->{branch},
+                $entry->{msg} // ""
+                ;
+        }
+    } else {
+        say "No stashes currently known to nuggit.";
     }
 }
 
@@ -361,4 +376,38 @@ sub stash_push
     } else {
         say "Nothing to stash";
     }
+}
+
+sub stash_show
+{
+    my $idx = shift @ARGV;
+    die "Ngt stash Index must be specified for show command\n" unless defined($idx);
+    
+
+    $ngt->foreach({breadth_first => sub {
+                       my $in = shift;
+                       my $stashes = git_stash_list();
+                       if (defined($stashes->{$idx})) {
+                           say colored("Stash in ".$in->{subname}, 'info');
+                           my $cmd = "git stash show ";
+                           $cmd .= "-p " if $patch_flag;
+                           $cmd .= $stashes->{$idx}->{'gitIdx'};
+                           my ($err, $stdout, $stderr) = $ngt->run($cmd);
+
+                           if ($patch_flag && $in->{subname} ) {
+                               # Normalize stashed paths
+                               my $rel_path = $in->{subname};
+                               $rel_path .= '/' unless $rel_path =~ /\/$/;
+                               # We are in a sub-module, prepend dir, ie: replace "--- a/FILE" with "--- a/$rel_path/FILE"
+                               #  Note; Regex allows for optional ANSI escape sequences when diff includes colorization
+                               $stdout =~ s/^((\e\[\d+m)*((\+\+\+)|(\-\-\-))\s[ab]\/)/$1$rel_path/mg;
+
+                           }
+                           say $stdout if $stdout;
+                           say $stderr if $stderr;
+                       }
+                  },
+                  run_root => 1
+                 });
+
 }
