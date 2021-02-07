@@ -99,6 +99,8 @@ if ($?) { # Clone exited with an error
     my $log = Git::Nuggit::Log->new(root => '.')->start(1);
 
     # Resolve any detached HEADs (will automatically print status)
-    system("ngt checkout --safe");
+    my $cmd = File::Spec->catfile($FindBin::Bin,"ngt");
+    $cmd .= " checkout --safe";
+    system($cmd);
     say "\nClone of $url completed. See above for status.";
 }

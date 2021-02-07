@@ -109,16 +109,25 @@ sub cmd {
     my $temp = pushd($dir) if $dir;
 
     $self->log($cmd);
+
+    # Allow for 'ngt' not being in path during test
+    if ($cmd =~ /^((ngt)|(nuggit))\s/) {
+        $cmd = "$FindBin::Bin/../bin/$cmd";
+    }
+    
     #say "\tcwd=".getcwd() if $verbose > 1;
 
     # NOTE: This only works if underlying command returns error code to bash -- Git does not always do so
     # Git will also output nominal status to stderr
-    run3($cmd, undef, \$rtv, \$err);
+    eval { run3($cmd, undef, \$rtv, \$err); };
 
-    if ($?) {
+    if ($@) {
+        my ($package, $filename, $line) = caller;
+        die "Error: Cmd ($cmd) at $filename:$line from ".getcwd()." failed with: \n\t$@\n";
+    } elsif ($?) {
         # TODO: unless flag to disable
         my ($package, $filename, $line) = caller;
-        die "Error: Cmd ($cmd) at $filename:$line from ".getcwd()." failed with: $rtv $err";
+        die "Error: Cmd ($cmd) at $filename:$line from ".getcwd()." failed with: $rtv $err\n";
     }
     if ($self->{fulllog_fh}) { # TODO: Do we need this logging?
         my $fh = $self->{'fulllog_fh'};

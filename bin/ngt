@@ -30,6 +30,13 @@
 # Optional Dependencies:
 #   Complete::Program - to enable auto-completion of programs
 
+=head1 SYNOPSIS
+
+Run "ngt --man" or "ngt --help" for details.
+
+=cut
+
+
 use strict;
 use warnings;
 use v5.10; # Adds say function
