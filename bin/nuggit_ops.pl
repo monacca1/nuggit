@@ -209,7 +209,8 @@ sub ParseArgs
                               "continue!",
                               "abort!",
                               "edit!",
-                              "skip-status-check!",
+                              "skip-status-check!", # Ability to bypass branch auto-creation if it doesn't exist (for checkout operations only)
+                              "auto-create!",
                               'message|m', # Specify message to use for any commits upon merge (optional; primarily for purposes of automated testing). If omitted, user will be prompted for commit message.  An automated message will be used if a conflict has been automatically resolved.
                 # TODO: remote flag.  For pull operation, this will cause a pull in the root, and a submodule update --remote in all submodules.  This is a more git-like version of the previous '--default' concept.
                 # TODO: Default flag.  For branch-first operations only.
@@ -288,7 +289,8 @@ sub root_checkout_safe
                       my $in = shift;
 
                       $result = checkout_safe(branch => $branch,
-                                              autocreate => 1,
+                                              # Auto-create branch names in all submodules when safe to do so, unless user requested otherwise
+                                              autocreate => (defined($opts->{'auto-create'}) ? $opts->{'auto-create'} : 1),
                                               subname => $in->{'subname'});
                           if (!defined($result) || (defined($branch) && $result ne $branch) ) {
                           $warnings->{$in->{'subname'}} = $result;
@@ -436,7 +438,12 @@ sub do_root_checkout_breadth_first {
         } else {
             chdir($shortname);
             # Run a safe checkout to resolve any detached heads
-            my $result = checkout_safe(branch => $branch, autocreate => 1, subname => $subname);
+            my $result = checkout_safe(branch => $branch,
+
+                                       # Auto-create branch names to resolve when appropriate, unless user requested otherwise
+                                       autocreate => (defined($opts->{'auto-create'}) ? $opts->{'auto-create'} : 1),
+                                       
+                                       subname => $subname);
             if (!defined($result) || $result ne $branch) {
                 $opts->{results}->{$subname} = $result;
             }

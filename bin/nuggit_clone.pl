@@ -40,13 +40,20 @@ use Git::Nuggit::Log;
 
 nuggit clone [-b BRANCH_NAME] CLONE_URL_TO_ROOT_REPO
 
+
+The clone operation will automatically attempt to resolve any detached
+HEADs after checkout. By default, nuggit will automatically create
+branches matching that of the root repository if one does not already
+exist.  This can be bypassed by specifying "--no-auto-create".
+
 =cut
 
-my ($branch, $help, $man);
+my ($branch, $help, $man, $autocreate);
 Getopt::Long::GetOptions(
                          "help"            => \$help,
                          "man"             => \$man,
                          "branch|b=s"      => \$branch,
+                         "auto-create!"    => \$autocreate,
                         );
 pod2usage(1) if $help;
 pod2usage(-exitval => 0, -verbose => 2) if $man;
@@ -101,6 +108,7 @@ if ($?) { # Clone exited with an error
     # Resolve any detached HEADs (will automatically print status)
     my $cmd = File::Spec->catfile($FindBin::Bin,"ngt");
     $cmd .= " checkout --safe";
+    $cmd .= " --no-auto-create" if defined($autocreate) && !$autocreate;
     system($cmd);
     say "\nClone of $url completed. See above for status.";
 }
