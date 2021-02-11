@@ -9,7 +9,7 @@ Documentation is still being updated, and some functionality
 (including rebase and --branch-first flags) may not be fully tested.
 
  
-- Introducing Nuggit submodule strategy
+- New: Introducing Nuggit submodule strategy
   - Previous Nuggit versions used a "branch-first" strategy, where the state of the branch was considered first-class.  This can still be invoked with “—branch-first” for selected commands
   - The new default behavior is “ref-first”, where operations follow the commit references first.
   - Ngt Strategy option initially available for pull, merge, checkout, rebase, and diff [of commit] commands.
@@ -23,6 +23,7 @@ Documentation is still being updated, and some functionality
    - ngt diff HEAD...HEAD~1
    - ngt diff --strategy=branch feature/foo
      - This variant will compare 'feature/foo' in each submodule to current, whereas omitting the strategy option will execute the comparison at the root level and follow differences in any submodule commit references.
+- NEW/experimental: 'ngt merge --preview branch', or more verbosely 'ngt merge-tree [base] branch [branch2]' to preview merge operations.
 - Optimized pull operations to avoid unnecessary recursion into unmodified submodules
 - Checkout with ref-first will now work as expected for any SHA or tag known to the root repository
 - Cleaner user output throughout nuggit and consistent usage of ANSI Color Themes, which can be customized via environment variable
