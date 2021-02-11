@@ -179,6 +179,17 @@ sub ParseArgs()
     if (!defined($commit_message_string) ) {
         my $editor = `git config --get core.editor`;
         chomp($editor);
+        if (!$editor) {
+            if ($ENV{GIT_EDITOR}) {
+                $editor = $ENV{GIT_EDITOR};
+            } elsif ($ENV{VISUAL}) {
+                $editor = $ENV{VISUAL};
+            } elsif ($ENV{EDITOR}) {
+                $editor = $ENV{EDITOR};
+            } else {
+                $editor = 'vi'; # Because sadly vi is more commonly available than emacs
+            }
+        }
         my $file = "$root_dir/.nuggit/TMP_COMMIT_MSG";
         my $cmd = "$editor $file";
         system($cmd);

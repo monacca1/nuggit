@@ -1,13 +1,3 @@
-# ANSI Color Configuration / Accessibility
-The Nuggit scripts utilize ANSI terminal colors to clarify message
-output.  Output generally uses custom alias classes of 'error',
-'warn', 'info', and 'success'.
-
-Environment variables can be used to disable colored output entirely,
-or to customize the color scheme for personal preferences.  See
-https://perldoc.perl.org/Term::ANSIColor#ENVIRONMENT for details.
-
-
 # Nuggit
 
 Nuggit is a wrapper for git that makes repositories consisting of submodules (or nested submodules) 
@@ -71,6 +61,15 @@ The following commands will install cpanm and all required dependencies locally.
 - eval $(perl -I ~/perl5/lib/perl5/ -Mlocal::lib)
   - # This command should be added to your .bashrc/.cshrc, or your PERL5LIB path manually updated.
 - ./cpanm JSON Term::ReadKey DateTime Git::Repository HTTP::Request LWP::UserAgent
+
+# ANSI Color Configuration / Accessibility
+The Nuggit scripts utilize ANSI terminal colors to clarify message
+output.  Output generally uses custom alias classes of 'error',
+'warn', 'info', and 'success'.
+
+Environment variables can be used to disable colored output entirely,
+or to customize the color scheme for personal preferences.  See
+https://perldoc.perl.org/Term::ANSIColor#ENVIRONMENT for details.
 
 
 # Nuggit Commands:

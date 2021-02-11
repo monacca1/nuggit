@@ -62,6 +62,7 @@ my %files =
  init      => "nuggit_init.pl",
  log       => "nuggit_log.pl",
  merge => {cmd => "nuggit_ops.pl", args => ['merge']},
+ merge-tree =>"nuggit_merge_tree.pl",
  mergetool => {cmd => "nuggit_foreach.pl", args => [ qw( git mergetool) ] },
  mv        => {cmd => "nuggit_mv.pl", completion_type => "file"},
  pull => {cmd => "nuggit_ops.pl", args => ['pull']},

@@ -10,9 +10,9 @@ Documentation is still being updated, and some functionality
 
  
 - Introducing Nuggit submodule strategy
-  - Previous Nuggit versions used a "branch-first" strategy, where the state of the branch was considered first-class.  This can still be invoked with “—strategy=branch” for selected commands
+  - Previous Nuggit versions used a "branch-first" strategy, where the state of the branch was considered first-class.  This can still be invoked with “—branch-first” for selected commands
   - The new default behavior is “ref-first”, where operations follow the commit references first.
-  - Strategy option initially available for pull, merge, checkout, rebase, and diff [of commit] commands.
+  - Ngt Strategy option initially available for pull, merge, checkout, rebase, and diff [of commit] commands.
 - 'ngt checkout --safe'  option.  This mode allows a branch to be checked out at all levels, conditional that doing so is only a change to the label and not the currently checked out commit. This is the magic that enables much of the ‘ref-first’ strategy
 - 'ngt clone' now automatically performs a '--safe' checkout to resolve any detached heads.
 - The '--default' flag concept is no longer applicable when using the 'ref-first' strategy.  This also enables new functionality with the following now all valid commands:

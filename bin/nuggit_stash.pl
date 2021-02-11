@@ -388,7 +388,7 @@ sub stash_show
                        my $in = shift;
                        my $stashes = git_stash_list();
                        if (defined($stashes->{$idx})) {
-                           say colored("Stash in ".$in->{subname}, 'info');
+                           say colored("Stash in ".(defined($in->{subname}) ? $in->{subname} : "root"), 'info');
                            my $cmd = "git stash show ";
                            $cmd .= "-p " if $patch_flag;
                            $cmd .= $stashes->{$idx}->{'gitIdx'};

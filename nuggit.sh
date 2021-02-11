@@ -10,7 +10,7 @@ while [ -h "$SOURCE" ]; do # resolve $SOURCE until the file is no longer a symli
 done
 DIR="$( cd -P "$( dirname "$SOURCE" )" >/dev/null 2>&1 && pwd )"
 
-export PATH=${PATH}:${DIR}/bin
+export PATH=${DIR}/bin:${PATH}
 export PERL5LIB=${DIR}/lib:${PERL5LIB}
 
 # Autocomplete (ngt will provide autocomplete responses for itself, when appropriate env variable is set)

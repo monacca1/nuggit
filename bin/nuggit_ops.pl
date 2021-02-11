@@ -26,10 +26,10 @@
 
 =head1 SYNOPSIS
 
-Nuggit ops implements common nuggit checkout, rebase, merge, and pull operations.
+Nuggit ops includes common nuggit checkout, rebase, merge, and pull operations. See help/man pages for those commands for details.
 
 
-=head2 Sample Commands
+=head1 Sample Commands
 
 Commands can be executed as "ngt ,,,", "nuggit ...", or "nuggit_ops.pl ..."
 
@@ -43,7 +43,7 @@ Create a new branch with the given name in the root repository and all submodule
 
 Checkout the given $branch at the root repository and all submodules, providing that doing so does not affect the currently checked out revision.  If $branch is omitted, or no action will be taken unless a given submodule is currently in a detached HEAD state.  This command will resolve any detached HEADs that it detects if a branch exists that matches the current revision.
 
-Note: The safe operation is not valid in conjunction with a filename, branch, Tag or SHA commit reference.  Behavior in these conditions is undefined and error detection is not guaranteed.
+Note: The safe operation is not valid in conjunction with a filename, Tag or SHA commit reference.  Behavior in these conditions is undefined and error detection is not guaranteed.
 
 =item checkout $branch_SHA_or_tag
 
@@ -90,18 +90,18 @@ use Data::Dumper; # DEBUG Only. Delete before release
 
 # List of supported operation modes for this script.  
 my %modes = (
-    "checkout" => 1,
-    "pull"     => 0,
-    "merge"    => 0,
-    "rebase"   => 0,
-    "view"     => 0, # View current conflict state (debug option)
+    "checkout"   => 1,
+    "pull"       => 0,
+    "merge"      => 0,
+    "rebase"     => 0,
+    "view"       => 0, # View current conflict state (debug option)
     # TODO: Add "switch" and "restore" support -- equivalent to checkout for specific purposes in git 2.23+. For our purposes, the primary difference is more stringent checks for file vs commit
    );
 my $opts = {
     "verbose" => 0,
     "safe"    => 0,
-    "strategy" => 'ref', # Original Nuggit behavior was branch-first, we now default to a ref-first strategy.
-    "edit"    => 1, # If disabled and no message is defined for merge/rebase, pass --no-edit flag to use automatic commit message during conflict resolutions. 
+    "ngtstrategy" => 'ref', # Original Nuggit behavior was branch-first, we now default to a ref-first strategy.
+    "edit"    => 0, # If disabled and no message is defined for merge/rebase, pass --no-edit flag to use automatic commit message during conflict resolutions. 
 };
 
 # Initialize Nuggit & Logger prior to altering @ARGV
@@ -136,6 +136,10 @@ if ($opts->{continue}) {
 
 # Pre-operation status check applies to all.
 # NOTE: While git can handle uncommitted changes in many cases, doing so is likely to confuse Nuggit and may result in unexpected commits or other undefined behavior.
+# Specific cases where we can (and may automatically) skip this check include:
+# - checkout --safe operations
+# - checkout -b   branch creation options.
+$opts->{'skip-status-check'} = 1 if $opts->{mode} eq "checkout" && ($opts->{safe} || $opts->{create});
 if (!$opts->{'skip-status-check'}) {
     my $status = get_status({uno => 1});
 
@@ -155,7 +159,7 @@ if (!$opts->{'skip-status-check'}) {
 
         pretty_print_status($status, $ngt->{relative_path_to_root}, {user_dir => $ngt->{user_dir}});
         
-        die colored("\n\u$opts->{mode} aborted due to dirty working directory.  Please stash or commit and then re-run. This check can be bypassed with --skip-status-check, however doing so may result in undefined behavior.", 'warn')."\n";
+        die colored("\n\u$opts->{mode} aborted due to dirty working directory.  Please stash or commit and then re-run. This check can be bypassed with --skip-status-check, however doing so may result in undefined behavior should there be conflicts in these files.", 'warn')."\n";
     }
 }
 
@@ -182,13 +186,20 @@ if ($opts->{mode} eq "checkout") {
     } else {
         root_checkout_branch($opts->{branch});
     }
-} elsif ($opts->{mode} eq "rebase") {
+} elsif ($opts->{mode} eq "rebase" || ($opts->{mode} eq "pull" && $opts->{rebase})) {
     say colored("WARNING: Rebase support is currently an experimental/untested Ngt feature. Proceed at your own risk. Do you wish to proceed? (y/n)", 'error');
     my $input = <STDIN>;
     die "Aborting by user request.\n" if ($input ne "y");
 
     say colored('Proceeding. Please report any issues you may encounter, including steps to reproduce and resolve (manually) if applicable.', 'warn');
     root_operation();
+} elsif ( ($opts->{mode} eq "merge" || $opts->{mode} eq "rebase") && $opts->{preview}) {
+    # TODO: For future portability/packaging purposes, this should change to a require
+    my $cmd = "nuggit_merge_tree.pl ";
+    $cmd .= $opts->{base} if $opts->{base};
+    $cmd .= " ".$opts->{branch} if $opts->{branch};
+    $cmd .= " ".$opts->{branch2} if $opts->{Branch2};
+    exec($cmd);
 } elsif ($opts->{mode} eq "merge" || $opts->{mode} eq "pull") {
     root_operation();
 } else {
@@ -203,39 +214,71 @@ sub ParseArgs
                               "man!",
                               "safe!",
                               "create|b!",
-                              "strategy|s=s",
+                              "ngtstrategy|s=s",
                               "branch-first!",
                               "ref-first!",
                               "continue!",
+                              "preview|p!",
                               "abort!",
                               "edit!",
-                              "skip-status-check!", # Ability to bypass branch auto-creation if it doesn't exist (for checkout operations only)
+                              "squash!",
+                              "skip-status-check!",
                               "auto-create!",
+                              "branch=s", # Optional explicit alternative to namesless spec
+                              "remote=s", # Optional explicit alternative to namesless spec
                               'message|m', # Specify message to use for any commits upon merge (optional; primarily for purposes of automated testing). If omitted, user will be prompted for commit message.  An automated message will be used if a conflict has been automatically resolved.
+                              
                 # TODO: remote flag.  For pull operation, this will cause a pull in the root, and a submodule update --remote in all submodules.  This is a more git-like version of the previous '--default' concept.
                 # TODO: Default flag.  For branch-first operations only.
                );
-
-    pod2usage(1) if $opts->{help};
-    pod2usage(-exitval => 0, -verbose => 2) if $opts->{man};
     
     # First unparsed argument indicates operation (ie: pull, merge, or checkout)
     if (@ARGV > 0) {
         $opts->{mode} = shift @ARGV;
-        $opts->{remote} = shift @ARGV if @ARGV > 0 && $opts->{mode} eq "pull"; # Special case for pull
-        $opts->{branch} = shift @ARGV if @ARGV > 0;
+        if ($opts->{preview} ) {
+            $opts->{base} = shift @ARGV if @ARGV > 2;
+            $opts->{branch} = (@ARGV > 1) ? shift @ARGV : "HEAD";
+            $opts->{branch2} = shift @ARGV if @ARGV > 0;
+        } else {
+            $opts->{remote} = shift @ARGV if @ARGV > 0 && $opts->{mode} eq "pull"; # Special case for pull
+            $opts->{branch} = shift @ARGV if @ARGV > 0;
+        }
+    }
+
+    if ($opts->{help} || $opts->{man}) {
+        my $pv = ($opts->{help} ? 1 : 2);
+        my $input = $0; # This is the default value. If this fails, we can switch to FindBin
+        my $msg = undef;
+        
+        if ($opts->{mode} && defined($modes{$opts->{mode}})) {
+            $input = $FindBin::Bin.'/../docs/'.$opts->{mode}.".pod";
+
+            if (!-e $input) {
+                $input = $0;
+                $msg = colored("Error: Unable to locate documentation. Try running \"man ngt-$opts->{mode}\" for addiitonal information",'warn');
+            }
+        } # else we display embedded POD from this file
+
+        pod2usage(-exitval => 0,
+                  -verbose => $pv,
+                  -input => $input,
+                  -msg => $msg
+                  );
+            
     }
     
     if(!defined($opts->{mode}) || !defined($modes{$opts->{mode}})) {
         my $err = ($opts->{mode}) ? "Please specify" : $opts->{mode}." is not";
-        die "$err a valid operation.  Re-run with --help for usage information, or --man for details.\n";
+        pod2usage(-exitval => 2, -verbose => 0, -output => \*STDERR,
+                  -message => "$err a valid operation"
+                  );
     }
     if (defined($opts->{'branch-first'})) {
-        $opts->{'strategy'} = 'branch';
+        $opts->{'ngtstrategy'} = 'branch';
     } elsif (defined($opts->{'ref-first'})) {
-        $opts->{'strategy'} = 'ref';
-    } elsif ($opts->{'strategy'} ne "branch" && $opts->{'strategy'} ne 'ref') {
-        die "Invalid strategy specified.  --strategy must be 'branch' or 'ref'.  See --man for details.";
+        $opts->{'ngtstrategy'} = 'ref';
+    } elsif ($opts->{'ngtstrategy'} ne "branch" && $opts->{'ngtstrategy'} ne 'ref') {
+        die "Invalid strategy specified.  --ngtstrategy must be 'branch' or 'ref'.  See --man for details.";
     }
 }
 
@@ -277,7 +320,10 @@ sub root_checkout_safe
     my $branch = shift // get_selected_branch_here();
 
     # Run checkout at root level.
-    my $result = checkout_safe(branch => $branch, autocreate => 0);
+    my $result = checkout_safe(branch => $branch,
+                               # Auto-create branch names in all submodules when safe to do so, unless user requested otherwise
+                               autocreate => (defined($opts->{'auto-create'}) ? $opts->{'auto-create'} : 1)
+                               );
 
     # If that doesn't work (and we aren't simply fitching detached heads), do not proceed (must fetch or create at root first).
     if ($branch && (!defined($result) || $result ne $branch)) {
@@ -292,10 +338,10 @@ sub root_checkout_safe
                                               # Auto-create branch names in all submodules when safe to do so, unless user requested otherwise
                                               autocreate => (defined($opts->{'auto-create'}) ? $opts->{'auto-create'} : 1),
                                               subname => $in->{'subname'});
-                          if (!defined($result) || (defined($branch) && $result ne $branch) ) {
+                      if (!defined($result) || (defined($branch) && $result ne $branch) ) {
                           $warnings->{$in->{'subname'}} = $result;
-                          }
-                      });
+                      }
+                  });
     my @keys = keys %$warnings;
     if (scalar @keys > 0) {
         my $dbranch = ($branch) ? "checkout $branch" : "resolve detached HEADs";
@@ -359,7 +405,10 @@ sub root_checkout_branch
         # An error likely indicates branch doesn't exist
         say $stdout if $stdout;
         say $stderr if $stderr;
-        die colored("Failed to checkout $branch in root repository. If you wish to create a new branch, specify '-b' and try again. If this branch exists remotely, you may need to run a 'ngt fetch' before proceeding.", 'error').'\n';
+        die colored("Failed to checkout $branch in root repository.",'error')
+        ."\n"
+        .colored("See above for details. If you wish to create a new branch, specify '-b' and try again. If this branch exists remotely, you may need to run a 'ngt fetch' before proceeding.", 'info')
+        ."\n";
     }
 
     # Create a buffer for storing any warnings to summarize
@@ -372,7 +421,7 @@ sub root_checkout_branch
         'parallel'      => 1, # Use parallel execution (per-level) if available (Future enhancement) for checkout (cannot be used for merge/pull due to added complexities of conflict resolution).
         'recursive'     => 1, # Recuse into submodules. Breadth-first ensures we update a given submodule before recursing into it
         'run_root'      => 0,
-
+        
         # User arguments
         'rtv'           => \%results, # Custom args
     });
@@ -408,10 +457,14 @@ sub do_root_checkout_breadth_first {
     # If submodule is in a subdirectory, we just want the last directory.
     my @tmp = File::Spec->splitdir($subname);
     my $shortname = pop @tmp;
+
+    # NOTE: This line is to provide a sense of progress.
+    # TODO: Can we do this in a less verbose manner and/or speedup the process?
+    say colored("Processing $in->{'subname'}", 'info');
     
     chdir("..");
 
-    if ($opts->{'strategy'} eq 'branch' ) { # branch-first strategy
+    if ($opts->{'ngtstrategy'} eq 'branch' ) { # branch-first strategy
         my ($err, $stdout, $stderr) = $ngt->run("git submodule init $shortname");
         if (!$err && -d $shortname) {
             chdir($shortname);
@@ -439,10 +492,8 @@ sub do_root_checkout_breadth_first {
             chdir($shortname);
             # Run a safe checkout to resolve any detached heads
             my $result = checkout_safe(branch => $branch,
-
-                                       # Auto-create branch names to resolve when appropriate, unless user requested otherwise
+                                       # Auto-create branch names in all submodules when safe to do so, unless user requested otherwise
                                        autocreate => (defined($opts->{'auto-create'}) ? $opts->{'auto-create'} : 1),
-                                       
                                        subname => $subname);
             if (!defined($result) || $result ne $branch) {
                 $opts->{results}->{$subname} = $result;
@@ -594,6 +645,15 @@ sub checkout_local {
 
 # Supports pull, merge, and rebase operations
 # NOTE: rebase support is experimental and untessted and may not function if multiple conflicts in a single repo during rebase
+#
+# TODO: For improved handling of conflicts and merge --abort, we need to add additional status information to struct
+# - For repo operation log status
+#   - 'retry'    - If operation was aborted due to error without executing (ie: conflict with previously modified or untracked file)
+#                   Note: This should allow safe usage when files have been previously modified prior to operation.
+#                  VERIFY: If a submodule reference was modified prior to operation, existing logic should handle it correctly.
+#   - 'nop'      - Operation was successful, but merge did not result in any new commits
+#   - 'conflict' - Conflict detected requiring user intervention.  abort with 'merge --abort', continue with 'commit'
+#   - 'success'  - Operation was successful.  If we abort merge, we must checkout HEAD~1 to undo.
 sub root_operation {
     my $op = $opts->{mode};
 
@@ -615,7 +675,7 @@ sub root_operation {
         'parallel'      => 0, # Parallel operations are not practical in context of (interactive) conflict handling
         'recursive'     => 1, # Recuse into submodules. Breadth-first ensures we update a given submodule before recursing into it.
         'run_root'      => 0,
-        'modified_only' => ($opts->{strategy} eq "ref") ? 1 : 0, # For ref-first strategy, we don't need to check unmodified submodules here.  This check is run after breadth_first for a module, so it will pick up new changes
+        'modified_only' => ($opts->{ngtstrategy} eq "ref") ? 1 : 0, # For ref-first strategy, we don't need to check unmodified submodules here.  This check is run after breadth_first for a module, so it will pick up new changes
     });
 
     if ($opts->{states}->{totals}->{file_conflicts} == 0) {
@@ -652,14 +712,18 @@ sub show_conflicts_state
     say "\tAuto-staged submodule references: ".$out->{states}->{totals}->{autoresolve_subs} if $out->{states}->{totals}->{autoresolve_subs} > 0;
     say "\tErrors Encountered: ".$out->{states}->{totals}->{errors} if $out->{states}->{totals}->{errors} > 0;
 
-    say "The following require manual resolution:";
+    say "\nThe following require manual resolution:";
     foreach my $repo (keys %{$out->{states}->{repos}}) {
         my $def = $out->{states}->{repos}->{$repo};
-        if ($repo eq '/') { $repo = ""; } # Ensure cleaner output for root conflicts
 
+        $repo = '' if $repo eq '/'; # Ensure clearer output
+        
         if ($def->{file_conflicts} && scalar(@{$def->{file_conflicts}}) > 0) {
             foreach my $file (@{$def->{file_conflicts}}) {
-                say "  ".colored($repo, 'warn').'/'.colored($file, 'error');
+                say "  "
+                    .colored($repo, 'warn')
+                    ,(($repo) ? '/' : '')
+                    .colored($file, 'error');
             }
         }
         # Only show submodule conflicts if verbose is set ... TODO: Are there any cases where submodule conflicts won't be auto-resolved? Can we better track resolved vs unresolved submodule conflicts?
@@ -686,9 +750,9 @@ sub do_root_operation_breadth_first {
     # op mode for submodule update (differs from $op for pull, or future switch and restore commands)
     my $myop = $op;
     if ($op eq "pull") {
-        $myop = "merge"; # TODO: support rebase flag
+        $myop = ($opts->{'rebase'} ? "rebase" : "merge");
         
-        # We must explicitly fetch the submodule being updated
+        # We must explicitly fetch the submodule being updated (VERIFY: Can we rely on parent pull to always recurse instead?)
         say colored("Fetching changes for $in->{name}", 'info');
         my ($err, $stdout, $stderr) = $ngt->run("git fetch");
         if ($err) {
@@ -708,11 +772,13 @@ sub do_root_operation_breadth_first {
             die "TODO: Error handling";
         } else {
             chdir($shortname);
-            checkout_safe(branch => $branch, autocreate => 0);
+            checkout_safe(branch => $branch,
+                          autocreate => (defined($opts->{'auto-create'}) ? $opts->{'auto-create'} : 1)
+                          );
         }
         $rtv->{'is_new'} = 1; # TODO: Or state='new' (vs 'deleted' or 'updated'?)
         
-    } elsif ($opts->{'strategy'} eq 'branch' ) {
+    } elsif ($opts->{'ngtstrategy'} eq 'branch' ) {
         # Perform actual operation (same logic as for root repo)
         $rtv = do_operation_pre($in);
 
@@ -721,6 +787,9 @@ sub do_root_operation_breadth_first {
         chdir("..");
 
         # Let git update single submodule with merge or rebase strategy as appropriate
+        # Force no-edit by using nop shell command (valid for UNIX+Windows) since submodule update doesn't support flag
+        $ENV{'GIT_EDITOR'} = ":";
+        # Alternative is to specify custom script
         my ($err, $stdout, $stderr) = $ngt->run("git submodule update --$myop $shortname");
         
         if ($err) {
@@ -774,7 +843,8 @@ sub abort_merge_state
     if ($conflicts_state) {
         # NOTE: This makes no guarantees that repo is in a usable state
         $ngt->clear_config("merge_conflict");
-        say "WARNING/TODO: Abort not implemented. This command clears ngt status, but user may need to manually abort conflicts in progress";
+        $ngt->run('git merge --abort');
+        say "WARNING/TODO: Abort not fully implemented. This command clears ngt status, but user may need to manually abort submodule conflicts in progress, or already completed";
         say "Aborted merge in progress. No guarantees are made as to the current state of the repository.  Reversion of changes, including any git merges in progress are TODO";
 
 
@@ -805,26 +875,44 @@ sub do_operation_pre {
     # Validate Parameters
     if ($op ne "pull" && !$branch) {
         # Reference; Pull may optionally specify a remote, repo, or refspec. Support for these arguments in Ngt may not be fully supported (TODO).
-        die "$op requires a branch, tag, or commit.";
+        die "$op requires a branch, tag, or commit.\n";
     } elsif ($op eq "checkout") {
-        die "Internal Error: checkout handling routed to wrong function";
+        die "Internal Error: checkout handling routed to wrong function\n";
     }
 
     # Build Command
     if ($op eq "merge") {
         $cmd = "git merge $branch";
-    } elsif ($op eq "pull") {
+    } elsif ($op eq "pull") {        
         $cmd = "git pull";
         # TODO: Optional support for additional git arguments for remote/repo and/or commit (likely ref-first strategy only)
         if ($opts->{remote}) {
             $cmd .= " $opts->{remote}";
             $cmd .= " $opts->{branch}" if $opts->{branch}; # pull can only specify branch if remote is also specified
         }
+        if (!$opts->{edit}) {
+            $cmd .= " --no-edit";
+        }
+        $cmd .= " --rebase" if $opts->{rebase};
     } elsif ($op eq "rebase") {
         $cmd = "git rebase $branch";
         # TODO: Support for interactive flag? May require alt submodule handling
     } else {
         die "Internal Error: $op is not supported for this function.";
+    }
+
+    $cmd .= " --squash" if $opts->{squash}; # May not be valid for rebase
+
+    # Specify message (for merge+rebase only)
+    if ($op ne "pull") {
+        if ($opts->{'message'}) {
+            $cmd .= " -m \"$opts->{'message'}\"";
+        } else {
+            $cmd .= " -m \"Nuggit Merged $branch into ?\""; # TODO: What is current branch name
+        }
+    } else {
+        # VERIFY: Workaround for lack of no-edit flag for pull
+        $ENV{'GIT_EDITOR'} = ":";
     }
 
     my ($err, $stdout, $stderr) = $ngt->run($cmd);
@@ -851,7 +939,7 @@ sub handle_submodule_conflict {
     my $conflicted = shift;
     my $cmd;
     
-    if ($opts->{'strategy'} eq 'branch' ) {
+    if ($opts->{'ngtstrategy'} eq 'branch' ) {
         $cmd = "git add $conflicted";
     } else {
         # Resolve conflict in a manner that we can subsequently run submodule update --$op on

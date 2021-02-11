@@ -1,0 +1,34 @@
+=head1 NAME
+
+Nuggit - An overview and crash course to using this tool to aide Git Submodule based workflows
+
+=head1 DESCRIPTION
+
+Nuggit is a collection of tools and libraries to aide Git workflows that include active development across multiple submodules.
+
+This document describes typical usage scenarios, tips, and background information.
+
+All nuggit scripts can be run with '--help' to display usage information, or '--man' for additional documentation details.  If installed, documentation is also available via the 'man' command on compatible systems.
+
+Refer to the main README for general information, including installation instructions.
+
+
+=head1 Typical workflow
+
+Assume that some repository exists at http://foo/bar.git that includes one or more nested submodules.
+
+To clone this repository with native Git, one would run: "git clone --recursive http://foo/bar.git". Using Nuggit, this can be abbreviated to "ngt clone http://foo/bar.git".
+
+If the workspace has already been cloned, you may run "ngt init" from the top-level directory of the workspace to setup Nuggit.  NOTE: If you are working in a subset of a larger repository, you may run this command from within a submodule, and all nuggit commands will execute relevant to the first '.nuggit' folder it has when traversing up the directory tree.
+
+B<PLACEHOLDER> - This document has not been completed
+
+=head1 Definitions
+
+=over
+
+=item workspace
+
+This refers to the project being worked on.  The top-level folder, which will contain the .nuggit folder, is the folder created by the initial clone command.
+
+=back
