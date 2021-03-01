@@ -244,10 +244,10 @@ sub nuggit_commit($)
            return;
        }
 
-       my $cmd = "git push -u origin $branch";
+       my $cmd = "git push --recurse-submodules=on-demand -u origin $branch";
        
        ($err, $stdout, $errmsg) = $ngt->run($cmd);
-       say colored("Automatically pushing $repo", ($err) ? 'error':'success' );
+       say colored("Automatically pushing $repo", ($err) ? 'error':'info' );
        say $stdout if $stdout;
        say $errmsg if $errmsg;
        if ($err) {
