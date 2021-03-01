@@ -60,6 +60,7 @@ my $branch_check = 1; # Check that all modified submodules are on the correct br
 my $root_repo_branch = "(Branch Unknown)";
 my $commit_all_files = 0; # Results in "git commit -a"
 my $use_force = 0;
+my $auto_push = 0; # If set, automatically push any updated submodules
 
 # Initialize Nuggit & Logger prior to altering @ARGV
 my $ngt = Git::Nuggit->new("run_die_on_error" => 0, "echo_always" => 0); 
@@ -101,15 +102,23 @@ my $autostaged_refs = 0; # Number of submodule references automagically staged
 my $prestaged_objs = 0; # Number of objects user has previously staged
 my $untracked_objs = 0; # Reference count of untracked files not committed
 my $unstaged_objs = 0; # Reference count of modified objects not staged/committed.
+my $push_errors = 0;
+my $repos_pushed = 0;
 recursive_commit($status);
 
-say "$autostaged_refs submodule references automatically committed" if $autostaged_refs > 0;
+say colored("Commit complete", 'info');
+say "$autostaged_refs submodule references automatically committed." if $autostaged_refs > 0;
 say "$untracked_objs untracked files exist in your work tree." if $untracked_objs > 0;
+say "Successfully pushed $repos_pushed repositories/submodules" if $repos_pushed > 0;
+say colored("Warning: Failed to push $push_errors submodules. See above for details", 'error') if $push_errors > 0;
 
 if (!$commit_all_files) {
     say "$prestaged_objs previously staged changes committed" if $prestaged_objs > 0;
     say "$unstaged_objs unstaged changes remaining in your work tree." if $unstaged_objs > 0;
 }
+
+
+
 
 sub recursive_commit( $ )
 {
@@ -172,6 +181,7 @@ sub ParseArgs()
                            "help"            => \$help,
                            "man"             => \$man,
                            "force!"          => \$use_force,
+                           "push|P!"         => \$auto_push,
                           );
     pod2usage(1) if $help;
     pod2usage(-exitval => 0, -verbose => 2) if $man;
@@ -214,7 +224,7 @@ sub nuggit_commit($)
 {
    my $commit_status;
    my $repo = $_[0];
-
+   
    my $args = "";
    $args .= "-a " if $commit_all_files;
    my ($err, $stdout, $errmsg) = $ngt->run("git commit $args -m \"N:$root_repo_branch; $commit_message_string\"");
@@ -225,6 +235,27 @@ sub nuggit_commit($)
    
    if ($err) {
        die("Error detected ($err), aborting nuggit commit\n");
+   }
+
+   if ($auto_push) {
+       my $branch = get_selected_branch_here();
+       if ($branch =~ /HEAD detached/) {
+           say colored("Error: $repo is in a DETACHED HEAD, will not attempt to push. Manual resolution is recommended by creating a new branch.  If you did not run this command with the '--force' flag to bypass safety checks, please report this as a probable Nuggit bug.", 'error').'\n';
+           return;
+       }
+
+       my $cmd = "git push -u origin $branch";
+       
+       ($err, $stdout, $errmsg) = $ngt->run($cmd);
+       say colored("Automatically pushing $repo", ($err) ? 'error':'success' );
+       say $stdout if $stdout;
+       say $errmsg if $errmsg;
+       if ($err) {
+           $push_errors++;
+           say colored("Warning: Failed to push changes in $repo. Please correct any issues and run 'ngt push' to retry.",'error');
+       } else {
+           $repos_pushed++;
+       }
    }
 }
 
@@ -260,6 +291,10 @@ Bypass verification that all submodules are on the same branch.
 =item --force
 
 If specified, bypass all sanity checks, including detached HEAD and matching branch anmes
+
+=item --push|P
+
+If specified, automatically push changes to origin for any updated submodule.
 
 =back
 
