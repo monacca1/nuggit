@@ -126,7 +126,7 @@ if (defined($ENV{'COMP_LINE'}) || defined($ENV{'COMMAND_LINE'}) ) {
     print format_completion($res);
     exit;
 
-} elsif (defined($cmd) && ($cmd eq "check" || $cmd eq "version"))  {
+} elsif (defined($cmd) && ($cmd eq "check" || $cmd eq "version" || $cmd eq "base"))  {
     # Check for Nuggit Library
     eval "use Git::Nuggit::Status";
     die "Git::Nuggit::Status does not appear to be installed. Did you source nuggit.sh or equivalent?" if $@;
@@ -144,10 +144,18 @@ if (defined($ENV{'COMP_LINE'}) || defined($ENV{'COMMAND_LINE'}) ) {
         die "Unable to find git";
     }
 
-    #say "Using Git::Nuggit version " . $Git::Nuggit::VERSION; # Git::Nuggit not fully defined as package
-    say "Using Git::Nuggit version " . $Git::Nuggit::VERSION;
-
     my ($root_dir, $relative_path_to_root) = find_root_dir();
+
+    if ($cmd eq "base") {
+        if ($root_dir) {
+            say $root_dir;
+            exit;
+        } else {
+            die "Not a Nuggit!";
+        }
+    }
+
+    say "Using Git::Nuggit version " . $Git::Nuggit::VERSION;
     
     my $nuggit_dir = $FindBin::Bin.'/';
     if (-d File::Spec->catdir($nuggit_dir, '../.git')) {
@@ -284,7 +292,9 @@ sub show_help {
 
     say "This is a wrapper for available nuggit commands. Internal commands are:";
     say "  ngt help      Show this help dialog";
-    say "  ngt check     Verify nuggit installation and dependencies\n";
+    say "  ngt check     Verify nuggit installation and dependencies and show version\n";
+    say "  ngt version   Alias to ngt check";
+    say "  ngt base      Output full path to nuggit root directory, suitable for inclusion by other scripts\n";
 
     say "Commands for 'ngt' can be autocompleted by pressing the tab key, while a list";
     say "  of all matches can be returned by pressing tab twice. This will work";
