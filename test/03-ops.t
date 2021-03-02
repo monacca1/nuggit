@@ -24,9 +24,9 @@ my @tests = (
     # Checkout Branch Cases, commit-first model
 
     ## Merge Cases
-    ["Basic Merge Test of Root, No conflicts", \&base_merge_test0],
-    ["Basic Merge Test of Root, Conflict requiring user-intervention", \&base_merge_test1],
-     
+    ["Basic Merge (ref-first) Test of Root, No conflicts", \&base_merge_test0],
+    ["Basic Merge (ref-first) Test of Root, Conflict requiring user-intervention", \&base_merge_test1],
+    
     # Simple merge, no conflicts
     ["Simple Merge", \&merge_test1],
     ["Simple Merge with conflict resolution", \&merge_test2],
@@ -37,7 +37,15 @@ my @tests = (
     
     # Pull Cases
     ["Simple Pull", \&pull_test],
-    );
+
+    # Repeat all ops-focused tests for ref-first
+    ["Basic Merge (branch-first) Test of Root, No conflicts", \&base_merge_test0, 1],
+    ["Basic Merge (branch-first) Test of Root, Conflict requiring user-intervention", \&base_merge_test1, 1],
+    ["Simple Merge (branch-first)", \&merge_test1, 1],
+    ["Simple Merge (branch-first) with conflict resolution", \&merge_test2, 1],
+
+    
+   );
 
 
 # Initialize Driver.  This function will also automaticallly parse command-line arguments
@@ -57,23 +65,24 @@ sub base_merge_test0 {
     my $fn2 = "test.md"; # A new file
     my $msg1 = "Root file write, branch2";
     my $msg2 = "This is a new file";
+    my $mode_flag = (shift) ? "--branch-first": ""; # If parameter was given, run test in ref-first mode
 
     # This is a single-user test
     my $user = $drv->create_user("user1");
 
     ## Setup
     # Create a new branch from current point
-    ok($drv->cmd("ngt checkout -b $branch2"), "Checkout $branch2");
+    ok($drv->cmd("ngt checkout $mode_flag -b $branch2"), "Checkout $branch2");
 
     # Make a set of non-conflicting changes in first branch
     $drv->test_write({msg => $msg1, fn => $fn1});
 
     # Switch to second branch and make set of non-conflicting changees
-    ok($drv->cmd("ngt checkout $branch1"), "Run Ngt checkout $branch1");
+    ok($drv->cmd("ngt checkout $mode_flag $branch1"), "Run Ngt checkout $branch1");
     $drv->create_file($fn2, $msg2);
 
     # Merge
-    ok($drv->cmd("ngt merge $branch2"));
+    ok($drv->cmd("ngt merge $mode_flag $branch2"));
 
     # Verify status
     my $status = get_status();
@@ -95,24 +104,25 @@ sub base_merge_test1 {
     my $fn2 = $fn1; # A deliberate conflict
     my $msg1 = "Root file write, branch2";
     my $msg2 = "This is a conflicting change";
+    my $mode_flag = (shift) ? "--branch-first": ""; # If parameter was given, run test in ref-first mode
 
     # This is a single-user test
     my $user = $drv->create_user("user1");
 
     ## Setup
     # Create a new branch from current point
-    ok($drv->cmd("ngt checkout -b $branch2"), "Checkout $branch2");
+    ok($drv->cmd("ngt checkout $mode_flag -b $branch2"), "Checkout $branch2");
 
     # Make a set of non-conflicting changes in first branch
     $drv->test_write({msg => $msg1, fn => $fn1});
 
     # Switch to second branch and make set of non-conflicting changees
-    ok($drv->cmd("ngt checkout $branch1"), "Run Ngt checkout $branch1");
+    ok($drv->cmd("ngt checkout $mode_flag $branch1"), "Run Ngt checkout $branch1");
 
     ok($drv->create_file($fn2, $msg2));
 
     # Merge
-    ok(dies{($drv->cmd("ngt merge $branch2"), "Expect merge conflict");});
+    ok(dies{($drv->cmd("ngt merge $mode_flag $branch2"), "Expect merge conflict");});
 
     # Verify status
     my $status = get_status();
@@ -136,10 +146,11 @@ sub merge_test1 {
     my $fn3 = "sub1/sub3/README.md";
     # This is a single-user test
     my $user = $drv->create_user("user1");
+    my $mode_flag = (shift) ? "--branch-first": ""; # If parameter was given, run test in ref-first mode
 
     ## Setup
     # Create a new branch from current point
-    ok($drv->cmd("ngt checkout -b $branch2"), "Created branch $branch2");
+    ok($drv->cmd("ngt checkout $mode_flag -b $branch2"), "Created branch $branch2");
 
     # But first verify post-checkout status in detail
     subtest "Validate Checkout Status" => sub {
@@ -155,7 +166,7 @@ sub merge_test1 {
     my $msg2 = $drv->test_write({title => "Sub3 file write, branch2", fn => $fn2});
 
     # Switch to second branch and make set of non-conflicting changees
-    ok($drv->cmd("ngt checkout $branch1"));
+    ok($drv->cmd("ngt checkout $mode_flag $branch1"));
 
     # But first verify post-checkout status in detail
     subtest "Validate Checkout Status" => sub {
@@ -169,7 +180,7 @@ sub merge_test1 {
     my $msg3 = $drv->test_write({title => "Sub3 file write, branch1", fn => $fn3});
        
     # Merge
-    ok($drv->cmd("ngt merge $branch2")); # TODO: Flag for testing with rebase and/or branch-first
+    ok($drv->cmd("ngt merge $mode_flag $branch2")); # TODO: Flag for testing with rebase and/or branch-first
 
     # Verify status
     my $status = get_status();
@@ -190,6 +201,7 @@ sub merge_test2 {
     my $fn1 = "README.md";
     my $fn2 = "sub1/sub3/README.md";
     my ($msg1, $msg2, $msg3);
+    my $mode_flag = (shift) ? "--branch-first": ""; # If parameter was given, run test in ref-first mode
 
     # This is a single-user test
     my $user = $drv->create_user("user1");
@@ -197,7 +209,7 @@ sub merge_test2 {
     ## Setup
     subtest "Write content in branch $branch2" => sub {
         # Create a new branch from current point
-        ok($drv->cmd("ngt checkout -b $branch2"), "Created branch $branch2");
+        ok($drv->cmd("ngt checkout $mode_flag -b $branch2"), "Created branch $branch2");
 
         # But first verify post-checkout status in detail
         subtest "Validate Checkout Status" => sub { # TODO: convert to drv fn
@@ -215,7 +227,7 @@ sub merge_test2 {
 
     subtest "Write conflicting content in $branch1" => sub {
         # Switch to second branch and make set of non-conflicting changees
-        ok($drv->cmd("ngt checkout $branch1"));
+        ok($drv->cmd("ngt checkout $mode_flag $branch1"));
 
         # But first verify post-checkout status in detail
         subtest "Validate Checkout Status" => sub {
@@ -232,7 +244,7 @@ sub merge_test2 {
     subtest "Merge and resolve conflict" => sub {
         # Merge
         # TODO: Flag for testing with rebase and/or branch-first
-        ok(dies{$drv->cmd("ngt merge $branch2")}); 
+        ok(dies{$drv->cmd("ngt merge $mode_flag $branch2")}); 
 
         # Verify conflicted stqtus status
         ok(-e '.nuggit/merge_conflict', 'Merge Conflict config file exists');

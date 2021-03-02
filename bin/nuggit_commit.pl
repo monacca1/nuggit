@@ -110,7 +110,7 @@ say colored("Commit complete", 'info');
 say "$autostaged_refs submodule references automatically committed." if $autostaged_refs > 0;
 say "$untracked_objs untracked files exist in your work tree." if $untracked_objs > 0;
 say "Successfully pushed $repos_pushed repositories/submodules" if $repos_pushed > 0;
-say colored("Warning: Failed to push $push_errors submodules. See above for details", 'error') if $push_errors > 0;
+say colored("Warning: Failed to push one or more submodules. See above for details", 'error') if $push_errors > 0;
 
 if (!$commit_all_files) {
     say "$prestaged_objs previously staged changes committed" if $prestaged_objs > 0;
@@ -252,7 +252,8 @@ sub nuggit_commit($)
        say $errmsg if $errmsg;
        if ($err) {
            $push_errors++;
-           say colored("Warning: Failed to push changes in $repo. Please correct any issues and run 'ngt push' to retry.",'error');
+           say colored("Warning: Failed to push changes in $repo. Please correct any issues and run 'ngt push' to retry. No additional repos will be pushed to avoid dangling references.",'error');
+           $auto_push = 0;
        } else {
            $repos_pushed++;
        }

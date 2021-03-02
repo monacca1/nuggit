@@ -70,9 +70,6 @@ pod2usage(1) if $help;
 pod2usage(-exitval => 0, -verbose => 2) if $man;
 $ngt->start(level=> 1);
 
-sub get_selected_branch($);
-sub get_selected_branch_here();
-
 my $verbose = 0;
 my $cwd = getcwd();
 
