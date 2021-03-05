@@ -34,6 +34,7 @@ use Cwd qw(getcwd);
 use Term::ANSIColor;
 use File::Spec;
 use Git::Nuggit;
+use JSON;
 
 =head1 SYNOPSIS
 
@@ -121,6 +122,7 @@ my $delete_remote_flag        = 0;
 my $delete_merged_remote_flag = 0;
 my $show_merged_bool          = undef; # undef = default, true=merged-only, false=unmerged-only
 my $verbose = 0;
+my $show_json = 0;
 my $selected_branch = undef;
 
 # print "nuggit_branch.pl\n";
@@ -163,13 +165,30 @@ elsif (defined($selected_branch))
 else
 {
     $ngt->start(level=> 0, verbose => $verbose);
-    verbose_display_branches(); # DEBUG/Experiment - DO NOT COMMIT
+    if ($show_json) {
+        verbose_display_branches();
+    } else {
+        display_branches();
+    }
 }
-use Data::Dumper;
+
 sub verbose_display_branches
 {
-    # Note: This may replace display_branches in the future.
-    say Dumper(get_branches("-a"));
+    # TODO: This may will eventually replace display_branches below, with a new text-output added here
+    # TODO: If user requests to check all submodules, call get_branches on all submodules
+    #        and verify branch is consistent throughout (similar to below, but saving output for more display options)
+    # Output would then be either:
+    # - Text listing similar to current, but extend by noting branches for any submodule that differs
+    # - JSON output
+    #   - is_consistent: bool
+    #   - branches: Root branches object
+    #   - submodules: Object where key is submodule path and value is branch listing
+
+    my $branches = get_branches({
+        all => $show_all_flag,
+        merged => $show_merged_bool,
+       });
+    say encode_json($branches);
 }
 
 sub display_branches
@@ -178,11 +197,11 @@ sub display_branches
     if (defined($show_merged_bool)) 
     {
         if ($show_merged_bool) 
-	{
+        {
             $flag .= " --merged";
         }
-	else
-	{
+        else
+        {
             $flag .= " --no-merged";
         }
     }
@@ -232,7 +251,8 @@ sub ParseArgs()
         "rD!"        => \$delete_merged_remote_flag,
         "merged!"    => \$show_merged_bool,
       "all|a!" => \$show_all_flag,
-      "verbose!" => \$verbose,
+        "verbose|v!" => \$verbose,
+        "json!" => \$show_json, # For branch listing command only
       "help"            => \$help,
       "man"             => \$man,
       ) || pod2usage(1);
@@ -271,6 +291,7 @@ sub is_branch_selected_throughout($)
   my $branch = $_[0];
   my $branch_consistent_throughout = 1;
   my $cnt = 0;
+  print "Checking submodule status . . . ";
 
   submodule_foreach(sub {
       my $subname = File::Spec->catdir(shift, shift);

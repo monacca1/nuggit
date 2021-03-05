@@ -1,6 +1,6 @@
 #!/usr/bin/env perl
 package Git::Nuggit;
-our $VERSION = 0.04;
+our $VERSION = 0.05;
 # TIP: To format documentation in the command line, run "perldoc nuggit.pm"
 
 use v5.10;
@@ -262,7 +262,7 @@ Initialize Nuggit Repository by creating a .nuggit file at current location.
 sub nuggit_init
 {
     die("nuggit_init() must be run from the top level of a git repository") unless -e ".git";
-    mkdir(".nuggit");
+    mkdir(".nuggit"); # This should fail silently if folder already exists
 
     # Git .git dir (this handles non-standard directories, including bare repos and submodules)
     my $git_dir = `git rev-parse --git-dir`;
@@ -354,13 +354,20 @@ Supported options (passed directly to git) include:
 Returns a hash where key is branch name and value will be a hash with any known details.
 
 =cut
-
 sub get_branches
 {
     my $opts = shift;
     my $cmd = "git branch -vv ";
-    $cmd .= $opts if $opts;
-    say "DBG: $cmd";
+
+    if (ref($opts)) {
+        $cmd .= "-a " if $opts->{all};
+        if (defined($opts->{merged})) {
+            $cmd .= ($opts->{merged}) ? "--merged" : "--no-merged";
+        }
+    } elsif ($opts) {
+        $cmd .= $opts; # String opts given
+    }
+    
     # execute git branch
     my $raw = `$cmd`;
     my %rtv;
@@ -374,21 +381,21 @@ sub get_branches
             my ($name, $link) = $line =~ m{([\d\w\-\_/]+)\s+->\s+(.+)};
             $rtv{$name} = {name => $name, link => $link};
         } else {
-            my ($selected, $name, $commit, $upstream, $msg) = $line =~ m{^(\*?)\s+([\d\w\-\_/]+)\s+([0-9a-fA-F]+)\s+(\[[\d\w\-\_/]+\])?\s*(.*)};
-            my $obj = {name => $name, selected => $selected, commit => $commit, upstream => $upstream, msg => $msg};
+            $line =~ m/^(?<selected>\*)?\s+(?<name>\S+)\s+(?<commit>[0-9a-fA-F]+)\s+(?<upstream>\[\S+\])?\s*(?<msg>.*)/;
+            my %obj = %+;
 
             # Aide parsing when -a is used
-            if ($name =~ m{remotes/([\w+])/(.+)}) {
-                $obj->{remote} = $1;
-                $obj->{remote_branch} = $2;
+            if ($obj{name} =~ m{remotes/([\w+])/(.+)}) {
+                $obj{remote} = $1;
+                $obj{remote_branch} = $2;
             } elsif ($opts && $opts eq "-r") { # or -r
-                my ($remote,$branch) = $name =~ m{(\w+)/(.+)};
-                $obj->{remote} = $1;
-                $obj->{remote_branch} = $2;
-                $obj->{remote_full_name} = $name;
-                $name = $obj->{remote_branch};
+                my ($remote,$branch) = $obj{name} =~ m{(\w+)/(.+)};
+                $obj{remote} = $1;
+                $obj{remote_branch} = $2;
+                $obj{remote_full_name} = $obj{name};
+                $obj{name} = $obj{remote_branch};
             }
-            $rtv{$name} = $obj;
+            $rtv{$obj{name}} = \%obj;
         }
     }
     return \%rtv;
