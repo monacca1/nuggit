@@ -67,9 +67,9 @@ If defined, show changes that have been staged.
 
 =item --strategy ref|branch
 
-Nuggit strategy to use when recursing into submodules.  The default mode is ref-first.
+Nuggit strategy to use when recursing into submodules.  The default mode is branch-first.
 
-In ref-first mode, this is equivalent to "git diff --submodule=diff $obj", utilizing Git's native support for translating any submodule reference differences into their constituent changes.
+In ref-first mode, this is equivalent to "git diff --submodule=diff $obj", utilizing Git's native support for translating any submodule reference differences into their constituent changes.  WARNING: This mode will show changes in submodules based on the committed state (references), but does NOT typically reflect uncommitted changes in the working tree.
 
 In branch-first mode, this is equivalent to executing "git diff $obj" in the root repository, and recursively for each submodule.  
 
@@ -83,7 +83,7 @@ NOTE: If all branch references are synchronized with their HEAD commits, the res
 
 sub ParseArgs();
 
-my $strategy = 'ref';
+my $strategy = 'branch';
 my $verbose = 0;
 my $arg_count = 0;
 my $show_color = 1;
@@ -254,6 +254,7 @@ sub submodule_diff {
     my $diff_object1 = shift;
     my $cmd = "git diff --submodule=diff ";
     $cmd .= " --color " if $show_color;
+    $cmd .= " --cached" if $show_cached;
     $cmd .= "$diff_object1" if $diff_object1;
     
     my ($err, $stdout, $stderr) = $ngt->run($cmd);
