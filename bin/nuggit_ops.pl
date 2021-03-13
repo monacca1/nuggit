@@ -159,7 +159,7 @@ if (!$opts->{'skip-status-check'}) {
 
         pretty_print_status($status, $ngt->{relative_path_to_root}, {user_dir => $ngt->{user_dir}});
         
-        die colored("\n\u$opts->{mode} aborted due to dirty working directory.  Please stash or commit and then re-run. This check can be bypassed with --skip-status-check, however doing so may result in undefined behavior should there be conflicts in these files.", 'warn')."\n";
+        die colored("\n\u$opts->{mode} aborted due to dirty working directory.  Please stash (ie: 'ngt stash save') or commit and then re-run. This check can be bypassed with --skip-status-check, however doing so may result in undefined behavior should there be conflicts in these files.", 'warn')."\n";
     }
 }
 
@@ -908,7 +908,7 @@ sub do_operation_pre {
         if ($opts->{'message'}) {
             $cmd .= " -m \"$opts->{'message'}\"";
         } else {
-            $cmd .= " -m \"Nuggit Merged $branch into ?\""; # TODO: What is current branch name
+            $cmd .= " -m \"Nuggit Merged $branch into ".get_selected_branch_here()."\"";
         }
     } else {
         # VERIFY: Workaround for lack of no-edit flag for pull
