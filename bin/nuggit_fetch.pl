@@ -37,11 +37,13 @@ use Pod::Usage;
 
 # Initialize Nuggit & Logger prior to altering @ARGV
 my $ngt = Git::Nuggit->new("run_die_on_error" => 1, "echo_always" => 1); 
+chdir($ngt->root_dir()) || die("Can't enter root_dir\n");
 
 my $opts = {
     "all"      => 0,
     "prune"    => 0,
     "recurse-submodules" => "on-demand",
+    "ngtstrategy" => "ref",
 };
 
 ParseArgs();
