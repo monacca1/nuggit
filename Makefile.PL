@@ -21,6 +21,7 @@ WriteMakefile(
                              'bin/nuggit_fetch.pl',
                              'bin/nuggit_foreach.pl',
                              'bin/nuggit_log.pl',
+                             'bin/nuggit_merge_tree.pl',
                              'bin/nuggit_ops.pl',
                              'bin/nuggit_mv.pl',
                              'bin/nuggit_push.pl',
