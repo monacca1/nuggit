@@ -46,7 +46,7 @@ use Data::Dumper; # Debug and --dump option
 use Git::Nuggit;
 
 sub p_indent($);
-sub submodule_tree($$$);
+sub submodule_tree($$$$);
 
 
 my $ngt = Git::Nuggit->new();
@@ -84,15 +84,16 @@ print "    " . `git log -n1 $active_branch | grep commit`;
 print "==========================================================\n";
 
 
-submodule_tree($root_dir, "0000", 0);
+submodule_tree("root repo", $root_dir, "0000", 0);
 
 
 
-sub submodule_tree($$$)
+sub submodule_tree($$$$)
 {
-  my $dir      = $_[0];
-  my $ref_hash = $_[1];
-  my $indent   = $_[2];
+  my $repo     = $_[0];
+  my $dir      = $_[1];
+  my $ref_hash = $_[2];
+  my $indent   = $_[3];
   
   my $start_dir;
   my $result_dir;
@@ -136,7 +137,7 @@ sub submodule_tree($$$)
     if($head_commit ne $ref_hash)
     {
       print p_indent($indent) . "************************************************************\n";
-      print p_indent($indent) . "* Submodule inconsistent with parent reference\n";
+      print p_indent($indent) . "* Submodule $repo inconsistent with parent reference\n";
       print p_indent($indent) . "* Parent points to commit: \n";
       print p_indent($indent) . "*     $ref_hash\n";
       print p_indent($indent) . "* HEAD of branch is commit: \n";
@@ -189,7 +190,7 @@ sub submodule_tree($$$)
 
 
 #    print "Recursing into submodule: " . $_ . "\n";
-    submodule_tree($dir . "/" . $submodule,  $ref_hash,   $indent+1);
+    submodule_tree($submodule, $dir . "/" . $submodule,  $ref_hash,   $indent+1);
     chdir $dir;
   }
 
