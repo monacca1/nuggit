@@ -42,13 +42,13 @@ use Term::ANSIColor;
 # usage: 
 #
 # clear the nuggit log
-#    nuggit_log.pl -c
+#    nuggit_history.pl -c
 # show the entire nuggit log
-#    nuggit_log.pl --show-all
+#    nuggit_history.pl --show-all
 #   or with no arguments:
-#    nuggit_log.pl
+#    nuggit_history.pl
 # show the last n lines 
-#    nuggit_log.pl --show <n>
+#    nuggit_history.pl --show <n>
 #
 sub ParseArgs();
 

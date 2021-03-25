@@ -59,6 +59,7 @@ my %files =
  diff      => {cmd => "nuggit_diff.pl", completion_type => "file"},
  difftool  =>  {cmd => "nuggit_foreach.pl", args => [ qw( --log_level 0 git difftool) ] },
  fetch     => "nuggit_fetch.pl",
+ history   => "nuggit_history.pl",
  init      => "nuggit_init.pl",
  log       => "nuggit_log.pl",
  merge     => {cmd => "nuggit_ops.pl", args => ['merge']},
