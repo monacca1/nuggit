@@ -961,7 +961,7 @@ sub do_operation_pre {
             ($branch) = $stdout =~ qr{^refs/remotes/origin/(.+)$ }x;
         }
     }
-    
+
     # Validate Parameters
     if ($op ne "pull" && !$branch) {
         # Reference; Pull may optionally specify a remote, repo, or refspec. Support for these arguments in Ngt may not be fully supported (TODO).
@@ -975,15 +975,17 @@ sub do_operation_pre {
         $cmd = "git merge $branch";
     } elsif ($op eq "pull") {        
         $cmd = "git pull";
-        # TODO: Optional support for additional git arguments for remote/repo and/or commit (likely ref-first strategy only)
+
+        $opts->{remote} = "origin" if $opts->{default} && !$opts->{remote};
         if ($opts->{remote}) {
             $cmd .= " $opts->{remote}";
-            $cmd .= " $opts->{branch}" if $opts->{branch}; # pull can only specify branch if remote is also specified
+            $cmd .= " $branch" if $branch; # pull can only specify branch if remote is also specified
         }
         if (!$opts->{edit}) {
             $cmd .= " --no-edit";
         }
         $cmd .= " --rebase" if $opts->{rebase};
+
     } elsif ($op eq "rebase") {
         $cmd = "git rebase $branch";
         # TODO: Support for interactive flag? May require alt submodule handling
@@ -1140,13 +1142,23 @@ sub do_operation_post {
                 my $cmd = "git commit";
                 if ($opts->{'message'}) {
                     $cmd .= " -m \"".$opts->{'message'}."\"";
-                } elsif (!$opts->{'edit'}) { 
-                    $cmd .= " --no-edit";
+                } elsif (!$opts->{'edit'}) {
+                    if (!-e ".git/MERGE_HEAD") {
+                        # If no merge is in progress at this level (ie: we are only updating submodules), we must specify message
+                        my $branch = $opts->{branch} // "";
+                        my $mybranch = get_selected_branch_here();
+                        $cmd .= " -m \"N: Merge $branch into $mybranch\"";
+                    } else { # Use Git's auto-generated merge message
+                        $cmd .= " --no-edit";
+                    }
                 }
                 my ($err, $stdout, $stderr) = $ngt->run($cmd);
                 if ($err && ($stdout !~ /nothing to commit/i) ) {
                     # VERIFY: Will this fail if there are no changes to commit? If so, we may need additional checks above.
-                    exit_save_merge_state("Failed to commit conflict resolution at ".getcwd(), $stdout);
+                    my $errmsg = "";
+                    $errmsg .= $stdout if $stdout;
+                    $errmsg .= "\n".$stderr if $stderr;
+                    exit_save_merge_state("Failed to commit conflict resolution at ".getcwd(), $errmsg);
                 }
             }
             
