@@ -43,8 +43,15 @@ In all cases, nuggit will automatically commit any submodule references that hav
 
 See ngt-ops(1) for additional details on nuggit operations strategy.
 
+=item B<--default>
 
-=item B<--continue?
+This flag is only valid in conjunction with branch-first strategy (ie: '--branch-first --default').
+
+The default branch is the remote tracking branch defined in the submodule definition (.gitmodules), or the remote repository's default HEAD otherwise.
+
+If specified in place of a branch name, perform a merge against the default branch at all levels.
+
+=item B<--continue>
 
 Resume a merge already in progress.
 

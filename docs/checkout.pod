@@ -68,4 +68,13 @@ Using the 'branch-first' strategy, the specified branch will be checked out at t
 
 See ngt-ops(1) for additional details on nuggit operations strategy.
 
+=item B<--default>
+
+This flag is only valid in conjunction with branch-first strategy (ie: '--branch-first --default').
+
+The default branch is the remote tracking branch defined in the submodule definition (.gitmodules), or the remote repository's default HEAD otherwise.
+
+If specified in place of a branch name, perform a checkout of the default branch at all levels.
+
+
 =back

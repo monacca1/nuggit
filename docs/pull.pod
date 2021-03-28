@@ -46,7 +46,15 @@ In all cases, nuggit will automatically commit any submodule references that hav
 
 See ngt-ops(1) for additional details on nuggit operations strategy.
 
-=back
+
+=item B<--default>
+
+This flag is only valid in conjunction with branch-first strategy (ie: '--branch-first --default').
+
+The default branch is the remote tracking branch defined in the submodule definition (.gitmodules), or the remote repository's default HEAD otherwise.
+
+If specified, explicitly perform a pull of the origin's default branch in each repository.  This is equivalent to running "git pull origin $default" where $default is determined independently for each submodule.
+
 
 =item B<--rebase>
 
@@ -54,11 +62,12 @@ This flag instructs git to utilize rebase instead of merge functionality when br
 
 If specified, this flag will be passed to the underlyig 'git pull' command, or as the operation to 'submodule update' for subodules in ref-first mode.
 
-=back
 
 =item B<--remote> $remote
 
 Explicitly specify the remote to pull from.
+
+=back
 
 =head1 SEE ALSO
 

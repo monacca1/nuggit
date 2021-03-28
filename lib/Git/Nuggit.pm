@@ -669,6 +669,7 @@ sub foreach {
             'recursive '    => $user_opts->{'recursive'} // 1,
             'run_root'      => $user_opts->{'run_root'} // 0,
             'modified_only' => $user_opts->{'modified_only'} // 0,
+            'load_tracking' => $user_opts->{'load_tracking'} // 0, # If set, query submodule tracking branches
             #'parallel'     => # Reserved for future enhancement
         };
         $is_root = 1;
@@ -698,6 +699,10 @@ sub foreach {
   if (!$list || $list eq "") {
     return;
   }
+
+    # Preload submodule tracking branch info if requested
+    my $gitmodules;
+    $gitmodules = `git config --file .gitmodules --get-regexp branch` if $opts->{load_tracking};
 
   my @modules = split(/\n/, $list);
   while(my $submodule = shift(@modules))
@@ -731,6 +736,9 @@ sub foreach {
               'opts' => $user_opts,
               'subname' => File::Spec->catdir($parent,$name),
               };
+      if ($gitmodules && $gitmodules =~  m/submodule\.$name\.branch (.*)$/mg) {
+          $cb_args->{'tracking_branch'} = $1;
+      }
       
       # Pre-traversal callback (breadth-first)
       if (defined($opts->{breadth_first}) ) {

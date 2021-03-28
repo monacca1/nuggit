@@ -260,10 +260,13 @@ sub log
 sub create_user {
     my $self = shift;
     my $name = shift || "root";
+    my $opts = shift // {};
     my $dir = $self->{'test-work'}."/root.git";
+
+    my $branch = ($opts->{branch}) ? "-b $opts->{branch}" : "";
     
     ok(chdir($self->{'test-work'}));
-    $self->cmd("ngt clone $dir $name");
+    $self->cmd("ngt clone $dir $branch $name");
     ok(-d $name);
     ok(chdir($name));
     ok(-e ".nuggit", "Verify .nuggit exists after clone") or skip "Aborting test1, nuggit failed";
@@ -287,7 +290,7 @@ sub create_user {
     ok( $status->{status} == STATE('CLEAN'), "Status is clean after clone" );
     ok( $status->{unstaged_files_cnt} == 0 && $status->{staged_files_cnt}==0, "No untracked files or refs" );
     ok( !$status->{detached_heads_flag}, "No detached heads");
-    ok( $status->{branch_status_flag} == 0, "No detached heads or submodules on wrong branch" );
+    ok( $status->{branch_status_flag} == 0, "No detached heads or submodules on wrong branch" ) unless $opts->{skip_branch_check};
     return $ngt;
 }
 
@@ -403,7 +406,8 @@ sub _test_write {
     ok( $obj && $obj->{staged_status} == STATE('MODIFIED'), "Verify $fn is staged");
 
     # Commit
-    ok($self->cmd("ngt commit -m \"Update $fn file\""), "Commit $fn change");       
+    my $copts = ($opts && $opts->{no_branch_check}) ? "--no-branch-check" : "";
+    ok($self->cmd("ngt commit $copts -m \"Update $fn file\""), "Commit $fn change");
 
     # Verify Status
     $status = get_status();

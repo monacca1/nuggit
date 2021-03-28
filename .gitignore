@@ -1,2 +1,4 @@
 tmptests/
 .nuggit/
+blib/
+cover_db/
