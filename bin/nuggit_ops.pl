@@ -1102,7 +1102,7 @@ sub do_operation_post {
             # Get status -uno for current repo only
             my $status = get_status({uno => 1, no_recurse => 1});
             my $staged_cnt = 0;
-            
+
             # If any files are modified/unstaged, abort
             if ($status->{'unstaged_files_cnt'} > 0) {
                 exit_save_merge_state("Unable to complete merge.", "You have $status->{'unstaged_files_cnt'} unresolved/unstaged files remaining under ".getcwd() );
@@ -1164,7 +1164,7 @@ sub do_operation_post {
             
         },
         'run_root' => 1,
-        'modified_only' => 1
+        'modified_only' => 0 # Note: If this flag is set, it may not recurse in certain cases of modifications in nested submodules, particularly in the context of --branch-first flag.
        });
 
     # Clear merge state
