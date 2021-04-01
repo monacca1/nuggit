@@ -492,39 +492,40 @@ sub do_root_checkout_breadth_first {
     chdir("..");
 
     if ($opts->{'ngtstrategy'} eq 'branch' ) { # branch-first strategy
-        
-        my ($err, $stdout, $stderr) = $ngt->run("git submodule init $shortname");
-        
-        if (!$err && -d $shortname) {
-            chdir($shortname);
-
-            # Default flag handling
-            if (!$branch) {
-                # This should only happen if --default was specified
-                
-                if ($in->{tracking_branch}) {
-                    $branch = $in->{tracking_branch};
-                } else { # No tracking branch, revert to server default branch
-                    my ($err, $stdout, $stderr) = $ngt->run('git symbolic-ref refs/remotes/origin/HEAD');
-                    ($branch) = $stdout =~ qr{^refs/remotes/origin/(.+)$ }x;
-                }
-                if (!$branch) {
-                    say colored("Error: Unable to branch for $subname", 'error');
-                    $opts->{results}->{$subname} = {branch => "ERROR - Unable to checkout", tracking => $in->{'tracking_branch'}};
-                    return;
-                } else {
-                    $opts->{results}->{$subname} = {branch => $branch, tracking => $in->{'tracking_branch'}};
-                }
-            }
-            
-            ($err, $stdout, $stderr) = $ngt->run("git checkout $branch");
+        if ($in->{status} eq '-') {
+            my ($err, $stdout, $stderr) = $ngt->run("git submodule update --init $shortname");
             if ($err) {
                 say $stdout if $stdout;
                 say $stderr if $stderr;
-                say colored("Error: Unable to follow reference for $subname", 'error');
-                $opts->{results}->{$subname} = {branch => "ERROR - Unable to checkout", tracking => $in->{'tracking_branch'}};
+                say colored("Error: Unable to initialize $subname", 'error');
+                $opts->{results}->{$subname} = {branch => "ERROR - Unable to initialize", tracking => $in->{'tracking_branch'}};
+                return;
             }
-        } else {
+        }
+        
+        chdir($shortname);
+
+        # Default flag handling
+        if (!$branch) {
+            # This should only happen if --default was specified
+            
+            if ($in->{tracking_branch}) {
+                $branch = $in->{tracking_branch};
+            } else { # No tracking branch, revert to server default branch
+                my ($err, $stdout, $stderr) = $ngt->run('git symbolic-ref refs/remotes/origin/HEAD');
+                ($branch) = $stdout =~ qr{^refs/remotes/origin/(.+)$ }x;
+            }
+            if (!$branch) {
+                say colored("Error: Unable to branch for $subname", 'error');
+                $opts->{results}->{$subname} = {branch => "ERROR - Unable to checkout", tracking => $in->{'tracking_branch'}};
+                return;
+            } else {
+                $opts->{results}->{$subname} = {branch => $branch, tracking => $in->{'tracking_branch'}};
+            }
+        }
+        
+        my ($err, $stdout, $stderr) = $ngt->run("git checkout $branch");
+        if ($err) {
             say $stdout if $stdout;
             say $stderr if $stderr;
             say colored("Error: Unable to checkout $subname", 'error');
