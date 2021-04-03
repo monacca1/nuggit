@@ -524,21 +524,22 @@ sub logger {
 }
 
 =head2 run_foreach
-Run given command in the current repository, and all nested submodules.
+
+Run given command (str) in the current repository, and all nested submodules.
 
 Note: Current repository corresponds to current working directory. To run from nuggit root, user should change directories first. This permits greater flexibility in usage.
 
 =cut
-# TODO: submodule_foreach is now deprecated, convert to an alias of foreach with depth_first_fn and run_root flag
 sub run_foreach {
     my $self = shift;
     my $cmd = shift;
 
-    submodule_foreach(sub {
+    $self->foreach({
+        'depth_first' => sub {
                           $self->run($cmd);
-                      }
-       );
-    $self->run($cmd);
+                      },
+        'run_root' => 1
+       });
 
 }
 
@@ -695,10 +696,10 @@ sub foreach {
     }
     my $list = `git submodule`;
 
-  # TODO: Consider switching to IPC::Run3 to check for stderr for better error handling
-  if (!$list || $list eq "") {
-    return;
-  }
+    # TODO: Consider switching to IPC::Run3 to check for stderr for better error handling
+    if (!$list || $list eq "") {
+        return;
+    }
 
     # Preload submodule tracking branch info if requested
     my $gitmodules;
@@ -735,7 +736,7 @@ sub foreach {
               'label' => $label,
               'opts' => $user_opts,
               'subname' => File::Spec->catdir($parent,$name),
-              };
+          };
       if ($gitmodules && $gitmodules =~  m/submodule\.$name\.branch (.*)$/mg) {
           $cb_args->{'tracking_branch'} = $1;
       }

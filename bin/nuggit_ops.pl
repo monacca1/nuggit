@@ -189,6 +189,7 @@ if ($opts->{mode} eq "checkout") {
 } elsif ($opts->{mode} eq "rebase" || ($opts->{mode} eq "pull" && $opts->{rebase})) {
     say colored("WARNING: Rebase support is currently an experimental/untested Ngt feature. Proceed at your own risk. Do you wish to proceed? (y/n)", 'error');
     my $input = <STDIN>;
+    chomp($input);
     die "Aborting by user request.\n" if ($input ne "y");
 
     say colored('Proceeding. Please report any issues you may encounter, including steps to reproduce and resolve (manually) if applicable.', 'warn');
@@ -830,7 +831,7 @@ sub do_root_operation_breadth_first {
 
     # op mode for submodule update (differs from $op for pull, or future switch and restore commands)
     my $myop = $op;
-    if ($op eq "pull") {
+    if ($op eq "pull") { # TODO/VERIFY: This fetch may no longer be necessary
         $myop = ($opts->{'rebase'} ? "rebase" : "merge");
         
         # We must explicitly fetch the submodule being updated (VERIFY: Can we rely on parent pull to always recurse instead?)
@@ -945,7 +946,6 @@ sub abort_merge_state
 # Execute pull/merge/rebase operation in current directory (pre-recursion step) and return results
 # Note: This function performs the actual operation (ie: merge/pull/rebase) and parses results, but does not handle submodules
 # Note: This functiion only operates with the 'branch-first' strategy, which is also used for root level for ref-first mode.
-# TODO: Consider renaming this fn
 sub do_operation_pre {
     my $in = shift; # For logging when called for submodules
     my $op = $opts->{mode};
@@ -974,6 +974,14 @@ sub do_operation_pre {
     # Build Command
     if ($op eq "merge") {
         $cmd = "git merge $branch";
+
+        # Set message (does not apply to pull or rebase)
+        if ($opts->{'message'}) {
+            $cmd .= " -m \"$opts->{'message'}\"";
+        } else {
+            $cmd .= " -m \"Nuggit Merged $branch into ".get_selected_branch_here()."\"";
+        }
+
     } elsif ($op eq "pull") {        
         $cmd = "git pull";
 
@@ -986,6 +994,9 @@ sub do_operation_pre {
             $cmd .= " --no-edit";
         }
         $cmd .= " --rebase" if $opts->{rebase};
+        
+        # Workaround for lack of no-edit flag for pull
+        $ENV{'GIT_EDITOR'} = ":";
 
     } elsif ($op eq "rebase") {
         $cmd = "git rebase $branch";
@@ -994,19 +1005,8 @@ sub do_operation_pre {
         die "Internal Error: $op is not supported for this function.";
     }
 
-    $cmd .= " --squash" if $opts->{squash}; # May not be valid for rebase
+    $cmd .= " --squash" if $opts->{squash}; # May not be valid for rebase. Must be followed with ngt commit for pull
 
-    # Specify message (for merge+rebase only)
-    if ($op ne "pull") {
-        if ($opts->{'message'}) {
-            $cmd .= " -m \"$opts->{'message'}\"";
-        } else {
-            $cmd .= " -m \"Nuggit Merged $branch into ".get_selected_branch_here()."\"";
-        }
-    } else {
-        # VERIFY: Workaround for lack of no-edit flag for pull
-        $ENV{'GIT_EDITOR'} = ":";
-    }
 
     my ($err, $stdout, $stderr) = $ngt->run($cmd);
 
