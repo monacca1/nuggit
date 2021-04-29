@@ -12,3 +12,21 @@ Or using cpanm (local repository management):
    See GetOptions below for available parameters
 
 
+# What is TestDriver.pm
+   What are the enviroments set up or available via TestDrive?  David mentioned one common repo configuration set up by TestDrive.pm... what does that look like?  Should we enumerate this configuration and allow for other configurations?  
+   We should document that 030ops.t uses the specific test configuration defined in TestDriver.pm
+   drives the test
+   array
+   parses
+   command line argument parsing
+
+
+# 03-ops.t
+   array of tests  @tests is the array of all the tests in this file
+   descriptions
+   optional arguments
+   function reference for the test
+   
+# Example test in 03-ops.t
+   simple_merge... merge_test1 is the function name
+   this is the test definition...

@@ -71,6 +71,11 @@ sub base_merge_test0 {
     my $mode_flag = (shift) ? "--branch-first": ""; # If parameter was given, run test in ref-first mode
 
     # This is a single-user test
+    # This function will clone a particular repo (in the tmptest/tests/user1), in simulation of a particular developer.
+    #    root
+    #       @SM1
+    #       @SM2
+    #            @SM3
     my $user = $drv->create_user("user1");
 
     ## Setup
