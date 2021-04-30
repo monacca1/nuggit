@@ -37,19 +37,39 @@ use Git::Nuggit;
 
 use Cwd qw(getcwd);
 
+=head1 Nuggit log
+
+Display the git log of the root repository.
+
 =head1 SYNOPSIS
 
-nuggit log (recommended pipe to more or less if -n is not given
+To compare ahead and behind commits between the current and a specified branch, use --diff and --all.  It is recommended pipe to more or less if -n is not used.
 
 Example usage:
-nuggit log --diff <branch name>
-nuggit log  --diff <branch name> -n <#>
-nuggit log --diff --all <branch name>
-nuggit log --diff --all <branch-name> -n <#>
 nuggit log
 nuggit log -n <#>
+nuggit log --diff <branch name>
+nuggit log --diff --all <branch name>
+nuggit log --diff --all <branch-name> -n <#> -p
 
-todo: -p
+=over
+
+=item -n <#>
+
+Specify the number of commits to show.
+
+=item --diff <branch name>
+
+Show the ahead commits; a branch name is required.
+
+=item --all
+
+Show the ahead and behind commits ; the diff flag and branch name are also required.
+
+=item -p
+
+Include patch text.
+
 =cut
 
 sub ParseArgs();
@@ -110,7 +130,7 @@ sub ParseArgs()
     do_log();
   }
   else{
-    if ($diff_object == "") {
+    if ($diff_object eq "") {
       # branch name required
       die "branch name required";
     }
