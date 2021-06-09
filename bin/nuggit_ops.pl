@@ -159,7 +159,7 @@ if (!$opts->{'skip-status-check'}) {
 
         pretty_print_status($status, $ngt->{relative_path_to_root}, {user_dir => $ngt->{user_dir}});
         
-        die colored("\n\u$opts->{mode} aborted due to dirty working directory.  Please stash or commit and then re-run. This check can be bypassed with --skip-status-check, however doing so may result in undefined behavior should there be conflicts in these files.", 'warn')."\n";
+        die colored("\n\u$opts->{mode} aborted due to dirty working directory.  Please stash (ie: 'ngt stash save') or commit and then re-run. This check can be bypassed with --skip-status-check, however doing so may result in undefined behavior should there be conflicts in these files.", 'warn')."\n";
     }
 }
 
@@ -189,6 +189,7 @@ if ($opts->{mode} eq "checkout") {
 } elsif ($opts->{mode} eq "rebase" || ($opts->{mode} eq "pull" && $opts->{rebase})) {
     say colored("WARNING: Rebase support is currently an experimental/untested Ngt feature. Proceed at your own risk. Do you wish to proceed? (y/n)", 'error');
     my $input = <STDIN>;
+    chomp($input);
     die "Aborting by user request.\n" if ($input ne "y");
 
     say colored('Proceeding. Please report any issues you may encounter, including steps to reproduce and resolve (manually) if applicable.', 'warn');
@@ -209,7 +210,7 @@ if ($opts->{mode} eq "checkout") {
 sub ParseArgs
 {
     Getopt::Long::GetOptions( $opts,
-                              "verbose!",
+                              "verbose|v!",
                               "help!",
                               "man!",
                               "safe!",
@@ -224,6 +225,7 @@ sub ParseArgs
                               "squash!",
                               "skip-status-check!",
                               "auto-create!",
+                              "default!", # Only valid in conjunection with branch-first strategy
                               "branch=s", # Optional explicit alternative to namesless spec
                               "remote=s", # Optional explicit alternative to namesless spec
                               'message|m', # Specify message to use for any commits upon merge (optional; primarily for purposes of automated testing). If omitted, user will be prompted for commit message.  An automated message will be used if a conflict has been automatically resolved.
@@ -280,6 +282,10 @@ sub ParseArgs
     } elsif ($opts->{'ngtstrategy'} ne "branch" && $opts->{'ngtstrategy'} ne 'ref') {
         die "Invalid strategy specified.  --ngtstrategy must be 'branch' or 'ref'.  See --man for details.";
     }
+
+    # Sanity checks
+    die "--default flag is only valid in conjunection with --branch-first strategy\n" if $opts->{default} && $opts->{'ngtstrategy'} ne 'branch';
+
 }
 
 =head2 checkout_create_branch
@@ -291,7 +297,7 @@ This function should be called from the root repository.
 =cut
 sub root_checkout_create_branch
 {
-    my $branch = shift;
+    my $branch = shift || die "A branch name must be specified to create a new branch.\n";
 
     # Attempt to create branch
     my ($err, $stdout, $stderr) = $ngt->run("git checkout -b $branch");
@@ -331,30 +337,43 @@ sub root_checkout_safe
     }
 
     my $warnings = {};
-    $ngt->foreach(sub {
+    $ngt->foreach({
+        'load_tracking' => 1,
+        'breadth_first' => sub {
                       my $in = shift;
 
                       $result = checkout_safe(branch => $branch,
                                               # Auto-create branch names in all submodules when safe to do so, unless user requested otherwise
                                               autocreate => (defined($opts->{'auto-create'}) ? $opts->{'auto-create'} : 1),
-                                              subname => $in->{'subname'});
+                                              subname => $in->{'subname'},
+                                              hint_branch => $in->{'tracking_branch'},
+                                             );
                       if (!defined($result) || (defined($branch) && $result ne $branch) ) {
-                          $warnings->{$in->{'subname'}} = $result;
+                          $warnings->{$in->{'subname'}} = {branch => $result, tracking => $in->{'tracking_branch'}};
                       }
+                  }
                   });
     my @keys = keys %$warnings;
     if (scalar @keys > 0) {
         my $dbranch = ($branch) ? "checkout $branch" : "resolve detached HEADs";
-        say colored("Failed to safely checkout $dbranch in one or more submodules:\n", 'warn');
+        say colored("Failed to safely $dbranch in one or more submodules:\n", 'warn');
         printf "\t %-40s \t %-40s\n", "Submodule", "Current Branch";# "\t Submodule \t Current Branch";
         printf "\t %-40s \t %-40s\n", "---------", "--------------";
         foreach my $key (@keys) {
+            my $kbranch = $warnings->{$key}->{branch};
+            if ($kbranch && $warnings->{$key}->{tracking} && $kbranch eq $warnings->{$key}->{tracking}) {
+                $kbranch = colored($kbranch, 'green');
+            } elsif (!$kbranch) {
+                $kbranch = colored("Detached HEAD", 'error');
+            }
             printf( "\t %-40s \t %-40s\n",
                     $key,
-                    (defined($warnings->{$key}) ? $warnings->{$key} : "Detached HEAD")
+                    $kbranch
                     );
         }
-        say colored("Tip: You may wish to create a new branch (ngt checkout -b <branch>) or update submodules manually if the above state was not expected.", 'info');
+        say colored("Tip: You may wish to create a new branch (ngt checkout -b <branch>) or update submodules manually if the above state was not expected.  A ",'info')
+        .colored('green','green')
+        .colored(" highlight indicates a match to the submodule's default tracking branch.  To retrieve this information later, run 'ngt status -a'", 'info');
     } elsif (defined($branch)) {
         say colored("$branch has been successfully checked out.", 'success');
     } else {
@@ -395,6 +414,12 @@ sub root_checkout_branch
 {
     my $branch = $opts->{branch};
 
+    if (!$branch && $opts->{default}) {
+        # Default flag specified in place of branch, determine what default is for root
+        my ($err, $stdout, $stderr) = $ngt->run('git symbolic-ref refs/remotes/origin/HEAD');
+        ($branch) = $stdout =~ qr{^refs/remotes/origin/(.+)$ }x;
+    }
+
     # TODO: Alternatively, use no-arguments as option to revert to matching commit (ie: non-safe?)
     die "checkout operation requires a branch, tag or SHA reference to proceed. Specify the '--safe' flag if you only want to resolve detached HEADs where possible" unless $branch;
     my $cmd = "git checkout $branch";
@@ -410,36 +435,39 @@ sub root_checkout_branch
         .colored("See above for details. If you wish to create a new branch, specify '-b' and try again. If this branch exists remotely, you may need to run a 'ngt fetch' before proceeding.", 'info')
         ."\n";
     }
-
-    # Create a buffer for storing any warnings to summarize
-    # TODO: For ref-first strategy-only, we can optimize this to recurse only into modified submodules
-    my %results;
     
     # Foreach submodule, non-recursive (to ensure we can recurse into new submodules as added, top-down
     $ngt->foreach({
+        'load_tracking' => 1, # Load submodule tracking branch information when available
         'breadth_first' => \&do_root_checkout_breadth_first,
         'parallel'      => 1, # Use parallel execution (per-level) if available (Future enhancement) for checkout (cannot be used for merge/pull due to added complexities of conflict resolution).
         'recursive'     => 1, # Recuse into submodules. Breadth-first ensures we update a given submodule before recursing into it
         'run_root'      => 0,
         
-        # User arguments
-        'rtv'           => \%results, # Custom args
     });
 
-    my @keys = keys %results;
+    my @keys = keys %{$opts->{results}};
+    $branch = "default branch ($branch)" if $opts->{default};
     if (scalar @keys > 0) {
         say colored("Checkout of $branch completed with one or more potential warnings:", 'warn');
         printf "\t %-40s \t %-40s\n", "Submodule", "Status or Current Branch";
         printf "\t %-40s \t %-40s\n", "---------", "------------------------";
         foreach my $key (@keys) {
-            my $val = $results{$key};
+            my $val = $opts->{results}->{$key}->{branch};
+            if ($opts->{results}->{$key}->{tracking} && $opts->{results}->{$key}->{tracking} eq $val) {
+                $val = colored($val, 'green');
+            } elsif (!$val) {
+                $val = colored("Detached HEAD", 'error');
+            }
             printf( "\t %-40s \t %-40s\n",
                     $key,
-                    (defined($val) ? $val : "Detached HEAD")
+                    $val
                     );
         }
         printf "\t %-40s \t %-40s\n", "---------", "--------------";
-        say "Tip: Run 'ngt status -ad' for details on all submodules, including those in detached HEADs. Manual resolution of any detached HEADs may be required before committing in the affected submodules.";
+        say colored("Tip: You may wish to create a new branch (ngt checkout -b <branch>) or update submodules manually if the above state was not expected.  A ",'info')
+        .colored('green','green')
+        .colored(" highlight indicates a match to the submodule's default tracking branch.  To retrieve this information later, run 'ngt status -a'", 'info');
 
     } else {
         say colored("Checkout of $branch completed successfully", 'success');
@@ -465,21 +493,44 @@ sub do_root_checkout_breadth_first {
     chdir("..");
 
     if ($opts->{'ngtstrategy'} eq 'branch' ) { # branch-first strategy
-        my ($err, $stdout, $stderr) = $ngt->run("git submodule init $shortname");
-        if (!$err && -d $shortname) {
-            chdir($shortname);
-            ($err, $stdout, $stderr) = $ngt->run("git checkout $branch");
+        if ($in->{status} eq '-') {
+            my ($err, $stdout, $stderr) = $ngt->run("git submodule update --init $shortname");
             if ($err) {
                 say $stdout if $stdout;
                 say $stderr if $stderr;
-                say colored("Error: Unable to follow reference for $subname", 'error');
-                $opts->{results}->{$subname} = "ERROR - Unable to checkout";
+                say colored("Error: Unable to initialize $subname", 'error');
+                $opts->{results}->{$subname} = {branch => "ERROR - Unable to initialize", tracking => $in->{'tracking_branch'}};
+                return;
             }
-        } else {
+        }
+        
+        chdir($shortname);
+
+        # Default flag handling
+        if (!$branch) {
+            # This should only happen if --default was specified
+            
+            if ($in->{tracking_branch}) {
+                $branch = $in->{tracking_branch};
+            } else { # No tracking branch, revert to server default branch
+                my ($err, $stdout, $stderr) = $ngt->run('git symbolic-ref refs/remotes/origin/HEAD');
+                ($branch) = $stdout =~ qr{^refs/remotes/origin/(.+)$ }x;
+            }
+            if (!$branch) {
+                say colored("Error: Unable to branch for $subname", 'error');
+                $opts->{results}->{$subname} = {branch => "ERROR - Unable to checkout", tracking => $in->{'tracking_branch'}};
+                return;
+            } else {
+                $opts->{results}->{$subname} = {branch => $branch, tracking => $in->{'tracking_branch'}};
+            }
+        }
+        
+        my ($err, $stdout, $stderr) = $ngt->run("git checkout $branch");
+        if ($err) {
             say $stdout if $stdout;
             say $stderr if $stderr;
             say colored("Error: Unable to checkout $subname", 'error');
-            $opts->{results}->{$subname} = "ERROR - Unable to checkout";
+            $opts->{results}->{$subname} = {branch => "ERROR - Unable to checkout", tracking => $in->{'tracking_branch'}};
         }
     } else { # ref-first strategy
         my ($err, $stdout, $stderr) = $ngt->run("git submodule update --init --checkout $shortname");
@@ -487,16 +538,18 @@ sub do_root_checkout_breadth_first {
             say $stdout if $stdout;
             say $stderr if $stderr;
             say colored("Error: Unable to follow reference for $subname", 'error');
-            $opts->{results}->{$subname} = "ERROR - Unable to checkout";
+            $opts->{results}->{$subname} = {branch => "ERROR - Unable to checkout", tracking => $in->{'tracking_branch'}};
         } else {
             chdir($shortname);
             # Run a safe checkout to resolve any detached heads
             my $result = checkout_safe(branch => $branch,
                                        # Auto-create branch names in all submodules when safe to do so, unless user requested otherwise
                                        autocreate => (defined($opts->{'auto-create'}) ? $opts->{'auto-create'} : 1),
-                                       subname => $subname);
+                                       subname => $subname,
+                                       hint_branch => $in->{'tracking_branch'}
+                                      );
             if (!defined($result) || $result ne $branch) {
-                $opts->{results}->{$subname} = $result;
+                $opts->{results}->{$subname} = {branch => $result, tracking => $in->{'tracking_branch'}};
             }
         }
     }
@@ -512,7 +565,8 @@ sub checkout_safe
     my $tgt_branch = $args{branch};
     my $autocreate = defined($args{autocreate}) ? $args{autocreate} : 1; # Autocreate is used by default
     if ($autocreate && $args{subname}) {
-        # Note: If subname was not defined in call, we won't check config for autocreate overrides
+        # Note: If subname was not defined in call, we won't check config for autocreate overrides (aka ignore list)
+        # TODO: This may be supplemented with support for wildcards
         my $subcfgs = $ngt->cfg("submodules");
         my $subcfg = $subcfgs->{$args{subname}};
         $autocreate = 0 if defined($subcfg) && $subcfg->{exclude};
@@ -547,18 +601,42 @@ sub checkout_safe
 
     # If we have a target branch
     if ($tgt_branch) {
+        # There are several cases to handle here
+        # - Branch does not exist locally or remotely.  Create branch if $autocreate (matches will be 0)
+        # - Branch exists and matches locally - checkout_local
+        # - Branch exists remotely with match and not locally.  checkout_safe_remote() to try updating        
+        # - Branch exists remotely, but does not match and does not exist locally.  FUTURE: Consider creating new branch and setting upstream appropriately iff current SHA is an ancestor of remote SHA
+        # - Branch exists locally, but does not match local or remote.  Do nothing
+
+
+        
         # Get list of potentially matching branches (expect 0-2 matches)
         my @matches = grep( /^(origin\/)?$tgt_branch$/, @branches );
-
         if (scalar(@matches) == 2) { # origin and local branches both match, we are safe
             return checkout_local($tgt_branch);
-        } elsif (scalar(@matches) == 0) { # No match in list
+        } elsif (scalar(@matches) == 0) { # No match in list at this commit
+            
             if ($autocreate) {
-                # Branch doesn't exist or isn't safe. We'll test by trying to create it
-                my ($err, $stdout, $stderr) = $ngt->run("git checkout -b $tgt_branch");
-                if (!$err) {
-                    return $tgt_branch;
-                } # else continue on to detached-head check
+                # Does branch already exist locally? If so, nothing to be done here
+                my $exists_local = `git branch --list $tgt_branch`;
+                if (!$exists_local) {
+                    
+                    # Does branch exist remotely?
+                    my $exists_remote = `git ls-remote --heads origin $tgt_branch`;
+                    
+                    #   If not, create a new branch
+                    if (!$exists_remote) {
+                        my ($err, $stdout, $stderr) = $ngt->run("git checkout -b $tgt_branch");
+                        if (!$err) {
+                            return $tgt_branch;
+                        } else { # else continue on to detached-head check, though this shouldn't fail
+                            warn colored("WARNING: Ngt Safe Checkout unexpectedly failed to create $tgt_branch at ".getcwd(), 'warn');
+                        }
+                    }
+                    #   TODO/POSSIBLE-FUTURE-ENHANCEMENT: If yes, is current commit an ancestor of remote branch? If so, we can create it and set tracking appropriately so a status would report that we are behind.
+                    #   Otherwise proceed to detached-head checks
+
+                }
 
             } # else use default behavior (detached HEAD handling only)
         } elsif (scalar(@matches) == 1 && $matches[0] eq $tgt_branch) {
@@ -568,23 +646,25 @@ sub checkout_safe
             # Branch exists remotely.  Does branch also exist locally at a different commit?
             return $tgt_branch if checkout_safe_remote($tgt_branch, $current_commit);
         }
+
     }
+
+    # Check if caller has provided a preferred default (ie: tracking branch from parent .gitmodules)
+    #  If so, we will try this alt branch, even if not in a detached HEAD state
+    if ($args{hint_branch}) {
+        if (grep( /$args{hint_branch}$/, @branches)) {
+            return checkout_local($args{hint_branch});
+        } elsif (grep( /^origin\/$args{hint_branch}$/, @branches )) {
+            return $args{hint_branch} if (checkout_safe_remote($args{hint_branch}, $current_commit));
+        }
+    }
+
     
     if ($cur_branch) {
         # We are already on some branch (matching or not), so return it
         return $cur_branch;
     } elsif (scalar(@branches) > 0) {
         # We are in a detached head, but other branches exist matching this commit
-
-        # Check if caller has provided a preferred default (ie: tracking branch from parent .gitmodules)
-        # TODO: verify we are loading hint_branch from .gitmodules in caller
-        if ($args{hint_branch}) {
-            if (grep( /$args{hint_branch}$/, @branches)) {
-                return checkout_local($args{hint_branch});
-            } elsif (grep( /^origin\/$args{hint_branch}$/, @branches )) {
-                return $args{hint_branch} if (checkout_safe_remote($args{hint_branch}, $current_commit));
-            }
-        }
 
         # If local master is in list, use that [default default]
         if (grep( /^master$/, @branches )) {
@@ -597,8 +677,9 @@ sub checkout_safe
         #  Note; Assume Remaining List is ordered remote branches, local branches
         my $rtv = pop(@branches);
 
-        if ($rtv =~ /^origin\//) {
+        if ($rtv =~ /^origin\/(.+)/) {
             # Sanity check remote branch
+            $rtv = $1;
             return checkout_safe_remote($rtv, $current_commit);
         } else {
             return checkout_local($rtv);
@@ -671,6 +752,7 @@ sub root_operation {
         
     # Foreach submodule; run operations traversing tree in both directions
     $ngt->foreach({
+        'load_tracking' => $opts->{default}, # We only need this information for --branch-first --default operations
         'breadth_first' => \&do_root_operation_breadth_first,
         'parallel'      => 0, # Parallel operations are not practical in context of (interactive) conflict handling
         'recursive'     => 1, # Recuse into submodules. Breadth-first ensures we update a given submodule before recursing into it.
@@ -749,7 +831,7 @@ sub do_root_operation_breadth_first {
 
     # op mode for submodule update (differs from $op for pull, or future switch and restore commands)
     my $myop = $op;
-    if ($op eq "pull") {
+    if ($op eq "pull") { # TODO/VERIFY: This fetch may no longer be necessary
         $myop = ($opts->{'rebase'} ? "rebase" : "merge");
         
         # We must explicitly fetch the submodule being updated (VERIFY: Can we rely on parent pull to always recurse instead?)
@@ -864,13 +946,22 @@ sub abort_merge_state
 # Execute pull/merge/rebase operation in current directory (pre-recursion step) and return results
 # Note: This function performs the actual operation (ie: merge/pull/rebase) and parses results, but does not handle submodules
 # Note: This functiion only operates with the 'branch-first' strategy, which is also used for root level for ref-first mode.
-# TODO: Consider renaming this fn
 sub do_operation_pre {
     my $in = shift; # For logging when called for submodules
     my $op = $opts->{mode};
     my $branch = $opts->{branch}; # SHAs and Tags also supported for merge/rebase
     my $cmd;
     my $rtv = {'file_conflicts' => [], 'submodule_conflicts' => [], 'dir' => getcwd() };
+
+    # Handle --default case
+    if ($opts->{default} && !$branch) {
+        if ($in->{tracking_branch}) {
+            $branch = $in->{tracking_branch};
+        } else { # No tracking branch, revert to server default branch
+            my ($err, $stdout, $stderr) = $ngt->run('git symbolic-ref refs/remotes/origin/HEAD');
+            ($branch) = $stdout =~ qr{^refs/remotes/origin/(.+)$ }x;
+        }
+    }
 
     # Validate Parameters
     if ($op ne "pull" && !$branch) {
@@ -883,17 +974,30 @@ sub do_operation_pre {
     # Build Command
     if ($op eq "merge") {
         $cmd = "git merge $branch";
+
+        # Set message (does not apply to pull or rebase)
+        if ($opts->{'message'}) {
+            $cmd .= " -m \"$opts->{'message'}\"";
+        } else {
+            $cmd .= " -m \"Nuggit Merged $branch into ".get_selected_branch_here()."\"";
+        }
+
     } elsif ($op eq "pull") {        
         $cmd = "git pull";
-        # TODO: Optional support for additional git arguments for remote/repo and/or commit (likely ref-first strategy only)
+
+        $opts->{remote} = "origin" if $opts->{default} && !$opts->{remote};
         if ($opts->{remote}) {
             $cmd .= " $opts->{remote}";
-            $cmd .= " $opts->{branch}" if $opts->{branch}; # pull can only specify branch if remote is also specified
+            $cmd .= " $branch" if $branch; # pull can only specify branch if remote is also specified
         }
         if (!$opts->{edit}) {
             $cmd .= " --no-edit";
         }
         $cmd .= " --rebase" if $opts->{rebase};
+        
+        # Workaround for lack of no-edit flag for pull
+        $ENV{'GIT_EDITOR'} = ":";
+
     } elsif ($op eq "rebase") {
         $cmd = "git rebase $branch";
         # TODO: Support for interactive flag? May require alt submodule handling
@@ -901,19 +1005,8 @@ sub do_operation_pre {
         die "Internal Error: $op is not supported for this function.";
     }
 
-    $cmd .= " --squash" if $opts->{squash}; # May not be valid for rebase
+    $cmd .= " --squash" if $opts->{squash}; # May not be valid for rebase. Must be followed with ngt commit for pull
 
-    # Specify message (for merge+rebase only)
-    if ($op ne "pull") {
-        if ($opts->{'message'}) {
-            $cmd .= " -m \"$opts->{'message'}\"";
-        } else {
-            $cmd .= " -m \"Nuggit Merged $branch into ?\""; # TODO: What is current branch name
-        }
-    } else {
-        # VERIFY: Workaround for lack of no-edit flag for pull
-        $ENV{'GIT_EDITOR'} = ":";
-    }
 
     my ($err, $stdout, $stderr) = $ngt->run($cmd);
 
@@ -1010,7 +1103,7 @@ sub do_operation_post {
             # Get status -uno for current repo only
             my $status = get_status({uno => 1, no_recurse => 1});
             my $staged_cnt = 0;
-            
+
             # If any files are modified/unstaged, abort
             if ($status->{'unstaged_files_cnt'} > 0) {
                 exit_save_merge_state("Unable to complete merge.", "You have $status->{'unstaged_files_cnt'} unresolved/unstaged files remaining under ".getcwd() );
@@ -1050,19 +1143,29 @@ sub do_operation_post {
                 my $cmd = "git commit";
                 if ($opts->{'message'}) {
                     $cmd .= " -m \"".$opts->{'message'}."\"";
-                } elsif (!$opts->{'edit'}) { 
-                    $cmd .= " --no-edit";
+                } elsif (!$opts->{'edit'}) {
+                    if (!-e ".git/MERGE_HEAD") {
+                        # If no merge is in progress at this level (ie: we are only updating submodules), we must specify message
+                        my $branch = $opts->{branch} // "";
+                        my $mybranch = get_selected_branch_here();
+                        $cmd .= " -m \"N: Merge $branch into $mybranch\"";
+                    } else { # Use Git's auto-generated merge message
+                        $cmd .= " --no-edit";
+                    }
                 }
                 my ($err, $stdout, $stderr) = $ngt->run($cmd);
                 if ($err && ($stdout !~ /nothing to commit/i) ) {
                     # VERIFY: Will this fail if there are no changes to commit? If so, we may need additional checks above.
-                    exit_save_merge_state("Failed to commit conflict resolution at ".getcwd(), $stdout);
+                    my $errmsg = "";
+                    $errmsg .= $stdout if $stdout;
+                    $errmsg .= "\n".$stderr if $stderr;
+                    exit_save_merge_state("Failed to commit conflict resolution at ".getcwd(), $errmsg);
                 }
             }
             
         },
         'run_root' => 1,
-        'modified_only' => 1
+        'modified_only' => 0 # Note: If this flag is set, it may not recurse in certain cases of modifications in nested submodules, particularly in the context of --branch-first flag.
        });
 
     # Clear merge state

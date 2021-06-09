@@ -16,6 +16,9 @@ use Git::Nuggit::Status; # Invoke Nuggit Status function directly (functions are
 my @tests = (
     # Checkout Safe functions
     ["Safe checkout validations", \&test_safe_exist],
+    ["Verify clone/safe-checkout when submodule is on a different branch", \&clone_default_branch_test],
+
+    # TODO: Submodule deletion tests, including status+checkout+commit behavior when deletion is unstaged
     
     # Create Branch Cases (currently implicit in merge casese)
 
@@ -68,6 +71,11 @@ sub base_merge_test0 {
     my $mode_flag = (shift) ? "--branch-first": ""; # If parameter was given, run test in ref-first mode
 
     # This is a single-user test
+    # This function will clone a particular repo (in the tmptest/tests/user1), in simulation of a particular developer.
+    #    root
+    #       @SM1
+    #       @SM2
+    #            @SM3
     my $user = $drv->create_user("user1");
 
     ## Setup
@@ -385,26 +393,99 @@ sub test_safe_exist
 
     done_testing;
 }
-# ngt checkout --safe tests
-# Similar to safe_checkout sequence above, but verify nested submodules
-# Note: Be sure to test detached-head resolution only mode (no branch specified)
 
-=head1 NEXT STEPS
-- Create test2.pm
-- Port existing (base) test.pm functions into test2.pm, converting to Test2::V0 format (including use of done_testing in favor of plan)
-- Verify OOP wrapping of test cases works with a base test
-- Begin working on the 03-ops.t tests
-- Later on we'll go back and refactor the original 02-main.t cases
 
-=head1 Testing Framework updates
-- 00 - Run compilation check
-- 01 - Run "ngt check"
+# NOTE: May need to test case where a submodule is explicitly on a different branch than root
+#  Verify that said branch differs from master, then do a fresh clone and verify state
+sub clone_default_branch_test {
+    # Test reliability of cloning a repository where at least one submodule is on a different branch than root
+    my $branch1 = "master";
+    my $branch2 = "branch2";
+    my $child_branch = "child/branch";
+    my $msg1 = "Sub2 write on $child_branch";
+    my $fn1 = "sub2/README.md";
+    my $fn2 = "sub1/README.md";
+    my $msg2 = "Sub1 write for branch clone verification";
 
-=head1 NOTES: Updated Test Considerations for new OOP approach
+    # Create first user
+    my $user1 = $drv->create_user("user1");
 
-- Execution of raw ngt commands directly will be unchanged.
-- For validation, we may need to invoke some ngt functionality directly via ngt object, hence
--  TODO: Need ability to override Nuggit.pm singleton model on-demand
-    Singleton approach is primarily for efficiency, so we can just add a flag to bypass that check
+    # Create new branch for a single submodule
+    subtest "Create branch in single submodule" => sub {
+        $drv->cd_user('user1');
+        
+        ok(chdir("sub2"));
+        $drv->cmd("git checkout -b $child_branch");
+        
+        # Set $child_branch as tracking branch (updates .gitmodules)
+        $drv->cd_user('user1');
+        $drv->cmd("git submodule set-branch --branch $child_branch sub2");
+        $drv->cmd('ngt commit -am "Updated tracking branch"');
 
-=cut
+        # Update a file. Note: Ngt normally disallows commits to submodules on different branches unless explicitly ignored
+        $drv->test_write({msg => $msg1, fn => $fn1, no_branch_check => 1});
+    };
+
+    subtest "Verify Clone has expected state" => sub {
+        # Create second user, cloning specified branch
+        #  Note: create_user fn will automatically verify that there are no DETACHED HEADs
+        my $user2 = $drv->create_user("user2", {skip_branch_check => 1});
+
+        # TODO: Verify both user dirs are at the same commit
+
+        # Verify we have correct file/contents
+        my @lines;
+        ok( (@lines = read_file($fn1, chomp => 1))[-1] eq $msg1, "$fn1 ends with expected line");
+
+        # Verify State is clean
+        my $status = get_status({'all' => 1});
+        ok( status_check($status) );
+
+        # Verify sub1 and sub3 are on master, and sub2 is on $child_branch
+        ok( $status->{branch_status_flag} == 1, "Verify one or more submodules reported as on different branches");
+        ok( $status->{objects}->{sub2}->{'branch.head'} eq $child_branch, "Verify child branch is on expected non-standard branch $child_branch");
+
+    };
+
+    # Create a new branch off master in user1 and push.
+    #  Expect sub2 to be on the default $child_branch
+    subtest "Verify behavior on clone of alt branch" => sub {
+        $drv->cd_user("user1");
+        
+        # Create new branch
+        $drv->cmd("ngt checkout -b $branch2");
+        $drv->test_write({msg => $msg2, fn => $fn2});
+        
+        # Create a new user on new branch. Let create_user verify clean slate and consistent branches
+        my $user3 = $drv->create_user("user3", {branch => $branch2});
+
+        # Switch back to branch1 in user3 and verify state
+        $drv->cd_user("user3");
+        $drv->cmd("ngt checkout $branch1");
+        my $status = get_status({'all' => 1});
+        ok( status_check($status) );
+        ok( $status->{branch_status_flag} == 1, "Verify one or more submodules reported as on different branches");
+        ok( $status->{objects}->{sub2}->{'branch.head'} eq $child_branch, "Verify child branch is on expected non-standard branch $child_branch");
+        
+        
+    };
+
+    # Delete 'master' in non-default sub2, then switch to master branch and verify state
+    # This is a contrived extension of above test to reproduce an observed bug
+    subtest "Contrived Case of deleted local master with ref-first checkout of tracking branch" => sub {
+        # Go back to user1, which is still on $branch2
+        $drv->cd_user("user1");
+        ok( chdir("sub2") );
+        $drv->cmd("git branch -d $branch1");
+
+        # Checkout master branch, which should automatically invoke 'checkout --safe' in ref-first mode
+        $drv->cmd("ngt checkout $branch1");
+        chdir(".."); # Go up a directory.  get_status() by design does not automatically upcurse
+        my $status = get_status({'all' => 1});
+        ok( status_check($status) );
+        ok( $status->{branch_status_flag} == 1, "Verify one or more submodules reported as on different branches");
+        ok( $status->{objects}->{sub2}->{'branch.head'} eq $child_branch, "Verify child branch is on expected non-standard branch $child_branch");
+        
+    };
+}
+

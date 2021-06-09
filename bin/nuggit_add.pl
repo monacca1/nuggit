@@ -102,14 +102,14 @@ sub ParseArgs()
 
 sub add_all
 {
-  $ngt->run_foreach(sub {
-                        my $parent = shift;
-                        my $name = shift;
+    $ngt->foreach(sub {
+                          my $in = shift;
+                          
                         
                         my ($err, $stdout, $stderr) = $ngt->run("git add --all");
 
                         if ($err) {
-                            say colored("Failed to add all in $name.  Git reports;", 'error');
+                            say colored("Failed to add all in $in->{subname}.  Git reports;", 'error');
                             say $stdout;
                         }
                     });
