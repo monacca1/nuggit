@@ -487,6 +487,8 @@ sub do_pretty_print_status {
 
             if ($obj->{'status'} == STATE('UNINITIALIZED')) {
                 print colored(' Uninitialized', 'error');
+            } elsif ($obj->{'branch.head'} eq "(detached)") {
+                print colored(' DETACHED ('.$obj->{'branch.oid'}.') ', 'error');
             } elsif (!defined($obj->{'branch.head'})) {
                 print colored(' Detached? OID:'.$obj->{'branch.oid'}, 'warn');
             } elsif (defined($root_branch) && $obj->{'branch.head'} ne $root_branch) {

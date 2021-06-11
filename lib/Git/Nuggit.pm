@@ -1,6 +1,6 @@
 #!/usr/bin/env perl
 package Git::Nuggit;
-our $VERSION = 0.05;
+our $VERSION = 1.00;
 # TIP: To format documentation in the command line, run "perldoc nuggit.pm"
 
 use v5.10;
@@ -336,8 +336,13 @@ sub get_selected_branch($)
   $selected_branch =~ m/\*.*/;
   $selected_branch = $&;
   $selected_branch =~ s/\* // if $selected_branch;
-  
-  return $selected_branch;
+
+  if ($selected_branch =~ /^\(HEAD detached/) {
+      # If in a detached HEAD state, return undef
+      return undef;
+  } else {  
+      return $selected_branch;
+  }
 }
 
 =head2 get_branches

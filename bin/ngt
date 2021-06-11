@@ -41,6 +41,7 @@ use strict;
 use warnings;
 use v5.10; # Adds say function
 use FindBin;
+use lib $FindBin::Bin.'/../lib'; # Add local lib to path
 use Term::ANSIColor;
 
 # Get First Parameter (case-insensitive)
@@ -140,7 +141,7 @@ if (defined($ENV{'COMP_LINE'}) || defined($ENV{'COMMAND_LINE'}) ) {
 
     my $git_version = `git --version`;
     if ($git_version =~ /git version (\d)\.(\d+)\.?(\d+)?/) {
-        die "Warning: Git 2.13.2 or later is required for full functionality." unless ( ($1 >= 2 && $2 > 13) || ($1 == 2 && $2 == 13 && 3 >= 2));
+        die "Warning: Git 2.22 or later is required for full functionality.\n" unless ( ($1 > 2) || ($1 == 2 && $2 >= 22));
     } else {
         die "Unable to find git";
     }

@@ -86,7 +86,7 @@ my $unstaged_bool = 0; # If set, and cached not set, show only unstaged changes
 
 my $verbose = 0;
 my $do_dump = 0; # Output Dumper() of raw status (debug-only)
-my $do_json = 0; # Outptu in JSON format
+my $do_json = 0; # Output in JSON format
 my $flags = {
              "uno" => 0, # If set, ignore untracked objects (git -uno command). This has no effect on cached or unstaged modes (which always ignore untracked files)
              "ignored" => 0, # If set, show ignored files

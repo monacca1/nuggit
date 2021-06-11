@@ -21,6 +21,7 @@ WriteMakefile(
                              'bin/nuggit_fetch.pl',
                              'bin/nuggit_foreach.pl',
                              'bin/nuggit_history.pl',
+                             'bin/nuggit_init.pl',
 			     'bin/nuggit_log.pl',
                              'bin/nuggit_merge_tree.pl',
                              'bin/nuggit_ops.pl',
@@ -39,7 +40,7 @@ WriteMakefile(
         'docs/rebase.pod'        => 'blib/man1/nuggit-rebase.1',
         'docs/checkout.pod'      => 'blib/man1/nuggit-checkout.1',
         'docs/merge.pod'         => 'blib/man1/nuggit-merge.1',
-        'docs/merge-tree.pod'   => 'blib/man1/nuggit_tree.1',
+        'docs/merge-tree.pod'    => 'blib/man1/nuggit_tree.1',
         'bin/nuggit_ops.pl'      => 'blib/man1/nuggit-ops.1',
         'bin/nuggit_add.pl'      => 'blib/man1/nuggit-add.1',
         'bin/nuggit_branch.pl'   => 'blib/man1/nuggit-branch.1',
@@ -48,13 +49,17 @@ WriteMakefile(
         'bin/nuggit_diff.pl'     => 'blib/man1/nuggit-diff.1',
         'bin/nuggit_fetch.pl'    => 'blib/man1/nuggit-fetch.1',
         'bin/nuggit_foreach.pl'  => 'blib/man1/nuggit-foreach.1',
-        'bin/nuggit_history.pl'      => 'blib/man1/nuggit-history.1',
-	'bin/nuggit_log.pl'      => 'blib/man1/nuggit-log.1',
+        'bin/nuggit_history.pl'  => 'blib/man1/nuggit-history.1',
+        'bin/nuggit_init.pl'     => 'blib/man1/nuggit-init.1',
+        'bin/nuggit_log.pl'      => 'blib/man1/nuggit-log.1',
         'bin/nuggit_mv.pl'       => 'blib/man1/nuggit-mv.1',
         'bin/nuggit_push.pl'     => 'blib/man1/nuggit-push.1',
         'bin/nuggit_reset.pl'    => 'blib/man1/nuggit-reset.1',
         'bin/nuggit_rm.pl'       => 'blib/man1/nuggit-rm.1',
         'bin/nuggit_status.pl'   => 'blib/man1/nuggit-status.1',
+
+        # Other help pages
+        'docs/intro.pod'         => 'blib/man1/nuggit-intro.1',
 
     },
     PREREQ_PM => {

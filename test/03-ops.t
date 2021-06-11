@@ -17,6 +17,7 @@ my @tests = (
     # Checkout Safe functions
     ["Safe checkout validations", \&test_safe_exist],
     ["Verify clone/safe-checkout when submodule is on a different branch", \&clone_default_branch_test],
+    ["Detached HEAD handling", \&detached_test],
 
     # TODO: Submodule deletion tests, including status+checkout+commit behavior when deletion is unstaged
     
@@ -266,6 +267,7 @@ sub merge_test2 {
         # Edit file (remove any line starting with << == or >> for easy simulated resolution)
         edit_file_lines { $_ = '' if /^[=<>]+/ } $fn2;
         ok($drv->cmd("ngt add $fn2"), "Add conflicted file");
+
         ok(dies {
             $drv->cmd("ngt commit -m \"Commit with conflict should fail\"");
         }, "Commit with unresolved conflict should fail");
@@ -489,3 +491,30 @@ sub clone_default_branch_test {
     };
 }
 
+sub detached_test
+{
+    my $fn1 = "sub1/README.md";
+    my $msg1 = "A detached commit";
+    
+    # TODO: Consider extending with second user to test clone behavior with out-of-sync references
+    my $user = $drv->create_user("user1");
+
+    # Get root repo current SHA
+    #  Available as $status->{'branch.oid'}
+    my $status = get_status({'all' => 1});
+    
+    # Make a commit
+    $drv->test_write({msg => $msg1, fn => $fn1});
+
+    # Checkout original commit at root.
+    $drv->cmd("ngt checkout ".$status->{'branch.oid'});
+
+    # Verify status
+    # Expect detached HEAD in root and sub1, original (master) branch in sub2 and sub3
+    $status = get_status({'all' => 1});
+
+    ok( $status->{branch_status_flag} == 1, "Verify overall status indicates submodules on different branches");
+    ok( $status->{detached_heads_flag} > 0, "Verify detached head flag is set");
+    ok( $status->{objects}->{sub1}->{'branch.head'} eq '(detached)', "Verify sub1 is detached");
+    
+}

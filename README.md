@@ -1,32 +1,49 @@
 # Nuggit
 
-Nuggit is a wrapper for git that makes repositories consisting of submodules (or nested submodules) 
-work more like mono-repositories.  This is, in part, achieved by doing work on the same branch across
-all submodules and taking the appropriate action when submodules are modified, added, pushed, pulled
-etc. without requiring the user to do extra magic just for submodules.
+Nuggit is a git tool for assisting with submodule based workflows.  It
+provides additional logic wrapping native git capabilities to automate
+common operations across submodules to achieve a mono-repository like
+workflow. 
 
-A wrapper script. "ngt" can be used to invoke all of the capabilities
-defined below.  Tab auto-completion is optionally available for this wrapper.
+This is, in part, achieved by encouraging users to conduct all work on
+the same branch across all submodules, and taking the appropriate
+action when submodules are modified, added, pushed, pulled
+etc. without requiring the user to do extra magic just for
+submodules.  
+
+All functionality can be access through the 'ngt' or 'nuggit' wrapper
+scripts.  Tab auto-completion is optionally available for the 'ngt'
+form when using the Bash shell.
+
 
 The nuggit.sh or nuggit.csh shell should be sourced to add nuggit to
 your path for bash or csh respectively (required for auto-completion).
 These files can be used as an example if needed to adopt for other
-shell environments.
+shell environments.  If installed via cpan, this step is optional,
+however may be required to enable shell-specific features.
 
-Usage information for most scripts is available with a "--man" or
-"--help"  parameter.  For example, "ngt --man" or "ngt status --man".
+Full usage information is available via man pages for most scripts, or
+from the command-line by specifying '--man' (for detailed usage) or
+"--help"  (synopsis only).  For example, "ngt --man" or "ngt
+status --man".
 
+## Support
 
-### Point of Contact
-Please report any issues to the issue tracker.  Contact Chris Monaco (chris.monaco@jhuapl.edu) or David Edell (david.edell@jhuapl.edu) for more information
+Please report any issues to the [issue
+tracker](http://github.com/monacca1/nuggit) or discussions section.
 
 
 ## Installation
 Several installation options are documented below for convenience.
 
 Minimum requirements for Nuggit are:
-- Command-line Git tools, version 2.13.2 or later.
+- Command-line Git tools, version 2.22 or later.
 - Perl version 5.10 or later
+
+NOTE: The test step for nuggit will fail if git is not installed, or
+if you have not defined your git user.name and user.email.  These can
+be set with "git config --global user.email my@email.com" and "git
+config --global user.name 'J Doe'"
 
 ### CPAN (local, recommended)
 
@@ -38,6 +55,7 @@ It is intended for this module to eventually be available from CPAN as
 
 ### Makefile.PL
 
+- Install all dependencies (see Makefile.PL for listing)
 - perl Makefile.PL
 - make
 - make test     # Optional
@@ -60,410 +78,86 @@ The following commands will install cpanm and all required dependencies locally.
 - ./cpanm --local-lib=~/perl5 local::lib
 - eval $(perl -I ~/perl5/lib/perl5/ -Mlocal::lib)
   - # This command should be added to your .bashrc/.cshrc, or your PERL5LIB path manually updated.
-- ./cpanm JSON Term::ReadKey DateTime Git::Repository HTTP::Request LWP::UserAgent
-- ./cpanm --local-lib=~/perl5 local::lib && eval $(perl -I ~/perl5/lib/perl5/ -Mlocal::lib)
+- Clone or download nuggit and cd into it
+- ~/cpanm .
+  - Note: If you downloaded cpanm to an alternate location, update the
+    path accordingly.
 
-# ANSI Color Configuration / Accessibility
+
+## ANSI Color Configuration / Accessibility
 The Nuggit scripts utilize ANSI terminal colors to clarify message
 output.  Output generally uses custom alias classes of 'error',
 'warn', 'info', and 'success'.
-
-
-
-### Manual
-No non-standard modules requiring compilation are utilized by this
-suite permitting an alternative manual installation process if
-required.
-
-The following procedure is not recommended unless nominal installation
-methods are unavailable.
-
 
 Environment variables can be used to disable colored output entirely,
 or to customize the color scheme for personal preferences.  See
 https://perldoc.perl.org/Term::ANSIColor#ENVIRONMENT for details.
 
 
-# Nuggit Commands:
-
-NOTICE: The listing below may not be up to date or may be incomplete.
-Details are available for most commands by running "--help"
-(abbreviated) or "--man" (full).
-
-Commands can be run with their full names as shown below, or through
-the nuggit wrapper as described above.
-
-### nuggit add
-- Add the specified files to the staging area.  This can be done without regard to which submodule the files are located in.  nuggit
-will figure it out based on the location of the file.  In other words, you do not need to switch directory into the submodule containing
-the file in order to "add" it to the staging area for that submodule.  
-- The output of the nuggit status command will show the relative path of the files that you have changed.  The paths displayed are relative 
-to the current working directory of the shell.  The paths to the files being added using nuggit add should be relative to the current 
-working directory as well.  You can copy and paste the file/paths from the nuggit status command and use them in the nuggit add command.
-- example
-  - `nuggit add ./fsw_core/apps/appx/file.c`
-- nuggit add command utilizes the "nuggit_log.txt".  Each file that is "added" to the staging area
-using "nuggit add" will result in a nuggit log entry.  See "nuggit log"
-
-
-
-### nuggit branch
-- View the branches that exist and display if the same branch is checked out across all submodules (recursively) or if there is a 
-branch discrepancy.  The nuggit workflow requires that the root repository and all nested submodules are on the same branch for 
-development.  The default tracking branch is not required to be the same across all submodules but with the nuggit workflow, you 
-do not perform development on the default tracking branch directly (i.e master).  Instead you develop on a branch and then merge 
-to master on a remote collaboration server (i.e. bit bucket).
-- You can be anywhere in the nuggit (git) repo to execute this command.
-- example
-  - `nuggit branch`
-#### Deleting a branch
-- The nuggit branch command can be used to delete branches as well.
-  - To delete a branch that has already been merged, first delete it in the remote repository using the command:
-    - `nuggit branch -rd <branch-name>`
-  - After the branch has been deleted in the remote repository, you can delete it locally using the command:
-    - `nuggit branch -d <branch-name>`
-
-
-
-### nuggit_branch_delete_merged.pl
--This command will delete a specified branch that has already been merged. It will delete it in the local repository AND in the 
-remote repository
-- Since nuggit creates branches across all submodules to allow the relevant work to be performed in whichever submodule may need 
-the work, it will result in the creation of the branch in submodules for which the work is not performed. After a branch is merged 
-into the default tracking branch, this command can be used to delete the merged branches. This includes the repos where work was 
-performed on that branch and it includes repos were no work was performed on that branch.
-- This is a helper script that will help with the deletion of merged branches. This script calls other nuggit commands to perform the effect..
-- This script does the following:
-  - Check to make sure that you are not currently on the branch that is going to be deleted.  If the checked-out branch is
-the branch to be deleted, the delete will not work.
-  - Check to make sure that, for all repositories and submodules where the branch exists, that it has been merged (both locally and in the remote).
-  - Delete the branch in all repositories and submodules on the remote (central repo) where the branch exists and has already been merged.
-  - Delete the branch locally from all repositories and submodules where the branch exists and has already been merged.
-- You can be anywhere in the nuggit (git) repo to execute this command.
-- Command syntax:
-  - `nuggit_branch_delete_merged.pl <branch to delete>`
-- example
-  - `nuggit_branch_delete_merged.pl JIRA-XYZ`
-- TO DO - add verification to make sure that the branch has been merged in across all submodules before attempting the delete.  In other words, make sure that there
-are no commits that are not in common with master (?)  Do a pull of default and the branch in order to be sure that this is true 
-on the remote too
-- TO DO - allow this script to continue without error even if there are some submodules where the branch does not exist. 
-
-
-### nuggit checkout
-- nuggit checkout is analogous to git checkout, however, when checking out a branch, it will attempt to checkout the branch, 
-not only in the base/root repository, but also recursively in the nested submodules.  Like the git command, you can use this 
-create a new branch.  Nuggit checkout should be used to create or checkout development branches rather than using git directly.
-
-- nuggit checkout can be used to checkout an existing branch, create a new branch, (to do) 
-checkout a file or (to do) checkout a specific commit of the repository.
-- checkout an existing branch
-  - this could be a branch that exists locally or created up stream and does not yet exist locally
-  - this will checkout the existing branch in all submodules and in the root repository.  It is assumed
-that this branch was created using nuggit and thus exists in all submodules.
-  - example
-    - `nuggit checkout JIRA-XYZ`
-  - NOTE that when checking out master, or whatever the default tracking branch is.  You should use `nuggit checkout --default` rather
-  than trying to checkout master explicitly.  This is because each submodule may have its own "default tracking" branch that and it
-  may not be called master.  The `--default` option is used to checkout the default tracking branch everywhere.  With this workflow 
-  model you do not work on master, however, for your workflow it maybe appropriate to merge into master (default tracking branch) and 
-  then push.
-- create and checkout a new branch
-  - This will create the branch in the root repository and in all submodules based on the currently checked out branch and commit.  
-This is analogous to the git checkout -b command but operates across all submodules.
-  - This command can be executed anywhere in the repository and the behavior is not specific to the location where the command is executed.
-  - Syntax
-    - `nuggit checkout -b <branch_name>`
-  - example:
-    - `nuggit checkout -b JIRA-XYZ`
-- checkout an explicit file
-  - This will revert local modifications so that the file matches the committed
-  - Example: `nuggit checkout ../sm/file.c`
-- checkout a hash
-   - TO DO
-     - TO DO - this may need to use some of the logic implemented in: `nuggit_checkout.pl <branch> --follow-commit`
-
-- NOTE that if changes were pushed to this branch in a submodule using git directly (not using nuggit)
-AND the parent repositories were not updated to point to the new submodule commits, this checkout command
-will result a repository that reports local changes.
-
-
-
-#### Checkout Default
-- Usually "master" is the default tracking branch, but not always.  And since each submodule can have its own default tracking branch, if
-we want to checkout the default tracking branch we cannot specify a single explicit branch name to check out.
--"Checkout Default" is a concept which means to checkout the conceptual master branch rather than the explicit master branch.  In other 
-words, this is to check out the default tracking branch for your project.  Checkout out of the default tracking branch is achieved with 
-the nuggit checkout command with the `--default` option. 
-- `nuggit checkout --default` will identify the tracking branch of the root/base repository and check it out.  It will then do 
-the same for each nested submodule recursively.  The result of this operation will be a repository where the root/base repository and 
-each submodule is checked out the latest of the tracking branch.
-- This operation should be done instead of checking out master.
-- You can be anywhere in the nuggit (git) repo to execute this command.
-- See the command `nuggit checkout` with the `--default` option
-
-
-
-### nuggit clone
-- Clone a repository 
-- Cloning a repository containing one or more nested submodules with git requires additional steps or arguments to populate the submodules.
-- Cloning a repository containing one or more nested submodules with nuggit is intended to be as simple as cloning a mono-repository with git.  
-- nuggit will perform the additional steps required to fully populate each nested submodule.  
-- nuggit clone will also initialize this git repository so that it can be used with the rest of the nuggit commands.  Specifically it adds a 
-.nuggit in the repo root directory to hold nuggit information and data structures.
-  - i.e. 
-    - `nuggit clone ssh://git@sd-bitbucket.jhuapl.edu:7999/fswsys/mission.git`
-- you can also specify a folder name to contain the cloned repository
-  - i.e.
-    - `nuggit clone ssh://url-to.repo:7999/project/repo.git folder_name`
-
-
-
-### nuggit commit
-- Commit all of the files that have previously be added to the staging area.  See `nuggit add`.  The commit will occur in any 
-submodule that has changes that have been added to the staging area.  The commit to the submodules will cause a commit to be 
-needed in the parent directory of that submodule which nuggit will automatically perform.  In other words, for each submodule 
-that has changes to be committed, the new/updated submodule will also be added and committed in the parent repository that 
-directly contains that submodule.  This will be recursively performed up the directory structure up to the root/base repository.  
-The nuggit commit may result in multiple commits if any submodule contained changes being committed.  In this case, each commit 
-will have the same commit message as that provided by the user in the nuggit commit command.
-- You can be anywhere in the nuggit (git) repo to execute this command.
-- Command:
-  - `nuggit commit`
-- Example:
-  - `nuggit commit -m "made changes to submodule X, Y and Z to fix bug for JIRA FSWSYS-1234"`
-
-
-
-### nuggit diff
-- Show the differences between the working directory and the repository (of the entire nuggit repository)
-- Show the differences between the working copy of a file and the file in the repository
-- Show the differences between the working copy of a directory (or submodule) and the same in the repository
-- Show the differences between two branches (not yet supported)
-- usage:
-  - one argument: file with relative path from current directory (as displayed by nuggit status)
-    - i.e.
-      - `nuggit_diff ../../../path/to/file.c`
-  - one argument: a directory (or submodules directory) with relative path (as displayed by nuggit status)
-    - i.e.
-      - `nuggit_diff ../../../path/to/dir`
-  - two arguments: two branches (not yet supported)
-    - i.e.
-      - `nuggit_diff origin/branch branch`
-     
-
-        
-### nuggit fetch
-- fetches everything in the root and submodules recursively.
-- "git fetch": downloads commits, files, and refs from a remote repository to your local repository. 
-- Fetching is what you do when you want to see what everyone else has been working on.
-- Note: nuggit pull is the same as nuggit fetch followed by nuggit merge
-
-- Command:
-  - `nuggit fetch`
-- Example:
-  - `nuggit fetch`
-
-
-
-### nuggit init
-- nuggit init will take an existing git repository and initialize it to be used with nuggit.  This action
-occurs automatically when cloning a repository using nuggit.  This is conceptually similar to git init where you 
-are acting on a pre-existing directory and initializing it as a git repository.  This should be done at the root 
-level of the repository.  This will also install the .nuggit in the current directory (the root of the repo).  If the repo was cloned
-using the native git clone you will need to `nuggit init` in the root folder of the git repository in order to use nuggit with
-this repository. 
-- Note the .nuggit is part of the gitignore so it will not be managed by git.
-- Command:
-  - `nuggit init`
--Example:
-  - `nuggit init`
-        
-
-        
-### nuggit log
-- nuggit log keeps track of the significant events performed on this nuggit repository.  This is to help recall what was done and if necessary assist
-in the git-fu that may be required to get out of a sticky situation.  
-- For example, the nuggit log will show the current branch, date/time, directory of files being added to the staging area using nuggit add.
-It will show the branch, date/time, directory, commit message and which submodule references were also added and committed upon a nuggit commit.
--Command:
-  - `nuggit log`
-- Example:
-  - Show the entire nuggit log: `nuggit log`
-  - Show the nuggit commands AND the git commands that were executed: `nuggit log -a`
-  - Clear the nuggit log: `nuggit -c` or `nuggit -clear`
-  
-  
-  
-### nuggit merge
-- Merge the specified branch into the currently checked out branch in the root repository and all nested submodules.  
-- To merge one working branch into another working branch, or to merge the working branch into the default tracking branch (i.e. master), 
-first check out the destination branch, then execute `nuggit merge <source branch name>`
-- To merge a branch into the default tracking branch (i.e. master), check out the default tracking branch (`nuggit checkout --default`), 
-then `nuggit merge <branch>`
-- To merge master or default tracking branch into a working branch, first ensure that the intended destination branch is checked out (meaning
-that it is the working branch).  Instead of explicitly merging master into the checked out branch we merge the default tracking branch
-into the working branch.  The command to do this is `nuggit merge --default`.   It is a good idea to do this before trying to merge your working
-branch into master (or default tracking branch). 
-#### Handling merge conflicts
-- if there is a merge conflict the output will indicate:
-
-                >nuggit merge --default
-                No branch specified for merge, assuming default remote
-                Source branch is: 
-                Destination branch is the current branch: JIRA-BARNEY-1
-                CONFLICT (content): Merge conflict in sm2.txt
-                Merge aborted with conflicts.  Please resolve (stash or edit & stage) then run "nuggit merge --continue" to continue. 
-
-- performing nuggit status after a merge conflict was detected will show what files had the conflict as in the following:
-                > nuggit status
-                Nuggit Merge in Progress.  Complete with "ngt merge --resume" or "ngt merge --abort"
-                On branch JIRA-BARNEY-1 (c553af5fe904804689987672df1995f5f3d43081)
-                Summary Status Working: conflicted(1), Staged: conflicted(1)
-                
-                 M  sm2 Modified
-                 UU sm2/sm2.txt
-
-- Identify the conflicts:
-  - `nuggit diff <file>` or other method if one is available
-  - resolve the conflict by opening the file, identifying the conflicts and preparing the file to be committed
-  - add the files that have been resolved to the staging area
-    - `nuggit add <resolved file>`
-- continue the merge with the command `nuggit merge --continue`
-- this is an iterative process.  The merge will pause once for each submodule that has a conflict and you will need to resolve those
-  conflicts, add the files and continue the merge until you reach the root repository.
-- if you finish by resolving conflicts in the root repo you may have to commit in the root directory to complete the merge
-- push, if desired, or continue with work on the merged branch
-- TO DO - resolve the meaning of the `--resume` argument, this didn't work for me, but `--continue` did
-
-
-       
-### nuggit pull
-- pull the checked out branch from origin for the root repository.  Then foreach
-submodule pull from origin.
-- Any local, uncommitted changes will trigger a warning and will prevent git from completing
-the pull
-- Note: pull is essentially a fetch followed by a merge.
-- Command:
-  - `nuggit pull`
-- Example:
-  - `nuggit pull`
-
-
-### nuggit push
-- nuggit push will push the working branch to the remote and do this recursively (in the root repo and all submodules).  It will identify the 
-working branch and push it explicitly by name to ensure that it is pushing to the same branch across all submodules (and root repo)
-
-#### Pushing to master (or default tracking branch)
-- Since the nuggit push identifies the working branch by name and pushes to the root repo and all submodules recursively, if you have checked
-out the default tracking branch, you may not be on the same explicitly named branch across the entire repo (of submodules). There is a separate
-script (for now) to push to the default tracking branch: `nuggit_push_default.pl`.  This script will push to whatever the checked out branch 
-is, and if you checked out with `nuggit checkout --default`, it should be the default  tracking branch for each submodule.
-  - Example:
-    - `nuggit_push_default.pl`
-
-
-
-### nuggit rebase
-- Not yet implemented
-
-
-
-### nuggit relink
-- This is to be used to correct when the submodule linkages get updated outside
-of nuggit or to address other potentially inconsistencies.  The nuggit workflow enforces development on the same branch across all submodules.
-If a repository is manipulated outside of the nuggit tools / workflow, or in unexpected/undesirable conditions using nuggit, the submodule reference
-from the parent repo may point to a commit within the submodule that is not the head of that same branch within the submodule.  
-`nuggit relink` will, for each submodule that has changes,`git add` the submodule in its parent repository.  This needs to be
-followed up with a `nuggit commit`.
-
-- Command:
-  - `nuggit relink`
-- Example:
-  - `nuggit relink`
-
-
-
-### nuggit remote
-- The nuggit remote command has options for setting or getting the remote URL based on the git remote set-url and git remote get-url commands.  
-- nuggit remote set-url:
-  - This command will set the URL for the given remote for the nuggit root repository as well as all of the submodules.  
-as all of the submodules.  If the remote is not given, origin is changed by default.
-  - Command:
-    - `nuggit remote set-url [-v | --verbose] <remote name> <new url>`
-- nuggit remote get-url:
-  - This command is used to get the URL for each submodule and check if it matches the pattern for the remote URL for the nuggit root repository.  It is desirable that all of the submodules be part of the same "project" or have the same ownership. 
-  - Command:
-    - `nuggit remote get-url <remote name>`
-
-
-
-### nuggit reset
-- The nuggit reset command will unstage changes that have been "added".  Staged changes are the changes that have been added using `nuggit add`
-- TO DO - implement the ability to reset without argument to reset ALL staged changes
-- TO DO - implement the ability to unstage a new file that has been added.  This currently does not work. 
-
-
-### stash
-- Not implemented yet
-
-
-### nuggit status
-- Show the status of the nuggit repository.  This will show the current branch and any submodules or files that are new, modified, deleted, 
-conflicted, similar to git status, however, `nuggit status` will operate across submodule boundaries and recurse into nested submodules.  The 
-output of nuggit status shows the relative paths of the file or submodule (relative to the current working directory).  This is so you can
-copy and paste the path/file name back into the command line for `nuggit add` OR to `nuggit diff`
-
-- Command: 
-  - `nuggit status`
-- Example:
-  - `nuggit status`
-
-Additional flags to nuggit status exist to show additional information
-- `-a` to list all submodules, event those with no active changes.  This will trigger the detections for repositories on the wrong branch or in detached head state
-- `-d` to list additional details about each submodule including the SHA, log message, author of the most recent commit, date of commit, and branches
-
-
-### nuggit tag
-- nuggit tag can be used to see the tags in the repository
-- TO DO - implement the ability to apply tags to the current checked out branch.
-
-
-### nuggit tree
-- Show the status of the currently checked out branch from the perspective the submodule reference.  This command will show the HEAD commit for the current branch for the root repository.  It will then show the submodule has for each submodule and for each submodule it will show the HEAD commit for the current branch.  If the parent repositories reference to the submodule is different from the HEAD of the branch for that submodule, this command will indicate this condition as an inconsistency.  If the repo is only manipulated using nuggit commands, the tree command will not find any inconsistencies. 
-
-
-### nuggit version
-- Show the version of the nuggit tool.
-- it is assumed that the nuggit tool exists as a git repository and nuggit version will print out the latest commit hash for the installed nuggit repository.
-
-
-# Internal
-
-### nuggit_checkout_default.pl
-- this will recursively checkout the default branch, starting in the root repo and recursing
-down into each submodule.  Note that the default branch of a submodule may be different from
-the default branch of the root repo.  The default branch in one submodule may be different 
-from the default branch in another submodule.                  
-
-   
-        
-### nuggit_rev_list.pl
-- show the differences in between the origin branch and the local branch.  If there are non-zero
-numbers in both columns, the repository needs to be merged.
-- i.e.
-
-                bash-4.2$ nuggit_rev_list.pl 
-                Root
-                diff between remote and local for branch jira-401
-                origin  local
-                commits commits
-                |       |
-                0       1
-                Entering 'fsw_core'
-                0       3
-                Entering 'fsw_core/apps/appx'
-                1       4
-                Entering 'fsw_core/apps/appy'
-                0       0
-
+## Command List
+The following commands are currently supported.  See their man pages
+for details.
+-  add
+-  branch
+-  checkout
+-  clone
+-  commit
+-  diff
+-  difftool
+-  fetch
+-  foreach
+-  history
+-  init
+-  log
+-  merge
+-  merge-tree
+-  mergetool
+-  mv 
+-  pull
+-  push
+-  rebase
+-  remote
+-  reset
+-  rm
+-  stash save|pop|save|list|show|drop|apply|branch
+-  status
+-  tag
+
+A 'check' command is also available to verify that all dependnecies,
+including minimum git version, are installed.  This command will also
+output the current Nuggit version.
+
+## User-defined Command Aliases
+
+Nuggit supports defining custom, project-specific, command aliases.  A
+defined alias can be exeuted from anywhere within the nuggit
+repository and will operate on paths relative to the root, as with any
+native nuggit command.
+
+To define aliases, create a ".nuggit/config.json" file.  For example:
+
+```
+{
+"aliases: " {
+    "foo" : "cat version",
+    "build" : { "cmd" : "make",
+                "dir" : "app/build",
+                "log_file" : "make"
+                }
+}
+```
+
+The above example enables a command "ngt foo", that can be executed
+from anywhere within your source tree to view the contents of a
+'version' file at the root directory.  
+
+This example also defines a 'ngt build', which will run 'make' from
+the directory 'app/build' relative to the repository root.  
+
+The optional 'log_file' parameter will cause the output from this command
+to be saved relative tot he specified dir.  In this case, it would
+create app/build/makestdout.log and app/build/makestderr.log.  Output
+will not appear in the shell if the command exits without error,
+however stderr will be displayed if it fails.  In this example, a
+failed build would show you the build errors but omit any other
+nominal output from the make command.

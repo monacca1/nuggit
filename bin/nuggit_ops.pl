@@ -26,7 +26,7 @@
 
 =head1 SYNOPSIS
 
-Nuggit ops includes common nuggit checkout, rebase, merge, and pull operations. See help/man pages for those commands for details.
+Nuggit ops includes common nuggit checkout, rebase, merge, and pull operations. See man pages for those commands for details.
 
 
 =head1 Sample Commands
@@ -225,6 +225,7 @@ sub ParseArgs
                               "squash!",
                               "skip-status-check!",
                               "auto-create!",
+                              "rebase!",
                               "default!", # Only valid in conjunection with branch-first strategy
                               "branch=s", # Optional explicit alternative to namesless spec
                               "remote=s", # Optional explicit alternative to namesless spec
@@ -257,7 +258,7 @@ sub ParseArgs
 
             if (!-e $input) {
                 $input = $0;
-                $msg = colored("Error: Unable to locate documentation. Try running \"man ngt-$opts->{mode}\" for addiitonal information",'warn');
+                $msg = colored("Error: Unable to locate documentation. Try running \"man ngt-$opts->{mode}\" for additonal information",'warn');
             }
         } # else we display embedded POD from this file
 
@@ -435,6 +436,16 @@ sub root_checkout_branch
         .colored("See above for details. If you wish to create a new branch, specify '-b' and try again. If this branch exists remotely, you may need to run a 'ngt fetch' before proceeding.", 'info')
         ."\n";
     }
+
+    # Check root status
+    my $real_branch = get_selected_branch_here();
+    if (!$real_branch) {
+        if ($opts->{'ngtstrategy'} eq 'branch') {
+            say colored("Warning: Checkout of $branch at root resulted in DETACHED HEAD. Attempting to recurse, but be advised that results for this branch-first operation may be unpredictable unless '$branch' is a tag that exists in all submodules.  Usage of the default ref-first strategy is recommended in most cases.","warn");
+        } else {
+            $opts->{branch} = undef; # Ensure safe-checkout is not biased to an illegal branch name for submodules
+        }
+    }
     
     # Foreach submodule, non-recursive (to ensure we can recurse into new submodules as added, top-down
     $ngt->foreach({
@@ -446,7 +457,7 @@ sub root_checkout_branch
         
     });
 
-    my @keys = keys %{$opts->{results}};
+    my @keys = sort keys %{$opts->{results}};
     $branch = "default branch ($branch)" if $opts->{default};
     if (scalar @keys > 0) {
         say colored("Checkout of $branch completed with one or more potential warnings:", 'warn');
@@ -614,18 +625,20 @@ sub checkout_safe
         my @matches = grep( /^(origin\/)?$tgt_branch$/, @branches );
         if (scalar(@matches) == 2) { # origin and local branches both match, we are safe
             return checkout_local($tgt_branch);
-        } elsif (scalar(@matches) == 0) { # No match in list at this commit
+        } elsif (scalar(@matches) == 0) { # No match in list at this commit, local or (previously fetched) remote
             
             if ($autocreate) {
-                # Does branch already exist locally? If so, nothing to be done here
+
+                # Does branch already exist locally? If so, nothing to be done here (not safe to checkout)
                 my $exists_local = `git branch --list $tgt_branch`;
                 if (!$exists_local) {
-                    
-                    # Does branch exist remotely?
-                    my $exists_remote = `git ls-remote --heads origin $tgt_branch`;
-                    
-                    #   If not, create a new branch
+                    # We can proceed to create only if branch does NOT exist remotely.
+                    my $exists_remote = `git branch -r | grep $tgt_branch`;
+
+                    # FUTURE: We can, optionally, proceed with autocreate locally if current commit is an ancestor of remote commit (ie: a candidate for a ff-only pull).  Any other condition would not be guaranteed 'safe'
+
                     if (!$exists_remote) {
+                                        
                         my ($err, $stdout, $stderr) = $ngt->run("git checkout -b $tgt_branch");
                         if (!$err) {
                             return $tgt_branch;
@@ -633,9 +646,6 @@ sub checkout_safe
                             warn colored("WARNING: Ngt Safe Checkout unexpectedly failed to create $tgt_branch at ".getcwd(), 'warn');
                         }
                     }
-                    #   TODO/POSSIBLE-FUTURE-ENHANCEMENT: If yes, is current commit an ancestor of remote branch? If so, we can create it and set tracking appropriately so a status would report that we are behind.
-                    #   Otherwise proceed to detached-head checks
-
                 }
 
             } # else use default behavior (detached HEAD handling only)
