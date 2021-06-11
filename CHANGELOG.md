@@ -1,3 +1,10 @@
+# 1.0  2021-06
+
+This is a version number update reflecting the significant
+improvements made with recent releases.  The prior 0.4/0.5 releases
+were effectively release candidates.  This release reflects assorted bugfixes and
+documentation improvements on top of the 0.04 version described below.
+
 # 0.04 2021-01
 
 This is a significant update providing more consistent and
