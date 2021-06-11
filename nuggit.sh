@@ -10,8 +10,14 @@ while [ -h "$SOURCE" ]; do # resolve $SOURCE until the file is no longer a symli
 done
 DIR="$( cd -P "$( dirname "$SOURCE" )" >/dev/null 2>&1 && pwd )"
 
-export PATH=${PATH}:${DIR}/bin
+export PATH=${DIR}/bin:${PATH}
 export PERL5LIB=${DIR}/lib:${PERL5LIB}
 
 # Autocomplete (ngt will provide autocomplete responses for itself, when appropriate env variable is set)
 complete -C ngt ngt
+
+# cd to specified folder relative to nuggit base.
+# Note: Accepts up to two arguments for convenience when building aliases.
+ngtcd() {
+    cd $(ngt base)/$1/$2
+}

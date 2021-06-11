@@ -33,7 +33,7 @@ use Pod::Usage;
 use FindBin;
 use lib $FindBin::Bin.'/../lib'; # Add local lib to path
 use Git::Nuggit;
-
+use Term::ANSIColor;
 use Cwd qw(getcwd);
 
 =head1 SYNOPSIS
@@ -65,32 +65,25 @@ By default, all diff output is shown with ANSI terminal colors (--color).  If th
 
 If defined, show changes that have been staged.
 
+=item --strategy ref|branch
+
+Nuggit strategy to use when recursing into submodules.  The default mode is branch-first.
+
+In ref-first mode, this is equivalent to "git diff --submodule=diff $obj", utilizing Git's native support for translating any submodule reference differences into their constituent changes.  WARNING: This mode will show changes in submodules based on the committed state (references), but does NOT typically reflect uncommitted changes in the working tree.
+
+In branch-first mode, this is equivalent to executing "git diff $obj" in the root repository, and recursively for each submodule.  
+
+NOTE: If all branch references are synchronized with their HEAD commits, the results should be equivalent with either strategy.
+
+
 =back
 
 =cut
 
-# Notes
-#
-# git branch -a
-#
-# git diff origin/master master --name-status
-# git diff origin/master master --stat
-#
-# ????
-# git diff --submodule
-# git diff --cached --submodule
-
-
-# shows how many commits are on each side since the common ancestor?
-#bash-4.2$ git rev-list --left-right --count origin/master...master
-#0       2
-
-# git fetch
-# git status
-
 
 sub ParseArgs();
 
+my $strategy = 'branch';
 my $verbose = 0;
 my $arg_count = 0;
 my $show_color = 1;
@@ -103,10 +96,9 @@ my $path;
 my $diff_object1 = "";
 my $diff_object2 = "";
 
-my $ngt = Git::Nuggit->new("echo_always" => 0);
+my $ngt = Git::Nuggit->new("echo_always" => 0, "run_die_on_error" => 0) || die("Not a nuggit");
 $root_dir = $ngt->root_dir();
 
-print "nuggit root directory is: $root_dir\n" if $verbose;
 
 ParseArgs();
 $ngt->start(level => 0);
@@ -115,25 +107,32 @@ $ngt->start(level => 0);
 if($arg_count == 0)
 {
     chdir($root_dir);
-    do_diff();
-    submodule_foreach(sub {
-        my ($parent, $name, $substatus, $hash, $label, $opts) = (@_);
-        if ($parent eq ".") {
-            do_diff($name);
-        } else {
-            do_diff("$parent/$name/");
-        }
-    });
+
+    if ($strategy eq 'branch') {
+        $ngt->foreach({'run_root' => 1, 'breadth_first' => sub {
+                       my $info = shift;
+                       my $parent = $info->{'parent'};
+                       my $name = $info->{'name'};
+
+                       if ($parent eq ".") {
+                           do_diff($name);
+                       } else {
+                           do_diff("$parent/$name/");
+                       }
+                   }});
+    } else {
+        submodule_diff();
+    }
 
 }
 elsif($arg_count == 1)
 {
   # get the diff of one file
-  print "Get the diff of one object: $diff_object1\n" if $verbose;
+  say "Get the diff of one object: $diff_object1" if $verbose;
 
   if(-e $diff_object1)
   {
-    print "object $diff_object1 exists!  yay!\n" if $verbose;
+    say "$diff_object1 is a file or directory" if $verbose;
 
     my ($vol, $dir, $file) = File::Spec->splitpath( $diff_object1 );
     if ($dir) {
@@ -145,26 +144,30 @@ elsif($arg_count == 1)
   }
   else
   {
-      # TODO: Validate argument as branch, or diff between branches.  SHA1 diffs not supported by nuggit
+      # TODO: Validate argument as branch, or diff between branches.
+      # Future: SHA1 diffs would have to follow submodule references
 
       chdir($root_dir);
-      do_diff(undef, $diff_object1);
-      submodule_foreach(sub {
-             my ($parent, $name, $substatus, $hash, $label, $opts) = (@_);
-             if ($parent eq ".") {
-                 do_diff($name, $diff_object1);
-             } else {
-                 do_diff("$parent/$name/", $diff_object1);
-             }
-         });
+
+      if ($strategy eq 'branch') {
+          $ngt->foreach({
+              'recursive' => 1,
+              'run_root' => 1,
+              'breadth_first' => sub {
+                  my $in = shift;
+                  do_diff($in->{'subname'}, $diff_object1);
+                  }
+              });
+      } else {
+          submodule_diff($diff_object1);
+      }
   }
 }
 elsif($arg_count == 2)
 {
 
-  # when two arguments are provided, assume these are branches
-  print "TWO ARGUMENTS PROVIDED.  Assume these are branch names/locations\n";
-  print "This is not yet supported\n";
+    # when two arguments are provided, assume these are branches
+    die "Two argument diff format not currently supported. If you intended to compare two objects, use the alternate git syntax of 'ngt diff obj1...obj2'\n";
 
 }
 
@@ -172,21 +175,36 @@ elsif($arg_count == 2)
 
 sub ParseArgs()
 {
-  my ($help, $man);
+  my ($help, $man, $tmp_branchfirst, $tmp_reffirst);
   # Gobble up any know flags and options
 
   Getopt::Long::GetOptions(
-    "help"            => \$help,
-    "man"             => \$man,
-   "verbose!"         => \$verbose,
-   "color!"           => \$show_color,
-   "cached!"           => \$show_cached,
-                          );
+      "help"            => \$help,
+      "man"             => \$man,
+      "verbose!"        => \$verbose,
+      "color!"          => \$show_color,
+      "cached!"         => \$show_cached,
+      "strategy|s=s"      => \$strategy,
+      "branch-first!"   => \$tmp_branchfirst,
+      "ref-first!"      => \$tmp_reffirst,
+     );
   pod2usage(1) if $help;
   pod2usage(-exitval => 0, -verbose => 2) if $man;
 
+  $strategy = 'branch' if $tmp_branchfirst;
+  $strategy = 'ref' if $tmp_reffirst;
+  die "Strategy must be 'branch' or 'ref'\n" if $strategy ne 'branch' && $strategy ne 'ref';
+
   $arg_count = @ARGV;
-  print "Number of arguments $arg_count \n" if $verbose;
+
+  if ($show_color) {
+      eval {
+          BEGIN {
+              $ENV{LESS} = "-R"; # If less is available, make sure we tell it to parse ANSI color codes
+          }
+          require IO::Page;
+      };
+  }
 
   if($arg_count >= 1)
   {
@@ -222,6 +240,24 @@ sub do_diff
         # At root level, no adjustment needed.
         # NOTE: We will always display paths relative to root for consistency in case user decides to use output as a patch file
     }
+    if ($err) {
+        # TODO: Consider suppressing output if error is that $rel_path doesn't exist (unless true at all levels)
+        say colored("Failed to execute diff of $rel_path",'error');
+    }
 
     say $stdout if $stdout;
+    say $stderr if $stderr;
+}
+
+# Executive Native Git Diff, with submodule=diff flag
+sub submodule_diff {
+    my $diff_object1 = shift;
+    my $cmd = "git diff --submodule=diff ";
+    $cmd .= " --color " if $show_color;
+    $cmd .= " --cached" if $show_cached;
+    $cmd .= "$diff_object1" if $diff_object1;
+    
+    my ($err, $stdout, $stderr) = $ngt->run($cmd);
+    say $stdout if $stdout;
+    say $stderr if $stderr;
 }

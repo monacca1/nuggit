@@ -1,1 +1,10 @@
-ngt
+#!/usr/bin/env perl
+
+=head1 SYNOPSIS
+
+Run "ngt --man" or "ngt --help" for details.
+
+=cut
+
+exec("ngt", @ARGV);
+

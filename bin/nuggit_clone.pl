@@ -27,9 +27,11 @@
 
 use strict;
 use warnings;
+use v5.10;
 use FindBin;
 use Getopt::Long;
 use Pod::Usage;
+use Term::ANSIColor;
 use lib $FindBin::Bin.'/../lib'; # Add local lib to path
 use Git::Nuggit;
 use Git::Nuggit::Log;
@@ -38,13 +40,20 @@ use Git::Nuggit::Log;
 
 nuggit clone [-b BRANCH_NAME] CLONE_URL_TO_ROOT_REPO
 
+
+The clone operation will automatically attempt to resolve any detached
+HEADs after checkout. By default, nuggit will automatically create
+branches matching that of the root repository if one does not already
+exist.  This can be bypassed by specifying "--no-auto-create".
+
 =cut
 
-my ($branch, $help, $man);
+my ($branch, $help, $man, $autocreate);
 Getopt::Long::GetOptions(
                          "help"            => \$help,
                          "man"             => \$man,
                          "branch|b=s"      => \$branch,
+                         "auto-create!"    => \$autocreate,
                         );
 pod2usage(1) if $help;
 pod2usage(-exitval => 0, -verbose => 2) if $man;
@@ -61,9 +70,6 @@ if ($num_args != 1 && $num_args != 2) {
 my $url=$ARGV[0];  # URL or Path to Clone From
 my $repo=$ARGV[1]; # Name of Target Directory (implied from URL/Path otherwise)
 
-print "repo url is: $url\n";
-
-
 #isolate the text between the slash and the .git
 #i.e.
 #nuggit_clone ssh://git@sd-bitbucket.jhuapl.edu:7999/fswsys/mission.git
@@ -72,13 +78,12 @@ if (!$repo) {
     $repo = $url;
     
     # now remove beginning / and ending .git
-    $repo =~ m/\/([a-z\-\_A-Z0-9]*)(\.git)?$/;
+    $url =~ m/([\w\-\_]+)(\.git)?$/;
     
     $repo = $1;
 }
 
-
-print "repo name is: $repo\n";
+say colored("Cloning $url into $repo", 'success');
 
 my $opts = "";
 $opts .= "-b $branch " if defined($branch);
@@ -87,8 +92,23 @@ $opts .= "-b $branch " if defined($branch);
 # clone the repository
 print `git clone $opts $url --recursive -j8 $repo`;
 
-# initialize the nuggit meta data directory structure
-chdir($repo) || die "Can't enter cloned repo ($repo)";
-nuggit_init();
-my $log = Git::Nuggit::Log->new(root => '.')->start(1);
+if ($?) { # Clone exited with an error
+    if (-e $repo) {
+        say colored("Clone completed with errors.", 'error');
+        say colored("Submodules may not be fully initialized.  Please resolve any errors listed above, then run a 'ngt checkout' to attempt to complete submodule initialization (if applicable).", 'warn');
+    } else {
+        say colored("Clone failed.  See above for details", 'error');
+    }
+} else { # No error
+    # initialize the nuggit meta data directory structure
+    chdir($repo) || die "Can't enter cloned repo ($repo)";
+    nuggit_init();
+    my $log = Git::Nuggit::Log->new(root => '.')->start(1);
 
+    # Resolve any detached HEADs (will automatically print status)
+    my $cmd = File::Spec->catfile($FindBin::Bin,"ngt");
+    $cmd .= " checkout --safe";
+    $cmd .= " --no-auto-create" if defined($autocreate) && !$autocreate;
+    system($cmd);
+    say "\nClone of $url completed. See above for status.";
+}

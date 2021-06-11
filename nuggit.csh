@@ -5,7 +5,7 @@ set rootdir = `dirname $self`
 set abs_rootdir = `cd $rootdir && pwd`
 
 # Add the bin dir to your path
-setenv PATH ${PATH}:${abs_rootdir}/bin
+setenv PATH ${abs_rootdir}/bin:${PATH}
 
 # And lib to perl5lib
 if ( $?PERL5LIB ) then

@@ -9,6 +9,8 @@ use File::Spec;
 use Term::ANSIColor;
 use Cwd;
 
+# TODO: Automatic rotation of primary logfile based on filesize
+
 =head1 Nuggit Logging Library
 
 Activity is autoamtically logged to root .nuggit/nuggit_log.txt in a parseable format as required.
@@ -122,9 +124,6 @@ Log the speciied commmand.  The current working directory will be included in th
 
 =cut
 
-my $nuggit_log_fh; # TODO: This should be a blessed var, once nuggit is converted to OOP
-my $cached_root_dir; # Scaffold until we make this an object
-
 sub new
 {
     my ($class,%args) = @_;
@@ -188,9 +187,9 @@ sub parse_args
     } elsif (defined($args{root})) {
         return 0 unless (-d $args{root});
         $self->{root} = ($args{root} eq ".") ? getcwd() : File::Spec->rel2abs($args{root});
-        $self->{file} = $args{root}."/.nuggit/nuggit_log.txt";
+        $self->{file} = File::Spec->catfile($args{root}, ".nuggit", "nuggit_log.txt");
     } elsif (-d '.nuggit') {
-        $self->{file} = ".nuggit/nuggit_log.txt";
+        $self->{file} = File::Spec->catfile(".nuggit","nuggit_log.txt");
         $self->{root} = getcwd();
     } else {
         return 0;
@@ -248,7 +247,7 @@ sub start
     
     # Prepare single-command detailed log
     my $last_cmd_file = $self->{file}.".last_cmd";
-    rename($last_cmd_file, $last_cmd_file.".old") if -f $last_cmd_file && !$log_as_child;
+    rotate_file($last_cmd_file) if -f $last_cmd_file && !$log_as_child;
     open(my $log_detail_fh, '>>', $last_cmd_file) || die "Can't open last_cmd_log.txt for writing";
     $self->{log_detail_fh} = $log_detail_fh;
     $self->cmd_full($cmd);
@@ -271,6 +270,35 @@ sub start
         say $log_fh $msg.$cmd;
     }
     return $self;
+}
+
+sub rotate_file
+{
+    my $fn = shift;
+    my $cnt = shift // 7;
+
+    # Base case
+    return if (!-f $fn); # File does not exist
+    if (!-f "$fn.1") {
+        # No old file
+        rename($fn, "$fn.1");
+        return;
+    }
+
+    # Increment cnt for all existing files < $cnt (last file will be overwritten)
+
+    my @files = sort {$b cmp $a} <$fn.*>;
+    foreach my $file (@files) {
+        if ($file =~ /$fn\.(\d)/) {
+            if ($1 < $cnt) {
+                   rename("$fn.$1", "$fn.".($1+1) );
+            }
+        }
+    }
+    
+    # Finally rename our base file
+    rename($fn, "$fn.1");
+    
 }
 
 # NOTE: $keep_lines arg may be deprecated in future in favor of an export capability to overrite existing log

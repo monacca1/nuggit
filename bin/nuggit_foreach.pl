@@ -27,6 +27,8 @@
 
 =head1 SYNOPSIS
 
+If executed without arguments, this script will simplly list the known submodules.
+
 This script provides a generic wrapper for commands (got or otherwise) to be executed as-is on each submodule, with all arguments passed along.  This is effectively a wrapper for "git submodule foreach" that invokes the command depth-first, ending with the root level.
 
 Usage is:  "nuggit foreach [<opts>] -- <cmd> <args>".
@@ -73,11 +75,11 @@ use Git::Nuggit;
 
 # Modifier Arguments
 my $break_on_error = 1; # If true, die on first child task to exit with a non-zero error code
-my $opts = {
-            "recursive" => 1,
-           };
+my $recursive = 1;
+my $run_root = 0;
 my $verbose = 0;
-my $ngt = Git::Nuggit->new();
+my $breadth_first = 1; my $depth_first;
+my $ngt = Git::Nuggit->new() || die("Not a nuggit!");
 my $log_level = 1; # Set to 0 to disable logging
 my ($help, $man);
 
@@ -85,18 +87,28 @@ my ($help, $man);
 GetOptions(
            "help"            => \$help,
            "man"             => \$man,
-           "verbose!" => \$verbose,
+           "verbose!"        => \$verbose,
            "break-on-error!" => \$break_on_error,
-           "recursive!" => \$opts->{'recursive'},
-           "log_level=i" => \$log_level,
+           "recursive!"      => \$recursive,
+           "log_level=i"     => \$log_level,
+           "breadth!"  => \$breadth_first,
+           "depth!"    => \$depth_first,
+           "root!"       => \$run_root,
           );
 pod2usage(1) if $help;
 pod2usage(-exitval => 0, -verbose => 2) if $man;
 
+$breadth_first = !$depth_first if defined($depth_first);
+
 my $cmd = join(' ', @ARGV); # $Pass all remaining arguments on
 
-say "Nuggit Wrapper; $cmd";
-
+if ($cmd ne '') {
+    say "Nuggit Wrapper; $cmd";
+} else {
+    say 'Nuggit Submodule Listing:';
+    say "\nParent\tName\tStatus\tHash\tLabel";
+}
+    
 # Start at root Nuggit repo
 my $root_dir = $ngt->root_dir();
 $ngt->start(level => $log_level, verbose => $verbose);
@@ -104,13 +116,24 @@ $ngt->run_die_on_error($break_on_error);
 
 chdir $root_dir || die("Error: Can't enter root; $root_dir");
 
+$ngt->foreach({'recursive' => $recursive,
+               'run_root' => $run_root,
+               ($breadth_first ? 'breadth_first' : 'depth_first') => sub {
+                   my $in = shift;
+                   my ($parent, $name, $status, $hash, $label) = (@_);
+                   if ($cmd ne '') {
+                       say colored("$parent/$name - Executing $cmd", 'green');
+                       $ngt->run($cmd);
+                   } else {
+                       say "$in->{parent}\t$in->{name}\t$in->{status}\t$in->{hash}\t$in->{label}";
+                   }
+               }
+              });
 
-submodule_foreach(sub {
-                      my ($parent, $name, $status, $hash, $label) = (@_);
-                      say colored("$parent/$name - Executing $cmd", 'green');
-                      $ngt->run($cmd);
-                  }, $opts);
-say colored("Root ($root_dir) - $cmd", 'green');
-system($cmd);
+
+if ($cmd ne '') {
+    say colored("Root ($root_dir) - $cmd", 'green');
+    system($cmd);
+}
 
 # Done

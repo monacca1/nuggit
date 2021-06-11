@@ -31,8 +31,10 @@ use v5.10;
 use Getopt::Long;
 use Pod::Usage;
 use Cwd qw(getcwd);
+use Term::ANSIColor;
 use File::Spec;
 use Git::Nuggit;
+use JSON;
 
 =head1 SYNOPSIS
 
@@ -46,6 +48,8 @@ To list all branches, "ngt branch -a"
 
 To delete a branch, "ngt branch -d BRANCH_NAME".  See below for additional options.
 
+NOTE: The "-r" syntax for deleting remote repositories in Nuggit differs from native git. In git this command requires specifying a branch in the form 'origin/branch' and only removes them locally.  Nuggit does not require the prefix, and removes them locally and remotely.
+
 =over
 
 =item --help
@@ -58,21 +62,33 @@ Display detailed documentation.
 
 =item -d | --delete
 
+Delete specified branch from the root repository, and all submodules, providing that said branch has been merged. 
+
 Equivalent to "git branch -d", deleting the specified branch name only if it has been merged into HEAD.  This version will apply said change to all submodules.
 
-=item -D | --DELETE
+=item -D | --delete-force
 
 This flag forces deletion of the branch regardless of merged state. Usage is otherwise the same as -d above and mirrors "git branch -D"
 
+=item -r | remote
+
+Apply operation to the remote (server) branch.  
+
+This flag currently applies only branch deletion operations, and is explicitly documented below as '-rd' and '-rD'.
+
+Typical usage is: "ngt branch -rd branch" or "ngt branch -rD branch".
+
+Note: Unlike the native git branch command, no 'origin' prefix is required here.
+
 =item -rd
 
-Delete specified branch from the remote origin for the root repository, and all submodules, providing that said branch has been merged into HEAD [as known to local system].  Precede this commmand with a "ngt fetch" to ensure local knowledge is up to date with the current state of the origin to improve accuracy of this check.
+This will delete the specified branch from the remote origin for the root repository, and all submodules, providing that said branch has been merged into HEAD [as known to local system].  Precede this commmand with a "ngt fetch" to ensure local knowledge is up to date with the current state of the origin to improve accuracy of this check.
 
 This check is meant to supplement server-side hooks/settings to help minimize user errors, but does not replace the utility of additional server-side checks.
 
 =item -rD
 
-Delete specified branchf rom the remote origin for the root repository, and all submodules, unconditionally.
+Delete specified branch from the remote origin for the root repository, and all submodules, unconditionally.
 
 =item --all | -a
 
@@ -108,7 +124,7 @@ sub is_branch_selected_throughout($);
 sub create_new_branch($);
 sub get_selected_branch_here();
 
-my $ngt = Git::Nuggit->new();
+my $ngt = Git::Nuggit->new() || die("Not a nuggit!");
 
 my $cwd = getcwd();
 my $root_repo_branches;
@@ -120,6 +136,7 @@ my $delete_remote_flag        = 0;
 my $delete_merged_remote_flag = 0;
 my $show_merged_bool          = undef; # undef = default, true=merged-only, false=unmerged-only
 my $verbose = 0;
+my $show_json = 0;
 my $selected_branch = undef;
 
 # print "nuggit_branch.pl\n";
@@ -128,7 +145,6 @@ ParseArgs();
 my $root_dir = $ngt->root_dir();
 
 chdir $root_dir;
-
 
 if($delete_branch_flag)
 {
@@ -162,7 +178,30 @@ elsif (defined($selected_branch))
 else
 {
     $ngt->start(level=> 0, verbose => $verbose);
-    display_branches();
+    if ($show_json) {
+        verbose_display_branches();
+    } else {
+        display_branches();
+    }
+}
+
+sub verbose_display_branches
+{
+    # TODO: This may will eventually replace display_branches below, with a new text-output added here
+    # TODO: If user requests to check all submodules, call get_branches on all submodules
+    #        and verify branch is consistent throughout (similar to below, but saving output for more display options)
+    # Output would then be either:
+    # - Text listing similar to current, but extend by noting branches for any submodule that differs
+    # - JSON output
+    #   - is_consistent: bool
+    #   - branches: Root branches object
+    #   - submodules: Object where key is submodule path and value is branch listing
+
+    my $branches = get_branches({
+        all => $show_all_flag,
+        merged => $show_merged_bool,
+       });
+    say encode_json($branches);
 }
 
 sub display_branches
@@ -171,11 +210,11 @@ sub display_branches
     if (defined($show_merged_bool)) 
     {
         if ($show_merged_bool) 
-	{
+        {
             $flag .= " --merged";
         }
-	else
-	{
+        else
+        {
             $flag .= " --no-merged";
         }
     }
@@ -217,20 +256,31 @@ sub display_branches
 
 sub ParseArgs()
 {
-    my ($help, $man);
+    my ($help, $man, $remote_flag);
+    Getopt::Long::Configure("no_ignore_case", "bundling");
     Getopt::Long::GetOptions(
-        "delete|d!"  => \$delete_branch_flag,
-        "DELETE|D!"  => \$delete_merged_flag,
-        "rd!"        => \$delete_remote_flag,
-        "rD!"        => \$delete_merged_remote_flag,
+        "delete|d!"  => \$delete_merged_flag,
+        "delete-force|D!"  => \$delete_branch_flag,
+        "remote|r"    => \$remote_flag,
         "merged!"    => \$show_merged_bool,
-      "all|a!" => \$show_all_flag,
-      "verbose!" => \$verbose,
-      "help"            => \$help,
-      "man"             => \$man,
-      );
+        "all|a!" => \$show_all_flag,
+        "verbose|v!" => \$verbose,
+        "json!" => \$show_json, # For branch listing command only
+        "help"            => \$help,
+        "man"             => \$man,
+      ) || pod2usage(1);
     pod2usage(1) if $help;
     pod2usage(-exitval => 0, -verbose => 2) if $man;
+
+    if ($remote_flag) {
+        if ($delete_branch_flag) { $delete_branch_flag = 0; $delete_remote_flag = 1; }
+        if ($delete_merged_flag) { $delete_merged_flag = 0; $delete_merged_remote_flag = 1; }
+    }
+    die "Error: Please specify only one of '-d' or '-D' flags." if ($delete_branch_flag+$delete_remote_flag+$delete_merged_flag+$delete_merged_remote_flag) > 1;
+
+    if ( ($delete_branch_flag + $delete_merged_flag + $delete_remote_flag + $delete_merged_remote_flag) > 1) {
+        die "ERROR: Please specify only one version of delete flags (-d -D -rd -rD) at a time.";
+    }
 
     # If a single argument is specified, then it is a branch name. Otherwise user is requesting a listing.
     if (@ARGV == 1) {
@@ -260,6 +310,7 @@ sub is_branch_selected_throughout($)
   my $branch = $_[0];
   my $branch_consistent_throughout = 1;
   my $cnt = 0;
+  print "Checking submodule status . . . ";
 
   submodule_foreach(sub {
       my $subname = File::Spec->catdir(shift, shift);
@@ -287,53 +338,84 @@ sub is_branch_selected_throughout($)
   return $branch_consistent_throughout;
 }
 
+# Delete a branch only if it is merged at all levels
 sub delete_merged_branch
 {
-    delete_branch(shift, "-D");
+    my $branch = shift;
+    if (check_branch_merged_all($branch)) {
+        delete_branch($branch, "-D");
+    } else {
+        die "This branch is not known, or has not been merged into HEAD.  Use '-D' to force deletion anyway.";
+    }
 }
 
+# Base function to (unconditionally) delete a local branch, failing on first error
 sub delete_branch
 {
   my $branch = shift;
   my $flag = shift || "-d";
 
-  $ngt->run("git submodule foreach --recursive git branch $flag $branch");
-  $ngt->run("git branch $flag $branch");
+  my $cmd = "git branch $flag $branch";
+
+  # Don't use native git submodule foreach, as it's error handling (aborting) is inconsistent
+  $ngt->run_foreach($cmd);
 }
+
+# Delete a remote branch (unconditionally)
 sub delete_remote_branch
 {
     my $branch = shift;
-    $ngt->run("git push origin --delete $branch");
-    submodule_foreach(sub {
-        $ngt->run("git push origin --delete $branch");
-                      }
-        );
+    $ngt->run_foreach("git push origin --delete $branch");
 }
+
+# Delete Remote branch, only if it is merged at all levels
 sub delete_merged_remote_branch
 {
     my $branch = shift;
-    my $delete = 1;
-    my $check_cmd = "git branch -a --merged | grep 'remotes' | grep $branch";
 
-    say $check_cmd . " = " . `$check_cmd`;
-    my $status = `$check_cmd`;
-    say "DBG: Not merged" unless $status;
-    
-    $delete = 0 unless `$check_cmd`;
-    submodule_foreach(sub {
-        if (`$check_cmd`) {
-
-        } else {
-            $delete = 0;
-            say "DBG: Branch not found in ".getcwd();
-        }
-#        $delete = 0 unless `$check_cmd`;
-                      });
-    
-    if ($delete) {
-        # Branch was merged locally, so it should be safe to delete remotely
-        delete_remote_branch($branch);
+    if (check_branch_merged_all($branch, "origin")) {
+        delete_remote_branch($branch); 
     } else {
-        say "This branch is not known locally, or has not been merged into HEAD.  Use '-rD' to force deletion anyway.  It may not be possible to recover branches that have been deleted remotely.";
+        say "This branch is not known locally, or has not been merged into HEAD.  Use '-rD' to force deletion any<way.  It may not be possible to recover branches that have been deleted remotely.";
     }
 }
+
+# TODO: Make this an option to call directly, ie: ngt branch -a --merged ? Or ngt branch --check-merged $branch
+# TODO: TEST
+sub check_branch_merged_all
+{
+    my $branch = shift;
+    my $remote = shift;
+    my $status = 1; # Consider it successful, unless we find a branch that is not merged
+
+    # TODO: Replace remotes with origin for local detection?
+    my $check_cmd = "git branch -a --merged | grep $branch";
+    
+    $ngt->foreach( {'depth_first' => sub {
+                           my $state = `$check_cmd`;
+                           if (!$state) {
+                               $status = 0;
+                               say "Branch not merged/found at ".getcwd() if $verbose;
+                           } else {
+                               my @lines = split('\n', $state);
+                               my $linefound = 0;
+                               foreach my $line (@lines) {
+                                   my ($lremote, $lbranch) = $line =~ /[\s\*]*(remotes\/(\w+)\/)?([\w\-\_\/]+)/;
+                                   if ($lbranch && $lremote && $branch eq $lbranch && $remote eq $lremote) {
+                                       # Match found
+                                       #  Note: If $remote is undef, then we only match when corresponding match is as well.
+                                       $linefound = 1;
+                                   }
+                               }
+                               if (!$linefound) {
+                                   $status = 0;
+                                   say "Branch not merged/found at ".getcwd() if $verbose;
+                               }
+                           }
+                       },
+                    'run_root' => 1
+                   }
+                  );
+    return $status;
+}
+

@@ -43,9 +43,9 @@ my $ngt = Git::Nuggit->new(); # Initialize Nuggit & Logger prior to altering @AR
 my $verbose = 0;
 my ($help, $man);
 Getopt::Long::GetOptions(
-    "help"             => \$help,
-    "man"              => \$man,
-    "verbose"          => \$verbose,
+                         "help"             => \$help,
+                         "man"              => \$man,
+                         "verbose"          => \$verbose,
     );
 pod2usage(-exitval => 0, -verbose => 2) if $man;
 pod2usage(1) if $help || !defined($ARGV[0]);
@@ -63,4 +63,6 @@ my ($vol, $dir, $fn) = File::Spec->splitpath( $file );
 if ($dir) {
     chdir($dir) || die ("Error: Can't enter file's parent directory: $dir");
 }
+
+# TODO: Output stderr, but suppress other error output in ngt->run options
 $ngt->run("git rm $fn");

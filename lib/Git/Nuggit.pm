@@ -1,30 +1,42 @@
 #!/usr/bin/env perl
-our $VERSION = 0.02;
+package Git::Nuggit;
+our $VERSION = 1.00;
 # TIP: To format documentation in the command line, run "perldoc nuggit.pm"
 
 use v5.10;
 use strict;
 use warnings;
 use Cwd qw(getcwd);
-use Term::ANSIColor;
+use Term::ANSIColor 4.00 qw(coloralias);
+use Git::Nuggit::Log;
+use Cwd qw(getcwd);
+use IPC::Run3;
+use File::Spec;
+use JSON;
+use File::Slurp qw(read_file write_file);
+our @ISA = qw(Exporter);
+our @EXPORT = qw(get_submodules list_submodules_here submodule_foreach find_root_dir nuggit_init get_remote_tracking_branch get_selected_branch_here get_selected_branch do_upcurse check_merge_conflict_state get_branches);
 
-# TODO: This should become an Object where:
-# - constructor finds root dir and relative path
-# - constructor dies if not a nuggit (not called for clone or init)
-# - allow configuration of defaults/settings.  Persistent settings, if used, can be read from .nuggit directory
-
+# Nuggit Color Scheme
+#  TODO: $ngt constructor may override these if alternate scheme is specified in .nuggit/config
+#  TODO: Consider built-in theme alternatives including: no colors, or 'color-blind' mode that primarily utilizes bold/underline/italics instead
+# NOTE: This will override any values in ANSI_COLORS_ALIASES env variable
+coloralias('error', 'red');
+coloralias('warn', 'yellow');
+coloralias('info', 'cyan');
+coloralias('success', 'green');
 
 =head1 Nuggit Library
 
 This library provides common utility functions for interacting with repositories using Nuggit.
 
-=head1 Methods
+=head1 Procedural Methods
 
 =cut
 
 =head2 get_submodules()
 
-Return an array of all submodules from current (or specified) directory and below listed depth-first.
+Return an array of all submodules from current (or specified) directory and below listed depth-first, queried via git submodule foreach.
 
 NOTE: Direct usage of submodule_foreach() is preferred when possible.
 
@@ -43,8 +55,31 @@ sub get_submodules {
     return \@modules;
 }
 
+=head2 list_submodules_here([path])
+
+Return an array listing all submodules of the current (or specified) directory.  This function uses 'git config' to parse the .gitmodules file and is NOT recursive.
+
+=cut
+
+sub list_submodules_here {
+    my $path = shift;
+    my $file = ".gitmodules";
+    $file = File::Spec->catfile($path, $file) if $path;
+
+    return undef unless -e $file;
+
+    my $rtv = `git config --file $file --get-regexp path | awk '{ print \$2 }'`;
+    chomp($rtv);
+
+    my @rtv = split('\n', $rtv);
+
+    return \@rtv;
+}
+
 
 =head2 submodule_foreach(fn)
+
+WARNING: This function is now deprecated in favor of $ngt->foreach and will be phased out in a future release.
 
 Recurse into each submodule and execute the given command. This is roughly equivalent to "git submodule foreach"
 
@@ -90,6 +125,19 @@ Hash containing list of user options.  Currently supported options are:
 
 =item recursive If false, do not recurse into nested submodules
 
+=item breadth_first_fn
+If defined, execute this callback function prior to recursing into nested submodules.
+
+The main callback function is executed after visiting all nested submodules.
+
+=item recursive
+
+If set, or undefined, recurse into any nested submodules. If set to 0, only visit submodules of the current repository.
+
+=item TODO/FUTURE: parallel
+
+If defined, parse each submodule in parallel using fork/wait
+
 =item FUTURE: Option may include a check if .gitmodules matches list reported by git submodule
 
 =back
@@ -103,8 +151,14 @@ Path of Parent Directory. In each recursion, the submodule name will be appended
 =cut
 
 sub submodule_foreach {
-  my $fn = shift;
-  my $opts = shift;
+    my ($fn, $opts);
+    if (ref $_[0] eq "CODE") {
+        $fn = shift;
+        $opts = shift;
+    } else {
+        $opts = shift;
+        $fn = $opts->{'depth_first_fn'};
+    }
   my $parent = shift || ".";
   my $cwd = getcwd();
 
@@ -138,12 +192,13 @@ sub submodule_foreach {
       # Pre-traversal callback (breadth-first)
       if (defined($opts) && defined($opts->{breadth_first_fn}) ) {
           $opts->{breadth_first_fn}->($parent, $name, $status, $hash, $label, $opts);
+          chdir(File::Spec->catdir($cwd,$name)) || die "Error returning to directory"; # In case caller changes folder
       }
 
 
       # Recurse
       if (!$opts || !defined($opts->{recursive}) || (defined($opts->{recursive}) && $opts->{recursive})) {
-          submodule_foreach($fn, $opts, $name);
+          submodule_foreach($fn, $opts, File::Spec->catdir($parent,$name));
       }
 
       # Callback (depth-first)
@@ -185,7 +240,7 @@ sub find_root_dir
             #     print ".nuggit exists at $nuggit_root\n";
             $path = "./" unless $path;
             chdir($cwd);
-            return ($nuggit_root, $path);
+            return ($nuggit_root, $path, $cwd);
         }
         chdir "../";
         $path = "../".$path;
@@ -207,7 +262,7 @@ Initialize Nuggit Repository by creating a .nuggit file at current location.
 sub nuggit_init
 {
     die("nuggit_init() must be run from the top level of a git repository") unless -e ".git";
-    mkdir(".nuggit");
+    mkdir(".nuggit"); # This should fail silently if folder already exists
 
     # Git .git dir (this handles non-standard directories, including bare repos and submodules)
     my $git_dir = `git rev-parse --git-dir`;
@@ -281,8 +336,74 @@ sub get_selected_branch($)
   $selected_branch =~ m/\*.*/;
   $selected_branch = $&;
   $selected_branch =~ s/\* // if $selected_branch;
-  
-  return $selected_branch;
+
+  if ($selected_branch =~ /^\(HEAD detached/) {
+      # If in a detached HEAD state, return undef
+      return undef;
+  } else {  
+      return $selected_branch;
+  }
+}
+
+=head2 get_branches
+
+Get a listing of all branches in the current repository/directory.
+
+Supported options (passed directly to git) include:
+- get_branches() - Return a list of all local branches
+- get_branches("-a") - Return a list of all local+remote branches (ie: $branch or remotes/origin/$branch)
+- get_branches("-r") - Return a list of all remote branches (ie: origin/$branch)
+- get_branches("--merged")
+- get_branches("--no-merged")
+
+Returns a hash where key is branch name and value will be a hash with any known details.
+
+=cut
+sub get_branches
+{
+    my $opts = shift;
+    my $cmd = "git branch -vv ";
+
+    if (ref($opts)) {
+        $cmd .= "-a " if $opts->{all};
+        if (defined($opts->{merged})) {
+            $cmd .= ($opts->{merged}) ? "--merged" : "--no-merged";
+        }
+    } elsif ($opts) {
+        $cmd .= $opts; # String opts given
+    }
+    
+    # execute git branch
+    my $raw = `$cmd`;
+    my %rtv;
+    my @lines = split("\n", $raw);
+
+    foreach my $line (@lines) {
+        if ($line =~ /HEAD detached at ([0-9a-fA-F]+)/) {
+            # Special handling
+            $rtv{'HEAD'} = {commit => $1};
+        } elsif ($line =~ /HEAD\s+->\s/) {
+            my ($name, $link) = $line =~ m{([\d\w\-\_/]+)\s+->\s+(.+)};
+            $rtv{$name} = {name => $name, link => $link};
+        } else {
+            $line =~ m/^(?<selected>\*)?\s+(?<name>\S+)\s+(?<commit>[0-9a-fA-F]+)\s+(?<upstream>\[\S+\])?\s*(?<msg>.*)/;
+            my %obj = %+;
+
+            # Aide parsing when -a is used
+            if ($obj{name} =~ m{remotes/([\w+])/(.+)}) {
+                $obj{remote} = $1;
+                $obj{remote_branch} = $2;
+            } elsif ($opts && $opts eq "-r") { # or -r
+                my ($remote,$branch) = $obj{name} =~ m{(\w+)/(.+)};
+                $obj{remote} = $1;
+                $obj{remote_branch} = $2;
+                $obj{remote_full_name} = $obj{name};
+                $obj{name} = $obj{remote_branch};
+            }
+            $rtv{$obj{name}} = \%obj;
+        }
+    }
+    return \%rtv;
 }
 
 =head2 do_upcurse
@@ -309,183 +430,7 @@ sub do_upcurse
     return $root_dir;
 }
 
-=head2 git_submodule_status
-
-DEPRECATED: Use Git::Nuggit::Status instead.  This function may be removed at any time.
-
-Get status of Nuggit repository and return as a string.
-
-NOTE: This API may be refactored in future to return a data structure to seperate display and backend logic.
-
-Returns a status object (ref) containing:
-- status - clean || modified   (Future updates may add untracked, refs-only, or other status words/flags)
-- name   - Name of repository
-- path   - Full path to root of this repository
-- branch - Current branch
-- raw     - Output from underlying git command(s) with minimal parsing to clarify paths
-- children - An array of submodules, each of which is a status object of this type.
-
-=cut
-
-sub nuggit_status
-{
-  my $status;
-  my $root_dir = getcwd(); # Caller should chdir() first if an alternate starting dir desired
-  my $submodule_branch;
-  my $status_cmd;
-  my $status_cmd_mode = shift;
-  my $untracked_mode = shift; # If true, ignore untracked files
-  my $relative_path_to_root = shift; # TODO: This will be removed (handled in print fn instead) once status output is pre-parsed.
-
-  # identify the checked out branch of root repo
-  # execute git branch
-  my $branches = `git branch`;
-  my $root_repo_branch = get_selected_branch($branches);
-
-  # Replace mode with Git::Repository::Status, and apply to output filtering only
-  if ($status_cmd_mode eq "cached") 
-  {
-      $status_cmd = "git diff --name-only --cached";
-  }
-  elsif ($status_cmd_mode eq "unstaged")
-  {
-      $status_cmd = "git diff --name-only";
-  }
-  else 
-  {
-      $status_cmd = "git status --porcelain";
-      $status_cmd .= " -uno" if $untracked_mode;
-  }
-
-  my $submodules = get_submodules();
-  my $opts = {'status_cmd' => $status_cmd, 'status_cmd_mode' => $status_cmd_mode,
-              'output' => {}, 'out_children' => {}};
-
-  # Pass along relative path to root (this is a placeholder pending full parsing of status)
-  $opts->{'relative_path_to_root'} = $relative_path_to_root if (defined($relative_path_to_root));
-
-  $status = _nuggit_status($opts); # Get root status
-
-  # Recurse into submodules
-  submodule_foreach(\&_nuggit_status, $opts);
-
-  # And cleanup parent<->child relations (since we parse status depth-first
-  my $list = $opts->{'out_children'};
-  foreach my $child (keys %$list) {
-      my $parent = $opts->{output}{$child};
-      if (defined($parent)) {
-          $parent->{children} = $opts->{'out_children'}{$child};
-      } else {
-          die "Internal Error: $child is orphaned" unless $child eq '.';
-      }
-  }
-
-  return $status;
-} # end nuggit_status()
-
-# Internal status function called by git_submodule_status().  See above for details.
-sub _nuggit_status
-{
-    my $rtv;
-    my ($parent, $name, $substatus, $hash, $label, $opts) = (@_);
-
-    if (scalar(@_) > 4) {
-        #my $subpath = $parent . '/' . $name .'/';
-        my $subname = ($parent eq '.') ? "$name" : "$parent/$name";
-
-        die("Internal Error: Duplicate repo at $subname") if defined($opts->{output}{$subname});
-        $rtv = {
-                'path' => $subname.'/',
-                'name' => $name,
-                'substatus' => $substatus, # Status of parent reference
-                'sha1' => $hash, # VERIFY
-                'label' => $label,
-               };
-
-        # Save reference to self 
-        $opts->{output}{$subname} = $rtv;
-
-        # And save as a child of $parent (to be added to children object later)
-        $opts->{out_children}{$parent} = [] if !defined($opts->{out_children}{$parent});
-        push(@{$opts->{out_children}{$parent}}, $rtv);
-
-    } else {
-        $opts = shift; # opts is sole-argument when called in this mode. Other args unneeded.
-        $rtv = {
-                'path' => './',
-                'name' => $name,
-               };
-        $opts->{output}{'.'} = $rtv;
-    }
-
-    my $status;
-    my $branches;
-    my $submodule_branch;
-
-    my $status_cmd = $opts->{'status_cmd'} || die("Internal Error: missing status_cmd");
-    my $status_cmd_mode = $opts->{'status_cmd_mode'} || die("Internal Error: missing status_cmd_mode");
-
-    $branches = `git branch`;
-    $submodule_branch = get_selected_branch($branches);
-    $rtv->{'branch'} = $submodule_branch;
-
-    $status = `$status_cmd`;
-
-    if($status ne "")
-    {
-        # Decode raw status
-        $rtv->{'files'} = {};
-        my @lines = split("\n", $status);
-
-        foreach my $line (@lines) {
-            if ($status_cmd_mode eq "status") {
-                if ($line =~ /^\s+(\w+)\s+([\.\w\-\/]+)/) {
-                    my $status = $1;
-                    my $file = $2;
-                    $rtv->{'files'}{$file} = $status;
-                }
-            } else {
-                $line =~ s/^\s+|\s+$//g; # Trim any whitespace
-                $rtv->{'files'}{$line} = ($status_cmd_mode eq "cached") ? 'S' : 'M';
-            }
-        }
-        
-        # add the repo path to the output from git that just shows the file
-        # TODO: Replace original path conversion with parsing of status
-        if (defined($opts->{'relative_path_to_root'})) {
-            my $relative_path_to_root = $opts->{'relative_path_to_root'};
-            my $subpath = $rtv->{'path'};
-            $subpath = "" if $subpath eq "./"; # Hide useless ./
-
-            if ($status_cmd_mode eq "status")
-            {
-                $status =~ s/^(...)/$1$relative_path_to_root$subpath/mg;
-            } 
-            else # cached or unstaged.  FIXME: S=staged, unstaged should be M or ?
-            {
-                $status =~ s/^(.)/S   $relative_path_to_root$subpath$1/mg;
-            }
-        }
-        $rtv->{'raw'} = $status;
-        $rtv->{'status'} = "modified"; # TODO: We can do better . . .
-
-    }
-    else
-    {
-        $rtv->{'status'} = 'clean';
-    }
-
-    # =============================================================================
-    # to do - detect if there are any remote changes
-    # with this workflow you should be keeping the remote branch up to date and 
-    # fully consitent across all submodules
-    # - show any commits on the remote that are not here.
-    # =============================================================================
-#    print "TO DO - SHOW ANY COMMITS ON THE REMOTE THAT ARE NOT HERE ??? or make this a seperate command?\n";
-    return $rtv;
-}
-
-=head1 check_merge_conflict_state()
+=head2 check_merge_conflict_state()
 
 Checks if a merge operation is in progress, and dies if it is.
 
@@ -498,37 +443,30 @@ DEPRECATED - Use $ngt->merge_conflict_state(1) instead
 sub check_merge_conflict_state
 {
     my $root_dir = shift || '.';
-    if( -e "$root_dir/.nuggit/merge_conflict_state") {
+    if( -e "$root_dir/.nuggit/merge_conflict") {
         die "A merge is in progress.  Please complete with 'ngt merge --continue' or abort with 'ngt merge --abort' before proceeding.";
     }
 }
 
-=head1 Nuggit OOP Interface
-
-Documentation TODO
+=head1 Object Oriented Interface
 
 The following is an initial cut at an OOP interface.  The OOP interface is incomplete at this stage
- and serves as a convenience wrapper for other commands, and Nuggit::Log
+ and serves primarily as a convenience wrapper for other commands, and Nuggit::Log
 
 =cut
-
-package Git::Nuggit;
-use Git::Nuggit::Log;
-use Cwd qw(getcwd);
-use IPC::Run3;
 
 sub new
 {
     my ($class, %args) = @_;
     # This is a Singleton library, handled transparently for the user
-    # Future: If a non-singleton use case arises, we can add a flag to bypass it below
+    # Note: At present, singleton logic is for optimization only. The bypass_singleton flag can be used to instantiate a new instance, intended only for usage by test drivers.
     state $instance;
-    if (defined($instance)) {
+    if (defined($instance) && (!defined($args{'bypass_singleton'}) || !$args{'bypass_singleton'})) {
         # If previously initialized, do not re-initialize
         return $instance;
     }
 
-    my ($root_dir, $relative_path_to_root) = main::find_root_dir(); # TODO: Move all functions into namespace & export
+    my ($root_dir, $relative_path_to_root, $user_dir) = find_root_dir(); # TODO: Move all functions into namespace & export
     $args{root} = $root_dir; # For Logger initialiation
 
     return undef unless $root_dir; # Caller is responsible for aborting if Nuggit is required
@@ -538,6 +476,7 @@ sub new
         logger => Git::Nuggit::Log->new(%args),
         root => $root_dir,
         relative_path_to_root => $relative_path_to_root,
+        user_dir => $user_dir, # Original path user executed script from
         verbose => $args{verbose},
         # Command execution defaults (TODO: setters)
         run_die_on_error => defined($args{run_die_on_error}) ? $args{run_die_on_error} : 1,
@@ -549,6 +488,16 @@ sub new
     # Wrapper to conveniently allow root/file to be specified in constructor or start method
     #  Return self if successful, fail if parsing fails.
     return $instance;
+}
+sub run_echo_always
+{
+    my $self = shift;
+    my $val = shift;
+    if (defined($val)) {
+        $self->{run_echo_always} = shift;
+    } else {
+        return $self->{run_echo_always};
+    }
 }
 
 sub run_die_on_error
@@ -562,6 +511,11 @@ sub root_dir
     my $self = shift;
     return $self->{root};
 }
+sub cfg_dir
+{
+    my $self = shift;
+    return File::Spec->catdir($self->{root}, ".nuggit");
+}
 
 sub start
 {
@@ -574,10 +528,41 @@ sub logger {
     return $self->{logger};
 }
 
-# Usage: my ($status, $stdout, $stderr) = run($cmd [,@args]);  # TODO: @args to be added later, for now single string expected
+=head2 run_foreach
+
+Run given command (str) in the current repository, and all nested submodules.
+
+Note: Current repository corresponds to current working directory. To run from nuggit root, user should change directories first. This permits greater flexibility in usage.
+
+=cut
+sub run_foreach {
+    my $self = shift;
+    my $cmd = shift;
+
+    $self->foreach({
+        'depth_first' => sub {
+                          $self->run($cmd);
+                      },
+        'run_root' => 1
+       });
+
+}
+
+=head2 run
+
+Execute the given git command from the current directory.  The command will be wrapped in IPC::Run3 in order to capture stdout, stderr, and exit status.  Output and 'die' functionality are controlled by object settings.
+
+Usage: my ($status, $stdout, $stderr) = run($cmd [,@args]);  
+
+TODO: @args to be added later, for now a single string expected
+TODO: Optional parameters to overrride object default for die_on_error and run_echo_always.
+
+=cut
+
 sub run {
     my $self = shift;
-    # TODO: Support optional log level.  If set, the first argument will be numeric.
+    # TODO: Support optional log level and args.  If set, the first argument will be hashref.
+    my $opts = (ref($_[0]) eq 'HASH') ? shift : undef;
     my $cmd = shift;
 
     my ($stdout, $stderr);
@@ -588,7 +573,7 @@ sub run {
     # We use IPC::Run3 so we can reliably capture stdout + stderr (backticks only captures stdout)
     run3($cmd, undef, \$stdout, \$stderr);
 
-    if ($self->{run_die_on_error} && $?) {
+    if (($self->{run_die_on_error} || $opts->{die_on_error}) && $?) {
         say $stderr if $stderr;
         my ($package, $filename, $line) = caller;
         $self->{logger}->cmd_full($cmd, $stdout, $stderr, $?);
@@ -601,7 +586,8 @@ sub run {
         }
     }
 
-    if ($self->{run_echo_always}) {
+    if ($self->{run_echo_always} || $opts->{echo_always}) {
+        #say "SHOW ALWAYS";
         say $stdout if $stdout;
         say $stderr if $stderr;
     }
@@ -628,6 +614,219 @@ sub merge_conflict_state {
         return undef;
     }
 }
+
+=head2 foreach(opts)
+
+Recurse into each submodule and execute the given command. This is roughly equivalent to "git submodule foreach" with added functionality.
+
+It accepts a hashref as it's sole parameter which may contain the following fields.
+Parameters:
+
+=over
+
+=item breadth_first
+
+Callback function to be called foreach submodule with breadth-first recursion (starting from the top level).  CWD will be at root of current submodule.  See below for arguments provided.
+
+=item depth_first
+
+Callback function to be called foreach submodule with depth-first recursion (starting from most nested).  CWDW will be at roto of current submodule.  See below for arguments provided.
+
+=item recursive If false, do not recurse into nested submodules
+
+=item run_root If true, execute defined callbacks on the root repository as well.
+
+=item modified_only  If true, execute and recurse into submodules that Git reports as modified, uninitialized, o rin a conflicted state only.
+
+=item parallel.  Reserved for future parallel processing enhancements.
+
+=back
+
+Callback functions will be called with a single hashref argument containing the following fields
+
+opts - A copy of the input options
+parent - The name of the parent repository
+name   - The name of this submodule
+
+The above fields will be defined for the root repository (if run_root) and all submodules, while the following fields only apply to submodules:
+
+status - The status for this repository.  0 for unmodified, '+' for modified, '-' for uninitialized, 'U' for pending merge conflicts.
+
+=cut
+# TODO: Add recursion level flag to parameters passed to callbacks
+# TODO: 'run_parallel' option using fork&join. This can be used for select operations, if git doesn't provide a '-j' flag.  Libraries may hlp in such an implmentation, ie: https://perlmaven.com/speed-up-calculation-by-running-in-parallel
+# TODO: Support for array of return values, primarily for compatibility with parallel mode
+sub foreach {
+    my $self = shift;
+    my $user_opts = shift;
+    my $opts = shift;
+    my $is_root = 0;
+
+    if (ref($user_opts) eq "CODE") {
+        # Base Case: Only a simpple fn reference given
+        $user_opts = { 'breadth_first' => $user_opts };
+    }
+
+    if (!$opts) {
+        $opts = {
+            # Note:  // is Perl's "defined-or" operator
+            'breadth_first' => $user_opts->{'breadth_first'},
+            'depth_first'   => $user_opts->{'depth_first'},
+            'recursive '    => $user_opts->{'recursive'} // 1,
+            'run_root'      => $user_opts->{'run_root'} // 0,
+            'modified_only' => $user_opts->{'modified_only'} // 0,
+            'load_tracking' => $user_opts->{'load_tracking'} // 0, # If set, query submodule tracking branches
+            #'parallel'     => # Reserved for future enhancement
+        };
+        $is_root = 1;
+    }
+
+    my $parent = shift || "."; # Not part of opts as this will vary per recursion.
+    my $cwd = getcwd();
+
+    if ($is_root && $opts->{'run_root'} && $opts->{'breadth_first'}) {
+        $opts->{'breadth_first'}->({
+            'opts' => $user_opts,
+            'parent' => $parent,
+            'name' => '',
+            'cwd' => $cwd,
+            # Note: OTher fields will not be provided for root
+           });
+        chdir($cwd); # Ensure we haven't changed dir
+    }
+
+    if (!-e '.gitmodules' && !$is_root )
+    {
+        return; # early if there are no submodules (for faster execution) and we are sure cwd is root of a submodule
+    }
+    my $list = `git submodule`;
+
+    # TODO: Consider switching to IPC::Run3 to check for stderr for better error handling
+    if (!$list || $list eq "") {
+        return;
+    }
+
+    # Preload submodule tracking branch info if requested
+    my $gitmodules;
+    $gitmodules = `git config --file .gitmodules --get-regexp branch` if $opts->{load_tracking};
+
+  my @modules = split(/\n/, $list);
+  while(my $submodule = shift(@modules))
+  {
+      # Get Status. Git will report:
+      #  ' ' for unmodified, '+' for modified commit, '-' for uninitialized, or 'U' for merge conflicts
+      my $status = substr($submodule, 0,1);
+      $status = 0 if ($status eq ' ');
+      
+      my @words = split(/\s+/, substr($submodule, 1));
+      
+      my $hash   = $words[0];
+      my $name = $words[1];
+      my $label;
+      $label = substr($words[2], 1, -1) if defined($words[2]); # Label may not always exist
+
+      if ($opts->{'modified_only'} && !$status) {
+          next; # Don't parse a submodule if it's un-modified.
+      }
+      
+      # Enter submodule
+      chdir($name) || die "submodule_foreach can't enter $name";
+
+      # Create argument object for callbacks
+      my $cb_args = {
+              'parent' => $parent,
+              'name' => $name,
+              'status' => $status,
+              'hash' => $hash,
+              'label' => $label,
+              'opts' => $user_opts,
+              'subname' => File::Spec->catdir($parent,$name),
+          };
+      if ($gitmodules && $gitmodules =~  m/submodule\.$name\.branch (.*)$/mg) {
+          $cb_args->{'tracking_branch'} = $1;
+      }
+      
+      # Pre-traversal callback (breadth-first)
+      if (defined($opts->{breadth_first}) ) {
+          $opts->{breadth_first}->($cb_args);
+          chdir(File::Spec->catdir($cwd,$name)) || die "Error returning to directory"; # In case caller changes folder
+      }
+
+
+      # Recurse
+      if (!$opts || !defined($opts->{recursive}) || (defined($opts->{recursive}) && $opts->{recursive})) {
+          $self->foreach($user_opts, $opts, $cb_args->{'subname'});
+      }
+
+      # Callback (depth-first)
+      if (defined($opts->{depth_first})) {
+          $opts->{depth_first}->($cb_args);
+      }
+
+      # Reset Dir
+      chdir($cwd);
+    
+  }
+    if ($is_root && $opts->{'run_root'} && $opts->{'depth_first'}) {
+        $opts->{'depth_first'}->({
+            'opts' => $user_opts,
+            'parent' => $parent,
+            'name' => '',
+            'cwd' => $cwd,
+            # Note: OTher fields will not be provided for root
+        });
+        chdir($cwd); # Ensure we haven't changed dir
+    }
+  
+}
+
+# This is the getter/setter for all global Nuggit user cfg settings.
+#  It will return undef if no matching field is known.
+#  If the main Nuggit config file has not been loaded yet, and it exists, it will be parsed on first call
+sub cfg {
+    my $self = shift;
+    my $key = shift;
+    my $val = shift;
+
+    $self->{cfg} = $self->load_config("config.json",{}) unless defined($self->{cfg});
+
+    if (defined($val)) {
+        $self->{cfg}{$key} = $val;
+    } else {
+        return $self->{cfg}{$key};
+    }
+}
+
+# TODO: Option to merge with default instead of replacing and/or option to automatically check for a default file.  Perhaps if $default is a string and refers to a valid file, then always merge contents.  Or 3-way checek with params: global_file, local_file, app_default.  NOTE: home dir is $ENV{"HOME"} for unix, or File::HomeDir for a generic solution
+sub load_config {
+    my $self = shift;
+    my $name = shift;
+    my $default = shift;
+    my $fn = File::Spec->catfile($self->cfg_dir(), $name);
+    if (-f $fn) {
+        my $raw = read_file($fn);
+        return $default unless $raw;
+        return decode_json($raw);
+    } else {
+        return $default;
+    }
+}
+sub save_config {
+    my $self = shift;
+    my $cfg = shift;
+    my $name = shift;
+    my $fn = File::Spec->catfile($self->cfg_dir(), $name);
+    write_file($fn, encode_json($cfg));
+}
+sub clear_config {
+    my $self = shift;
+    my $name = shift;
+    my $fn = File::Spec->catfile($self->cfg_dir(), $name);
+    if (-e $fn) {
+        rename($fn, "$fn.old");
+    }
+}
+
 
 
 1;

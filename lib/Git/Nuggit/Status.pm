@@ -1,13 +1,12 @@
 #!/usr/bin/env perl
 package Git::Nuggit::Status;
-our $VERSION = 0.02;
+our $VERSION = 0.03;
 
 use v5.10;
 use strict;
 use warnings;
-use Cwd qw(getcwd);
+use Cwd qw(getcwd abs_path);
 use Term::ANSIColor;
-
 our @ISA = qw(Exporter);
 our @EXPORT = qw(get_status pretty_print_status do_pretty_print_status show_status file_status status_check STATE);
 
@@ -59,13 +58,6 @@ sub STATE {
     }
 }
 
-# Status Color Codes used in printable output within this file
-my $stageColor = 'cyan';
-my $goodColor = 'green';
-my $warnColor = 'yellow';
-my $badColor = 'red';
-
-
 =head2 get_status($opts)
 
 Retrieve the status of a Git repository, and submodules.
@@ -101,6 +93,7 @@ Output is a nested object with the following keys for each:
 - branch.head - The currently checked out branch
 - branch.* - Any additional 'header' information output by 'git --porcelain=v2 --branch' will be parsed.
 - branch_status_flag - True if any submodule is not on the same branch as it's parent.
+- detached_heads_flag - True if any submodule (or root) is in a detached HEAD state.
 =head3 Limitations
 
 Branch information, including ahead-behind, detached state, or invalid
@@ -131,13 +124,18 @@ sub get_status
                'staged_files_cnt' => 0, # Number of modified (not submodule) files staged (recursive)
                'unstaged_files_cnt' => 0, # Number of modified (not submodule) files unstaged (recursive)
                'branch_status_flag' => 0, # True if any scanned submodules are not on the same branch as parent
+               'detached_heads_flag' => 0, # True if any scanned submodules or root are detached
               };
     _get_status($rtv, $flags, $opts);
 
+    # Root level flag cleanup
+    $rtv->{'detached_heads_flag'} = 1 if ($rtv->{'branch.head'} eq "(detached)");
+    $rtv->{'branch_status_flag'} = 1 if $rtv->{'detached_heads_flag'};
     return $rtv;
 }
 
 # Private function for recursively implementing get_status
+# TODO: Can we optimize with fork/join & mutex? 
 sub _get_status
 {
     my $rtv = shift;
@@ -164,28 +162,8 @@ sub _get_status
                 $rtv->{'branch.behind'} = shift(@parts);
             } else {
                 $rtv->{$key} = shift(@parts);
-
                 if ($key eq "branch.oid" && $opts->{details}) {
-                    # If requested, query commit details
-                    my $msg = `git show $rtv->{'branch.oid'} --pretty=format:"%aN\n%ar\n%s" -s`;
-                    if ($?) {
-                        # Failed to query
-                    } else {
-                        my ($author, $date, $cm) = split('\n', $msg);
-                        $rtv->{'commit.author'} = $author;
-                        $rtv->{'commit.date'} = $date;
-                        $rtv->{'commit.msg'} = $cm;
-                    }
-
-                    # And matching tags/branches (exact matches only)
-                    my $tags = `git tag --points-at $rtv->{'branch.oid'}`; 
-                    chomp($tags);
-                    $rtv->{'commit.tags'} = [split('\n',$tags)] if $tags;
-                    
-                    my $branches = `git branch --points-at $rtv->{'branch.oid'}`;
-                    chomp($branches);
-                    $rtv->{'commit.branches'} = [split('\n', $branches)] if $branches;
-
+                    $rtv->{commit} = get_commit_info($rtv->{'branch.oid'});
                 }
             }
             next;
@@ -230,6 +208,7 @@ sub _get_status
             # VERIFY: Is there a difference between stated/unstaged here?
             $obj->{'staged_status'} = $STATE{'CONFLICT'};
             $obj->{'status'} = $STATE{'CONFLICT'};
+            $obj->{'conflict_status'} = $xy;
         } elsif ($type eq '?') {
             # Untracked
             $path = $parts[0];
@@ -247,6 +226,9 @@ sub _get_status
         }
         else { die("ERROR: Illegal type in porcelain status for line: $line"); } # Debug
 
+        $obj->{'obj_name'} = $hh if $hh;
+        $obj->{'obj_name_staged'} = $h1 if $h1;
+        
         if ($xy) {
             $obj->{'status_flag'} = substr($xy, 1, 2);
             $obj->{'status_flag'} = ' ' if $obj->{'status_flag'} eq ".";
@@ -283,7 +265,12 @@ sub _get_status
             my $tmppath = getcwd();
             chdir($path);
             
-            _get_status( $obj, $flags, $opts );
+            _get_status( $obj, $flags, $opts ) unless $opts->{no_recurse};
+
+            # Reference Details, if details requested and does not match checked out commit
+            if ($obj->{sub_commit_delta} && $opts->{details}) {
+                $obj->{'ref'} = get_commit_info($obj->{'obj_name'});
+            }
 
             push(@{ $rtv->{children} }, $obj); # Add path to children array
             chdir($tmppath);
@@ -292,10 +279,15 @@ sub _get_status
             $rtv->{unstaged_files_cnt} += $obj->{unstaged_files_cnt};
             $rtv->{staged_files_cnt} += $obj->{staged_files_cnt};
 
-            # Branch Check
-            if ($obj->{'branch_status_flag'} || $rtv->{'branch.head'} ne $obj->{'branch.head'}) {
-                $rtv->{branch_status_flag} = 1 ;
+            # Branch Check (only valid if we've recursed)
+            if (!$opts->{no_recurse}) {
+                if ($obj->{'branch_status_flag'} || $rtv->{'branch.head'} ne $obj->{'branch.head'}) {
+                    $rtv->{branch_status_flag} = 1 ;
+                }
+                
+                $rtv->{detached_heads_flag} = 1 if $obj->{'branch.head'} eq "(detached)";
             }
+            
         } else {
             # Not a submodule, increment count if state is > UNTRACKED
             $rtv->{unstaged_files_cnt}++ if $obj->{status} > STATE('UNTRACKED');
@@ -306,7 +298,6 @@ sub _get_status
         $rtv->{status} = $obj->{status} if $obj->{status} > $rtv->{status};
         $rtv->{staged_status} = $obj->{staged_status} if $obj->{staged_status} > $rtv->{staged_status};
         
-
         # Add $obj to objects
         $rtv->{objects}{$path} = $obj;
 
@@ -351,7 +342,13 @@ sub _get_status
                         chdir($subname) || die "Can't cd to $subname";
                         _get_status( $obj, $flags, $opts );
                         chdir($tmppath);
-                        
+
+                        # Branch Check
+                        if ($obj->{'branch_status_flag'} || $rtv->{'branch.head'} ne $obj->{'branch.head'}) {
+                            $rtv->{branch_status_flag} = 1 ;
+                        }
+
+                        $rtv->{detached_heads_flag} = 1 if $obj->{'branch.head'} eq "(detached)";                   
                     }
                     push(@{ $rtv->{children} }, $obj); # Add path to children array
                     $rtv->{objects}{$subname} = $obj;
@@ -380,11 +377,17 @@ sub pretty_print_status
     my $relative_path = shift;
     my $flags = shift;
     my $verbose = $flags->{verbose};
+    $flags->{usr_rel_path} = $relative_path; # Cache rel path to usr folder
+    $flags->{usr_abs_path} = abs_path($flags->{user_dir});  # And abs path to same
 
     my $root_branch = $status->{'branch.head'};
 
     if ($root_branch) {
-        print "On branch $root_branch ";
+        if ($root_branch eq "(detached)") {
+            print colored('HEAD detached ','error');
+        } else {
+            print "On branch $root_branch ";
+        }
         say "(".$status->{'branch.oid'}.")" if $status->{'branch.oid'};
     } else {
         say "WARNING: Unable to identify root branch";
@@ -397,7 +400,7 @@ sub pretty_print_status
         print "(refs only)";
     }
     if ($status->{staged_status} != $STATE{'CLEAN'}) {
-        print ", ".colored("Staged: ",$stageColor).show_status($status->{staged_status});
+        print ", ".colored("Staged: ",'info').show_status($status->{staged_status});
         if ($status->{staged_files_cnt} > 0) {
             print "(".$status->{staged_files_cnt}.")";
         } else {
@@ -406,7 +409,7 @@ sub pretty_print_status
     }
     say "";
     if ($status->{'branch_status_flag'}) {
-        say colored("\tOne or more submodules are not on the above branch.",$warnColor);
+        say colored("\tOne or more submodules are not on the above branch.",'warn');
     }
     if (defined($status->{'branch.ahead'}) && ($status->{'branch.ahead'} != 0 || $status->{'branch.behind'} != 0)) {
         print "Your branch is out of sync with upstream";
@@ -426,25 +429,8 @@ sub pretty_print_status
 
     if ($flags->{details}) {
         say "\nCommit Details:";
-        say "SHA: ".$status->{'branch.oid'};
-        say "Description: ".$status->{'commit_described'} if $status->{'commit_described'}; # Only if -a
-
-        if (defined($status->{'commit.author'})) {
-            say "Author: $status->{'commit.author'}";
-            say "Date: $status->{'commit.date'}";
-            say "Message: $status->{'commit.msg'}";
-        } else {
-            say colored("\t Warning: Commit details unavailable.", $badColor);
-        }
-        say "Matching Tags: ".join(', ',@{$status->{'commit.tags'}}) if $status->{'commit.tags'};
-        if ($status->{'commit.branches'}) {
-            # Print Branches as a comma-delimited list
-            say "Matching Branches: ".join(', ',
-                                  # Making active branch name bold
-                                  map { $_ =~ /^\*\s+([\w\/]+)/ ? colored($1,'bold') : $_ } @{$status->{'commit.branches'}}
-                );
-        }
-
+        say "\tInferred Branch: ".$status->{'commit_described'} if $status->{'commit_described'}; # Only if -a
+        show_commit_info($status->{'commit'});        
     }
     
     say "";
@@ -470,29 +456,43 @@ sub do_pretty_print_status {
     my $flags = shift;
     my $verbose = $flags->{verbose};
 
+    # TODO: Attempt to cleanup rel paths in output ... need better way to compare dirs
+    # ie: File::Spec->catdir($abs_rel_path, $obj->path) vs $usr_abs_path
+    # Paths may not be equal when recursing
+    my $abs_rel_path = abs_path(File::Spec->catdir($flags->{user_dir},$relative_path));
+
     foreach my $key (sort keys(%{$status->{'objects'}})) {
         my $obj = $status->{objects}->{$key};
         # Note: We deliberately do not use File::Spec here because we want to colorize submodule path
+        #  This is for display-only, so OS compatibility is not an issue
+
         print " ".$obj->{'status_flag'};
-        print colored($obj->{'staged_status_flag'},$stageColor).' ';
-        if ($relative_path && $relative_path !~ /^\.\/?$/) {
-            print colored($relative_path,$warnColor);
-            print '/' unless(substr($relative_path,-1) eq "/");
+        print colored($obj->{'staged_status_flag'},'info').' ';
+        if ($relative_path && $relative_path !~ /^\.\/?$/ && $abs_rel_path ne $flags->{usr_abs_path}) {
+            if ($obj->{is_submodule} && File::Spec->catdir($abs_rel_path, $obj->{path}) eq $flags->{usr_abs_path}) {
+                # Print only indicator that we are referring to self
+                print '../';
+            } else {
+                print colored($relative_path,'warn');
+                print '/' unless(substr($relative_path,-1) eq "/");
+            }
         }
         print $obj->{'path'};
         print " <= ".$obj->{'old_path'} if $obj->{'old_path'};
 
         if ($obj->{'is_submodule'}) {
-            print colored(" Delta-Commits",$warnColor) if $obj->{sub_commit_delta};
-            print colored(" Modified",$warnColor) if $obj->{sub_modified};
+            print colored(" Delta-Commits",'warn') if $obj->{sub_commit_delta};
+            print colored(" Modified",'warn') if $obj->{sub_modified};
             print " Untracked-Content" if $obj->{sub_untracked};
 
             if ($obj->{'status'} == STATE('UNINITIALIZED')) {
-                print colored(' Uninitialized', $badColor);
+                print colored(' Uninitialized', 'error');
+            } elsif ($obj->{'branch.head'} eq "(detached)") {
+                print colored(' DETACHED ('.$obj->{'branch.oid'}.') ', 'error');
             } elsif (!defined($obj->{'branch.head'})) {
-                print colored(' Detached? OID:'.$obj->{'branch.oid'}, $warnColor);
+                print colored(' Detached? OID:'.$obj->{'branch.oid'}, 'warn');
             } elsif (defined($root_branch) && $obj->{'branch.head'} ne $root_branch) {
-                print colored(' Branch: '.$obj->{'branch.head'}, $badColor);
+                print colored(' Branch: '.$obj->{'branch.head'}, 'error');
                 print ' ('.$obj->{'branch.oid'}.')' if $verbose;
             } else {
                 print " (".$obj->{'branch.oid'}.")" if $verbose;
@@ -508,36 +508,41 @@ sub do_pretty_print_status {
             print "\n";
 
             if ($flags->{details}) { # Details View
-                say "\tSHA: ".$obj->{'branch.oid'};
-                say "\tDescription: ".$obj->{'commit_described'} if $obj->{'commit_described'}; # Only if -a
-
-                if (defined($obj->{'commit.author'})) {
-                    say "\tAuthor: $obj->{'commit.author'}";
-                    say "\tDate: $obj->{'commit.date'}";
-
-                    my $msg = $obj->{'commit.msg'};
-                    $msg = substr($msg,0,67)."..." if length($msg) > 70; # Truncate long messages
-                    say "\tMessage: $msg";
-
-                    say "\tTags: ".join(', ',@{$obj->{'commit.tags'}}) if $obj->{'commit.tags'};
-                    if ($obj->{'commit.branches'}) {
-                        # Print Branches as a comma-delimited list
-                        say "\tBranches: ".join(', ',
-                                                # Making active branch name bold
-                                                map { $_ =~ /^\*\s+([\w\/]+)/ ? colored($1,'bold') : $_ } @{$obj->{'commit.branches'}}
-                            );
-                    }
-
-                } else {
-                    say colored("\t Warning: Commit details unavailable.", $badColor);
+                if ($obj->{sub_commit_delta}) {
+                    say colored("\tCurrent Commit", 'success');
+                    
                 }
+                show_commit_info($obj->{commit});
+                
+                if ($obj->{sub_commit_delta} && $obj->{'ref'}) {
+                    say colored("\tReferenced Commit", 'success');
+                    show_commit_info($obj->{'ref'});
+                }
+                
             }
 
             # Recurse into any nested submodules
-            do_pretty_print_status($obj, File::Spec->catdir($relative_path,$obj->{'path'}), $root_branch, $flags);
+            do_pretty_print_status($obj,
+                                   ($abs_rel_path eq $flags->{usr_abs_path}) ? $obj->{path} : File::Spec->catdir($relative_path,$obj->{'path'}),
+                                   $root_branch,
+                                   $flags);
         } else {
+            if ($obj->{status} == $STATE{'CONFLICT'}) {
+                print colored(' Conflict', 'error');
+                my $conflictFlag = $obj->{'conflict_status'};
+                my $conflictMsg;
+                if ($conflictFlag eq 'DD') { $conflictMsg = 'Both deleted'; }
+                elsif ($conflictFlag eq 'AU') { $conflictMsg = 'Added by us'; }
+                elsif ($conflictFlag eq 'UD') { $conflictMsg = 'Deleted by them'; }
+                elsif ($conflictFlag eq 'UA') { $conflictMsg = 'Added by them'; }
+                elsif ($conflictFlag eq 'DU') { $conflictMsg = 'Deleted by us'; }
+                elsif ($conflictFlag eq 'AA') { $conflictMsg = 'Both added'; }
+                elsif ($conflictFlag eq 'UU') { $conflictMsg = 'Both modified'; }
+                print colored("($conflictMsg)", 'warn') if $conflictMsg;
+
+            }
             print "\n";
-        }        
+        }
     }
 
 }
@@ -558,15 +563,15 @@ sub show_status
     } elsif ($status == $STATE{'UNTRACKED'}) {
         return "untracked";
     } elsif ($status == $STATE{'RENAMED'}) {
-        return colored("renamed", $warnColor);
+        return colored("renamed", 'warn');
     } elsif ($status == $STATE{'MODIFIED'}) {
-        return colored("modified", $warnColor);        
+        return colored("modified", 'warn');        
     } elsif ($status == $STATE{'CONFLICT'}) {
-        return colored("conflicted", $badColor);
+        return colored("conflicted", 'error');
     } elsif ($status == $STATE{'UNINITIALIZED'}) {
-        return colored("uninitialized", $badColor);
+        return colored("uninitialized", 'error');
     } else {
-        return colored("unknown=$status",'red');
+        return colored("unknown=$status",'error');
     }
 
 }
@@ -581,6 +586,7 @@ FUTURE ENHANCEMENTS:
 - Handle regex/wildcard search for matching files.  Option for negation pattern
     Ideally, detect if an input term is string or regex, and treat accordingly
 - Handle multiple input patterns
+
 =cut
 
 sub file_status
@@ -660,5 +666,62 @@ sub get_submodule_status {
     return \@rtv;
 }
 
+sub get_commit_info {
+    my $sha = shift;
+    if (!$sha) {
+        warn colored("WARNING: get_commit_info() on undefined commit. Possible internal error", "warn");
+        return undef;
+    }
+
+    my $rtv = {'sha' => $sha};
+
+    # If requested, query commit details
+    my $msg = `git show $sha --pretty=format:"%aN\n%ar\n%s" -s`;
+    if ($?) {
+        # Failed to query
+    } else {
+        my ($author, $date, $cm) = split('\n', $msg);
+        $rtv->{'author'} = $author;
+        $rtv->{'date'} = $date;
+        $rtv->{'msg'} = $cm;
+    }
+    
+    # And matching tags/branches (exact matches only)
+    my $tags = `git tag --points-at $sha`; 
+    chomp($tags);
+    $rtv->{'tags'} = [split('\n',$tags)] if $tags;
+    
+    my $branches = `git branch --points-at $sha`;
+    chomp($branches);
+    $rtv->{'branches'} = [split('\n', $branches)] if $branches;
+
+    return $rtv;
+}
+sub show_commit_info {
+    my $obj = shift;
+    say "\tSHA: ".$obj->{'sha'};
+    #say "\tDescription: ".$obj->{'commit_described'} if $obj->{'commit_described'}; # Only if -a
+    
+    if (defined($obj->{'author'})) {
+        say "\tAuthor: $obj->{'author'}";
+        say "\tDate: $obj->{'date'}";
+        
+        my $msg = $obj->{'msg'};
+        $msg = substr($msg,0,67)."..." if length($msg) > 70; # Truncate long messages
+        say "\tMessage: $msg";
+
+        say "\tTags: ".join(', ',@{$obj->{'tags'}}) if $obj->{'tags'};
+        if ($obj->{'branches'}) {
+            # Print Branches as a comma-delimited list
+            say "\tBranches: ".join(', ',
+                                    # Making active branch name bold
+                                    map { $_ =~ /^\*\s+([\w\/]+)/ ? colored($1,'bold') : $_ } @{$obj->{'branches'}}
+                                   );
+        }
+        
+    } else {
+        say colored("\t Warning: Commit details unavailable. A 'ngt fetch' may be needed.", 'error');
+    }
+}
 
 1;

@@ -40,8 +40,8 @@ Display an abbreviated help menu
 =item --man
 
 Display detailed documentation.
-
-=item -uno
+--
+=item --uno | -u
 
 Ignore untracked files
 
@@ -54,6 +54,16 @@ Show ignored files
 Show raw status structure in JSON format.
 
 =back
+
+=head2 Output Details
+
+=head3 Submodule State
+
+If a submodule's checked out commit does not match the committed reference, the status will show as "Delta-Commits".  If the "--details" or "-d" flag is specified, then details will be shown on both the currently checked out commit in this submodule, and the commit that the parent repository references.
+
+If a submodule's checked out commit is out of sync with the upstream branch, it will show as "Upstream-Delta( +x -y )" where x is the number of commits that the local copy is ahead of the remote, and y is the number of commits the upstream branch is ahead of the local version.  Note: Users should run "ngt fetch" prior to status to ensure an accurate reflection of the current Upstream state. 
+
+=head2
 
 =cut
 
@@ -76,7 +86,7 @@ my $unstaged_bool = 0; # If set, and cached not set, show only unstaged changes
 
 my $verbose = 0;
 my $do_dump = 0; # Output Dumper() of raw status (debug-only)
-my $do_json = 0; # Outptu in JSON format
+my $do_json = 0; # Output in JSON format
 my $flags = {
              "uno" => 0, # If set, ignore untracked objects (git -uno command). This has no effect on cached or unstaged modes (which always ignore untracked files)
              "ignored" => 0, # If set, show ignored files
@@ -85,19 +95,21 @@ my $flags = {
 my $color_submodule = 'yellow';
 
 my ($help, $man);
-Getopt::Long::GetOptions(
-    "help"            => \$help,
+my $rtv = Getopt::Long::GetOptions(
+    "help|h"            => \$help,
     "man"             => \$man,
-                           "cached|staged"  => \$cached_bool, # Allow --cached or --staged
-                           "unstaged"=> \$unstaged_bool,
-                           "verbose|v!" => \$verbose,
-                           "uno!" => \$flags->{uno},
-                           "ignored!" => \$flags->{ignored},
-                           'dump' => \$do_dump,
-                         'json' => \$do_json,
-                         'all|a!' => \$flags->{all},
-                         'details|d!' => \$flags->{details},
-                        );
+    "cached|staged"  => \$cached_bool, # Allow --cached or --staged
+    "unstaged"=> \$unstaged_bool,
+    "verbose|v!" => \$verbose,
+    "uno|u!" => \$flags->{uno},
+    "ignored!" => \$flags->{ignored},
+    'dump' => \$do_dump,
+    'json' => \$do_json,
+    'all|a!' => \$flags->{all},
+    'details|d!' => \$flags->{details},
+   );
+if (!$rtv) { pod2usage(1); die("Unrecognized options specified"); }
+
 $flags->{verbose} = $verbose;
 pod2usage(1) if $help;
 pod2usage(-exitval => 0, -verbose => 2) if $man;
@@ -105,8 +117,9 @@ pod2usage(-exitval => 0, -verbose => 2) if $man;
 
 my $root_repo_branch;
 
-my ($root_dir, $relative_path_to_root) = find_root_dir();
+my ($root_dir, $relative_path_to_root, $user_dir) = find_root_dir();
 die("Not a nuggit!\n") unless $root_dir;
+$flags->{'user_dir'} = $user_dir; # For pretty-printing relative paths
 
 print "nuggit root dir is: $root_dir\n" if $verbose;
 print "nuggit cwd is ".getcwd()."\n" if $verbose;
@@ -146,9 +159,7 @@ else
         say colored("Nuggit Merge in Progress.  Complete with \"ngt merge --continue\" or \"ngt merge --abort\"",'red');
     }
     pretty_print_status($status, $relative_path_to_root, $flags);
-    #say colored("Warning: Above output may not reflect if submodules are not initialized, on the wrong branch, or out of sync with upstream", $warnColor);
 }
-
 
 
 
