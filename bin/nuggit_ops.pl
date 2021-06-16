@@ -662,7 +662,7 @@ sub checkout_safe
     # Check if caller has provided a preferred default (ie: tracking branch from parent .gitmodules)
     #  If so, we will try this alt branch, even if not in a detached HEAD state
     if ($args{hint_branch}) {
-        if (grep( /$args{hint_branch}$/, @branches)) {
+        if (grep( /^$args{hint_branch}$/, @branches)) {
             return checkout_local($args{hint_branch});
         } elsif (grep( /^origin\/$args{hint_branch}$/, @branches )) {
             return $args{hint_branch} if (checkout_safe_remote($args{hint_branch}, $current_commit));
