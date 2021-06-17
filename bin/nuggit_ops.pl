@@ -327,13 +327,13 @@ sub root_checkout_safe
     my $branch = shift // get_selected_branch_here();
 
     # Run checkout at root level.
-    my $result = checkout_safe(branch => $branch,
+    my $root_result = checkout_safe(branch => $branch,
                                # Auto-create branch names in all submodules when safe to do so, unless user requested otherwise
                                autocreate => (defined($opts->{'auto-create'}) ? $opts->{'auto-create'} : 1)
                                );
 
     # If that doesn't work (and we aren't simply fitching detached heads), do not proceed (must fetch or create at root first).
-    if ($branch && (!defined($result) || $result ne $branch)) {
+    if ($branch && (!defined($root_result) || $root_result ne $branch)) {
         die ("$branch does not exist, or is not safe to checkout (--safe flag specified) in root repository.\n  If this is unexpected, you may need to perform a 'ngt fetch'.\n If the branch does not exist, you should create it with 'ngt checkout -b $branch'\n");
     }
 
@@ -343,13 +343,13 @@ sub root_checkout_safe
         'breadth_first' => sub {
                       my $in = shift;
 
-                      $result = checkout_safe(branch => $branch,
+                      my $result = checkout_safe(branch => $branch,
                                               # Auto-create branch names in all submodules when safe to do so, unless user requested otherwise
                                               autocreate => (defined($opts->{'auto-create'}) ? $opts->{'auto-create'} : 1),
                                               subname => $in->{'subname'},
                                               hint_branch => $in->{'tracking_branch'},
                                              );
-                      if (!defined($result) || (defined($branch) && $result ne $branch) ) {
+                      if (!defined($result) || !defined($branch) || (defined($branch) && $result ne $branch) ) {
                           $warnings->{$in->{'subname'}} = {branch => $result, tracking => $in->{'tracking_branch'}};
                       }
                   }
@@ -372,6 +372,7 @@ sub root_checkout_safe
                     $kbranch
                     );
         }
+        printf "\t %-40s \t %-40s\n", "/", colored("Detached HEAD",'error') if !$root_result;
         say colored("Tip: You may wish to create a new branch (ngt checkout -b <branch>) or update submodules manually if the above state was not expected.  A ",'info')
         .colored('green','green')
         .colored(" highlight indicates a match to the submodule's default tracking branch.  To retrieve this information later, run 'ngt status -a'", 'info');
@@ -475,6 +476,7 @@ sub root_checkout_branch
                     $val
                     );
         }
+        printf "\t %-40s \t %-40s\n", "/", colored("Detached HEAD",'error') if !$real_branch;
         printf "\t %-40s \t %-40s\n", "---------", "--------------";
         say colored("Tip: You may wish to create a new branch (ngt checkout -b <branch>) or update submodules manually if the above state was not expected.  A ",'info')
         .colored('green','green')
@@ -559,7 +561,7 @@ sub do_root_checkout_breadth_first {
                                        subname => $subname,
                                        hint_branch => $in->{'tracking_branch'}
                                       );
-            if (!defined($result) || $result ne $branch) {
+            if (!defined($result) || !defined($branch) || $result ne $branch) {
                 $opts->{results}->{$subname} = {branch => $result, tracking => $in->{'tracking_branch'}};
             }
         }
