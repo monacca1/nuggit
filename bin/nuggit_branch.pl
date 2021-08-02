@@ -100,6 +100,14 @@ Filter branch listing by merged or not merged state.  If neither option is speci
 
 NOTE: If the '--no-merged' option is specified, checks for submodule branches matching root will be skipped.
 
+=item --orphans
+
+List all orphaned branches.  An orphaned branch is one that exists in a submodule but not in the root repository. 
+
+=item --orphan
+
+This argument must specify a branch name and an additional flag.  If no other flags are provided indicating specific information about the orphan, this will show full details about the orphan branch.  Full details include, the count of repos where the specified branch exists, count of repos where specified branch is missing, gives a list of repos where specified branch is missing, gives a list of repos where specified branch exists.  When this flag is provided, the following specifics can be requested --missing-from or --exists-in, where information about which repos do not have this branch, or which repos do have this branch respectively.
+
 =back
 
 =cut
@@ -123,6 +131,11 @@ sub ParseArgs();
 sub is_branch_selected_throughout($);
 sub create_new_branch($);
 sub get_selected_branch_here();
+sub list_orphans();
+sub orphan_branch_details();
+sub orphan_branch_missing_from();
+sub orphan_branch_exists_in();
+sub orphan_branch_full_details();
 
 my $ngt = Git::Nuggit->new() || die("Not a nuggit!");
 
@@ -135,6 +148,10 @@ my $delete_merged_flag        = 0;
 my $delete_remote_flag        = 0;
 my $delete_merged_remote_flag = 0;
 my $show_merged_bool          = undef; # undef = default, true=merged-only, false=unmerged-only
+my $orphans_flag              = 0;
+my $orphan_branch             = "";
+my $exists_in_flag            = 0;
+my $missing_from_flag         = 0;
 my $verbose = 0;
 my $show_json = 0;
 my $selected_branch = undef;
@@ -174,6 +191,25 @@ elsif (defined($selected_branch))
 {
     $ngt->start(level=> 1, verbose => $verbose);
     create_new_branch($selected_branch);
+}
+elsif($orphans_flag)
+{
+  list_orphans();
+}
+elsif($orphan_branch ne "")
+{
+  if($exists_in_flag)
+  {
+    orphan_branch_exists_in();
+  }
+  elsif($missing_from_flag)
+  {
+    orphan_branch_missing_from();
+  }
+  else
+  {
+    orphan_branch_full_details();
+  }
 }
 else
 {
@@ -259,15 +295,20 @@ sub ParseArgs()
     my ($help, $man, $remote_flag);
     Getopt::Long::Configure("no_ignore_case", "bundling");
     Getopt::Long::GetOptions(
-        "delete|d!"  => \$delete_merged_flag,
-        "delete-force|D!"  => \$delete_branch_flag,
-        "remote|r"    => \$remote_flag,
-        "merged!"    => \$show_merged_bool,
-        "all|a!" => \$show_all_flag,
-        "verbose|v!" => \$verbose,
-        "json!" => \$show_json, # For branch listing command only
-        "help"            => \$help,
-        "man"             => \$man,
+        "delete|d!"         => \$delete_merged_flag,
+        "delete-force|D!"   => \$delete_branch_flag,
+        "remote|r"          => \$remote_flag,
+        "merged!"           => \$show_merged_bool,
+        "all|a!"            => \$show_all_flag,
+        "verbose|v!"        => \$verbose,
+        "json!"             => \$show_json, # For branch listing command only
+        "help"              => \$help,
+	"orphans"           => \$orphans_flag,  # list orphan branches
+	"orphan=s"          => \$orphan_branch, # specifies the specific orphan branch name. 
+	                                        # If this is provided, then additional flags may be provided
+        "exists-in"         => \$exists_in_flag,     # when this and the orphan branch are passed in, this will list all the submodule repos where the branch exists
+	"missing-from"      => \$missing_from_flag,  # when this and the orphan branch are passed in, this will list all the submodule repos where the branch does not exist.
+        "man"               => \$man,
       ) || pod2usage(1);
     pod2usage(1) if $help;
     pod2usage(-exitval => 0, -verbose => 2) if $man;
@@ -419,3 +460,34 @@ sub check_branch_merged_all
     return $status;
 }
 
+sub list_orphans()
+{
+  print "to do - get orphan info\n";
+ 
+  print "show json?: $show_json \n";
+}  
+
+sub orphan_branch_full_details()
+{
+    # show full details
+    print "to do - show full orphan details about the specified branch ($orphan_branch)\n";
+    print "show json?: $show_json \n";
+}
+
+sub orphan_branch_missing_from()
+{
+    # show the information about the specified branch that includes which submodules do
+    # not have this branch
+    print "to do - show the repos where the specified branch ($orphan_branch) does not exists\n";
+
+    print "show json?: $show_json \n";
+}
+
+sub orphan_branch_exists_in()
+{
+    # show the information about the specified branch that includes which submodules 
+    # have this branch
+    print "to do - show which repos have the specified branch ($orphan_branch)\n";
+
+    print "show json?: $show_json \n";
+}
