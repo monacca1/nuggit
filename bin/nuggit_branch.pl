@@ -493,7 +493,12 @@ sub get_branch_info()
                    my $branches_string = `git branch`;
 		   
 		   $branch_info{'name'} = $name;
-		   $branch_info{'branches_str'} = $branches_string;
+#		   $branch_info{'branches_str'} = $branches_string;
+		   
+		   # to do - convert the branches string into a branches array
+		   my @branch_array = split("\n", $branches_string,);
+		   #print Dumper (\@branch_array);
+		   $branch_info{'branches_array'} = \@branch_array;
 		   
 		   push(@nuggit_branch_info, \%branch_info);
 
