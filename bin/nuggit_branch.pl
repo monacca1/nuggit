@@ -35,6 +35,7 @@ use Term::ANSIColor;
 use File::Spec;
 use Git::Nuggit;
 use JSON;
+use Data::Dumper;
 
 =head1 SYNOPSIS
 
@@ -132,6 +133,7 @@ sub is_branch_selected_throughout($);
 sub create_new_branch($);
 sub get_selected_branch_here();
 sub list_orphans();
+sub list_nuggit_branches();
 sub orphan_branch_details();
 sub orphan_branch_missing_from();
 sub orphan_branch_exists_in();
@@ -149,6 +151,7 @@ my $delete_remote_flag        = 0;
 my $delete_merged_remote_flag = 0;
 my $show_merged_bool          = undef; # undef = default, true=merged-only, false=unmerged-only
 my $orphans_flag              = 0;
+my $exists_in_all_flag        = 0;
 my $orphan_branch             = "";
 my $exists_in_flag            = 0;
 my $missing_from_flag         = 0;
@@ -187,14 +190,13 @@ elsif ($delete_merged_remote_flag)
     say "Deleting merged branch from origin across all submodules: " . $selected_branch;
     delete_merged_remote_branch($selected_branch);
 }
-elsif (defined($selected_branch)) 
-{
-    $ngt->start(level=> 1, verbose => $verbose);
-    create_new_branch($selected_branch);
-}
 elsif($orphans_flag)
 {
   list_orphans();
+}
+elsif($exists_in_all_flag)
+{
+   list_nuggit_branches();
 }
 elsif($orphan_branch ne "")
 {
@@ -210,6 +212,11 @@ elsif($orphan_branch ne "")
   {
     orphan_branch_full_details();
   }
+}
+elsif (defined($selected_branch)) 
+{
+    $ngt->start(level=> 1, verbose => $verbose);
+    create_new_branch($selected_branch);
 }
 else
 {
@@ -303,11 +310,12 @@ sub ParseArgs()
         "verbose|v!"        => \$verbose,
         "json!"             => \$show_json, # For branch listing command only
         "help"              => \$help,
-	"orphans"           => \$orphans_flag,  # list orphan branches
-	"orphan=s"          => \$orphan_branch, # specifies the specific orphan branch name. 
-	                                        # If this is provided, then additional flags may be provided
-        "exists-in"         => \$exists_in_flag,     # when this and the orphan branch are passed in, this will list all the submodule repos where the branch exists
-	"missing-from"      => \$missing_from_flag,  # when this and the orphan branch are passed in, this will list all the submodule repos where the branch does not exist.
+	"orphans"           => \$orphans_flag,        # list orphan branches
+	"exists-in-all"     => \$exists_in_all_flag,  # get list of branches that exist in all submodules (that we have access to from the currently checked out branch)
+	"orphan=s"          => \$orphan_branch,       # specifies the specific orphan branch name. 
+	                                              # If this is provided, then additional flags may be provided
+        "exists-in"         => \$exists_in_flag,      # when this and the orphan branch are passed in, this will list all the submodule repos where the branch exists
+	"missing-from"      => \$missing_from_flag,   # when this and the orphan branch are passed in, this will list all the submodule repos where the branch does not exist.
         "man"               => \$man,
       ) || pod2usage(1);
     pod2usage(1) if $help;
@@ -462,32 +470,125 @@ sub check_branch_merged_all
 
 sub list_orphans()
 {
-  print "to do - get orphan info\n";
- 
-  print "show json?: $show_json \n";
-}  
+  # this should list all branches in any repo where the particular branch does not also exist in the root repo.
+
+  # get the list of root repo branches
+  
+  # for each submodule, get the list of all branches and only display the branches that do not exist in the parent. 
+  
+  if($show_json)
+  {
+     # output for machine
+     print "to do - get orphan info\n";
+   
+     print "show json?: $show_json \n";
+  }
+  else # output for human
+  {
+    print "to do - get a list of branches that exist in all submodules\n";
+  }
+  
+}
+
+sub list_nuggit_branches()
+{
+  # this will display a list of branches that are in good standing and exist in all submodule repositories
+  # Note, the existence of a submodule may depend on what branch you have checked out.  So it will not 
+  # be possible to check the status of a branch in submodules that do not exist in the currently checked out
+  # branch
+  if(defined($selected_branch))
+  {
+     print "Check if specified branch is in good standing\n";
+     print "branch to check = " . $selected_branch . "\n";
+  }  
+  else
+  {
+    print "List all branches that exist in all repos\n";
+    
+    if($show_json)
+    {
+      # output for machine
+      print "to do - output json info showing a list of branches that are in good standing and exist everywhere\n"
+    }
+    else # output for human
+    {
+      print "to do - get a list of branches that exist in all submodules\n";
+    }    
+    
+  }
+  
+
+
+}
 
 sub orphan_branch_full_details()
 {
-    # show full details
+  # show full details
+    
+  if($show_json)
+  {
+     # output for machine
+     print "to do - get branch full details\n";
+   
+     print "show json?: $show_json \n";
+  }
+  else # output for human
+  {
     print "to do - show full orphan details about the specified branch ($orphan_branch)\n";
     print "show json?: $show_json \n";
+  }
+
 }
 
 sub orphan_branch_missing_from()
 {
-    # show the information about the specified branch that includes which submodules do
-    # not have this branch
-    print "to do - show the repos where the specified branch ($orphan_branch) does not exists\n";
-
+  # show the information about the specified branch that includes which submodules do
+  # not have this branch
+    
+  if($show_json)
+  {
+     # output for machine
+     print "to do - get orphan 'missing-from' details in json form for branch $orphan_branch\n";
+   
+     print "show json?: $show_json \n";
+  }
+  else # output for human
+  {
+    print "to do - show orphan branch 'missing-from' details: ($orphan_branch)\n";
     print "show json?: $show_json \n";
+  }
+  
 }
 
 sub orphan_branch_exists_in()
 {
-    # show the information about the specified branch that includes which submodules 
-    # have this branch
-    print "to do - show which repos have the specified branch ($orphan_branch)\n";
+  # show the information about the specified branch that includes which submodules 
+  # have this branch
 
+  if($show_json)
+  {
+     # output for machine
+     print "to do - get orphan 'exists-in' details in json form for branch $orphan_branch\n";
+   
+     print "show json?: $show_json \n";
+     
+     print $orphan_branch ."-----\n";
+     if(defined($orphan_branch))    ###### TO DO... this doesnt work... need to fix how we get this from GetOptions()
+     {
+       print "Checking for branch $orphan_branch\n";
+     }
+     
+  }
+  else # output for human
+  {
+    print "to do - show orphan branch 'exists-in' details: ($orphan_branch)\n";
     print "show json?: $show_json \n";
+
+     if(defined($selected_branch))    ###### TO DO... this doesnt work... need to fix how we get this from GetOptions()
+     {
+       print "Checking for branch $selected_branch\n";
+     }
+
+  }
+
 }
