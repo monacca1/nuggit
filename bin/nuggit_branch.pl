@@ -538,7 +538,7 @@ sub list_orphans()
 
   my @nuggit_branch_info = get_branch_info();
 
-  print Dumper(\@nuggit_branch_info);
+#  print Dumper(\@nuggit_branch_info);
 
   # algorithm... find the root repo
   # for each repo that is not the root repo
@@ -550,25 +550,64 @@ sub list_orphans()
   #     for each branch
   #        check if the branch is in every other repo.  if not it is an orphan branch
 
-  foreach my $info (@nuggit_branch_info) 
+  foreach my $info (@nuggit_branch_info)   #for each repo
   {
-     print "Repo Name " . $info->{'name'}  . " \n";
-     print "branches array: " . $info->{'branches_array'} . "\n";
+     my $repo_A_name = $info->{'name'};
+#     print "Repo Name " . $repo_A_name  . " \n";
+#     print "branches array: " . $info->{'branches_array'} . "\n";
      
      my $tmp = $info->{'branches_array'};
 
-     print "printing tmp via dumper: \n";
-     print Dumper($tmp);
+#     print "printing tmp via dumper: \n";
+#     print Dumper($tmp);
      
      # test printing one individual element
-     print "printing directly: $tmp->[0]\n";  
-     
-     
+#     print "printing directly: $tmp->[0]\n";  
+          
      # construct temporary array so we can walk through the items with the foreach loop
      my @foo = @{ $tmp };
-     foreach(@foo)
+     my $i = 0;
+     foreach(@foo)  # for each branch in the above repo.  we want to check this branch to see if it is in ALL other repos
      {
-       print "branch:  " . $_ ."\n";
+       my $repo_A_branch_name = $_;
+       print "TO DO - check this branch[$i]:  " . $repo_A_branch_name . " to see if it exists in all repos\n";
+       
+       my $cnt_of_repos_missing_branch = 0;
+       my $cnt_of_repos_contianing_branch = 0;
+       foreach(@nuggit_branch_info)  # loop over all repos again
+       {
+          my $repo_B_name =       $_->{'name'};
+          my @repo_B_branches = @{$_->{'branches_array'}};
+	  
+	  my $match = 0; 
+	  foreach my $repo_B_branch_name (@repo_B_branches)   # loop over all braches again
+	  {
+	    if($repo_A_branch_name eq $repo_B_branch_name)
+	    {
+	      print "Match Found ($repo_A_name :: $repo_A_branch_name = $repo_B_name :: $repo_B_branch_name)\n";
+	      $match++;
+	      last;
+	    }
+#	    print "checking repo a $repo_A_name :: $repo_A_branch_name   =? $repo_B_name :: $repo_B_branch_name\n";
+	  }
+	  
+	  if($match == 0)
+	  {
+	     $cnt_of_repos_missing_branch++;
+#	     print "orphan branch, no match for $repo_A_name :: $repo_A_branch_name in repo $repo_B_name\n";
+	  }
+	  else
+	  {
+	    $cnt_of_repos_contianing_branch++;
+#	    print "branch ($repo_A_branch_name) in good standing with this repo $repo_B_name\n";
+	  }
+	  
+       }
+       print "repos with branch    ($repo_A_branch_name): $cnt_of_repos_contianing_branch\n";
+       print "repos without branch ($repo_A_branch_name): $cnt_of_repos_missing_branch\n";
+       
+       $i = $i + 1;
+       
      }
      
      
