@@ -109,6 +109,10 @@ List all orphaned branches.  An orphaned branch is one that exists in a submodul
 
 This argument must specify a branch name and an additional flag.  If no other flags are provided indicating specific information about the orphan, this will show full details about the orphan branch.  Full details include, the count of repos where the specified branch exists, count of repos where specified branch is missing, gives a list of repos where specified branch is missing, gives a list of repos where specified branch exists.  When this flag is provided, the following specifics can be requested --missing-from or --exists-in, where information about which repos do not have this branch, or which repos do have this branch respectively.
 
+=item --exists-in-all
+
+The --exists-in-all flag may be provided an optional branch name.  If a branch name is provided, this will check if the specified branch exists in all submodules.  If no branch name is provided, this will output a list of branches that do exist in all submodules that are visibile from the currently checked out workspace/branch.
+
 =back
 
 =cut
