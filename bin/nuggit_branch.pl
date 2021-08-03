@@ -136,6 +136,8 @@ sub ParseArgs();
 sub is_branch_selected_throughout($);
 sub create_new_branch($);
 sub get_selected_branch_here();
+
+sub get_branch_info();
 sub list_orphans();
 sub list_nuggit_branches();
 sub orphan_branch_details();
@@ -472,6 +474,38 @@ sub check_branch_merged_all
     return $status;
 }
 
+
+sub get_branch_info()
+{
+
+  print "GETTING BRANCH INFO\n\n\n";
+  my @nuggit_branch_info;
+
+  $ngt->foreach({'run_root' => 1, 'breadth_first' => sub {
+                   my %branch_info;
+                   my $info = shift;
+                   my $parent = $info->{'parent'};
+                   my $name = $info->{'name'};
+		   if($name eq "")
+		   {
+		     $name = "Nuggit Root";
+		   }
+                   my $branches_string = `git branch`;
+		   
+		   $branch_info{'name'} = $name;
+		   $branch_info{'branches_str'} = $branches_string;
+		   
+		   push(@nuggit_branch_info, \%branch_info);
+
+                }});
+		   
+#  print Dumper(\@nuggit_branch_info);
+
+  return @nuggit_branch_info;
+
+}
+
+
 sub list_orphans()
 {
   # this should list all branches in any repo where the particular branch does not also exist in the root repo.
@@ -480,35 +514,9 @@ sub list_orphans()
   
   # for each submodule, get the list of all branches and only display the branches that do not exist in the parent. 
 
+  my @nuggit_branch_info = get_branch_info();;
 
-# ================================
-#  my $cmd = "git branch";
-  # Don't use native git submodule foreach, as it's error handling (aborting) is inconsistent
-#  $ngt->run_foreach($cmd);
-# ================================
-
-# =====================================
-#   print Dumper $ngt->get_branches();
-# =====================================
-
-# ==========================================
-my $nuggit_root_dir = find_root_dir();
-print "Nuggit Root Dir is: $nuggit_root_dir \n";
-
-
-  $ngt->foreach({'run_root' => 1, 'breadth_first' => sub {
-                   my $info = shift;
-                   my $parent = $info->{'parent'};
-                   my $name = $info->{'name'};
-		   if($name eq "")
-		   {
-		     $name = "Nuggit Root";
-		   }
-		   print "repo or submodule name is:  $name\n";
-                   print `git branch`; 
-
-                }});
-		   
+  print Dumper(\@nuggit_branch_info);
 
 
   if($show_json)
