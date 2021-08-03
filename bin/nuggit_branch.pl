@@ -481,7 +481,7 @@ sub list_orphans()
   # for each submodule, get the list of all branches and only display the branches that do not exist in the parent. 
 
 
-# =========================
+# ================================
 #  my $cmd = "git branch";
   # Don't use native git submodule foreach, as it's error handling (aborting) is inconsistent
 #  $ngt->run_foreach($cmd);
@@ -495,23 +495,20 @@ sub list_orphans()
 my $nuggit_root_dir = find_root_dir();
 print "Nuggit Root Dir is: $nuggit_root_dir \n";
 
-print getcwd . "   \n";
 
-print "Root repo is " . getcwd . "\n";
-print "branches of root repo: \n";
-print `git branch`;
-print "\n";
+  $ngt->foreach({'run_root' => 1, 'breadth_first' => sub {
+                   my $info = shift;
+                   my $parent = $info->{'parent'};
+                   my $name = $info->{'name'};
+		   if($name eq "")
+		   {
+		     $name = "Nuggit Root";
+		   }
+		   print "repo or submodule name is:  $name\n";
+                   print `git branch`; 
 
-
-  submodule_foreach(sub {
-      my $subname = File::Spec->catdir(shift, shift);
-      print "At submodule: $subname \n";
-      print `git branch`;
-                    });
-# ========================================
-
-
-
+                }});
+		   
 
 
   if($show_json)
