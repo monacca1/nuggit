@@ -536,10 +536,51 @@ sub list_orphans()
   
   # for each submodule, get the list of all branches and only display the branches that do not exist in the parent. 
 
-  my @nuggit_branch_info = get_branch_info();;
+  my @nuggit_branch_info = get_branch_info();
 
   print Dumper(\@nuggit_branch_info);
 
+  # algorithm... find the root repo
+  # for each repo that is not the root repo
+  #    for each branch listed in the submodule... check if the branch is in the root repo
+  #        if the branch is not in the root repo, it is an orphan branch
+
+  # alternative algorithm..
+  #  for each repo
+  #     for each branch
+  #        check if the branch is in every other repo.  if not it is an orphan branch
+
+  foreach my $info (@nuggit_branch_info) 
+  {
+     print "Repo Name " . $info->{'name'}  . " \n";
+     print "branches array: " . $info->{'branches_array'} . "\n";
+     
+     my $tmp = $info->{'branches_array'};
+
+     print "printing tmp via dumper: \n";
+     print Dumper($tmp);
+     
+     # test printing one individual element
+     print "printing directly: $tmp->[0]\n";  
+     
+     
+     # construct temporary array so we can walk through the items with the foreach loop
+     my @foo = @{ $tmp };
+     foreach(@foo)
+     {
+       print "branch:  " . $_ ."\n";
+     }
+     
+     
+#     print "printing array len: ", scalar @tmp, "\n";
+     
+#     print "\@tmp: ". $tmp[0]  . "\n";
+     
+#     foreach my $branch (@tmp)
+#     {
+#       print "branch:    " . $branch . "\n";
+#     }
+  }
 
   if($show_json)
   {
