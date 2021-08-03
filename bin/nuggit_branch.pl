@@ -475,6 +475,17 @@ sub check_branch_merged_all
 }
 
 
+# build and return a data structure
+#   array [ 
+#            { name = string
+#              branch array = { 
+#                    branch, 
+#                    branch, 
+#                    branch },
+# 	     },
+#            ...
+#        ]
+	  
 sub get_branch_info()
 {
 
@@ -493,11 +504,17 @@ sub get_branch_info()
                    my $branches_string = `git branch`;
 		   
 		   $branch_info{'name'} = $name;
-#		   $branch_info{'branches_str'} = $branches_string;
-		   
-		   # to do - convert the branches string into a branches array
+	   
+		   # convert the branches string into a branches array
 		   my @branch_array = split("\n", $branches_string,);
-		   #print Dumper (\@branch_array);
+		   
+		   # remove the "*" for the selected branch
+		   foreach(@branch_array)
+		   {
+		     $_ =~ s/\*//;
+		     $_ =~ s/^\s+//; 
+		   }
+		   
 		   $branch_info{'branches_array'} = \@branch_array;
 		   
 		   push(@nuggit_branch_info, \%branch_info);
