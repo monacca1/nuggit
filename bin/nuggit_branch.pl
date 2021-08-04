@@ -597,25 +597,45 @@ sub list_orphans()
   # alternative algorithm 3
   # for each unique branch, go through all the repos and check if the branch is in the repo
 
-  foreach my $repo_info (@nuggit_branch_info)
+  foreach my $branch_name (@full_branch_list)
   {
-    my $repo_A_name    = $repo_info->{'name'};
-    my @branches_array = @{ $repo_info->{'branches_array'} };
 
-    print "$repo_A_name\n";
-#    print Dumper (@branches_array);
-    
-    foreach my $branch_name (@full_branch_list)
+    my @missing_from_array;
+    my @exists_in_array;
+  
+    foreach my $repo_info (@nuggit_branch_info)
     {
+      my $repo_A_name    = $repo_info->{'name'};
+      my @branches_array = @{ $repo_info->{'branches_array'} };
+
+#      print "$repo_A_name\n";
+      #    print Dumper (@branches_array);
+    
       if(!is_item_in_array(\@branches_array, $branch_name))
       {
-        print "    X branch $branch_name is not in this repo\n";
+#        print "    X branch $branch_name is not in this repo\n";
+        push(@missing_from_array, $repo_A_name);
       }
       else
       {
-        print "    branch $branch_name is in this repo\n";
+#        print "    branch $branch_name is in this repo\n";
+        push(@exists_in_array, $repo_A_name);
       }
     }
+    
+    print "Branch: $branch_name \n";
+    
+    if(@missing_from_array == 0)
+    {
+      print "    Branch exists in all repos\n";
+    }
+    else
+    {
+       print "Missing from array: \n";
+       foreach my $repo (@missing_from_array)  { print "    $repo\n"; }
+       print "Exists in array: \n";
+       foreach my $repo (@exists_in_array)     { print "    $repo\n"; }
+    } 
   }
 
   return;
