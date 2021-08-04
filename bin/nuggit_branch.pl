@@ -594,12 +594,12 @@ sub list_orphans()
 # print Dumper(\@full_branch_list);
 #  print Dumper(\@nuggit_branch_info);
 
-  # alternative algorithm 3
-  # for each unique branch, go through all the repos and check if the branch is in the repo
+# to do - put the following in a function... we will want to be able to re-use this too.
 
+  # Algorithm 
+  # for each unique branch, go through all the repos and check if the branch is in the repo
   foreach my $branch_name (@full_branch_list)
   {
-
     my @missing_from_array;
     my @exists_in_array;
   
@@ -622,114 +622,42 @@ sub list_orphans()
         push(@exists_in_array, $repo_A_name);
       }
     }
+
+# to do - define a data structure for this particular branch
+#{
+#    name: branch name
+#    exists_in_array:     [ @branch list ]
+#    missing_from_array:  [ @branch list ]
+#}
+    my %branch_info;
+    $branch_info{'branch_name'}  = $branch_name;
     
-    print "Branch: $branch_name \n";
+#    print "Branch: $branch_name \n";
     
     if(@missing_from_array == 0)
     {
-      print "    Branch exists in all repos\n";
+#      print "    Branch exists in all repos\n";
+      $branch_info{'orphan_status'} = "nuggit";
     }
     else
     {
-       print "Missing from array: \n";
-       foreach my $repo (@missing_from_array)  { print "    $repo\n"; }
-       print "Exists in array: \n";
-       foreach my $repo (@exists_in_array)     { print "    $repo\n"; }
-    } 
+       $branch_info{'orphan_status'} = "orphan";
+#       print "Missing from array: \n";
+#       foreach my $repo (@missing_from_array)  { print "    $repo\n"; }
+#       print "Exists in array: \n";
+#       foreach my $repo (@exists_in_array)     { print "    $repo\n"; }
+    }
+    
+    
+    $branch_info{'missing_count'}      = @missing_from_array;
+    $branch_info{'missing_from_array'} = \@missing_from_array;
+    $branch_info{'exist_count'}        = @exists_in_array;
+    $branch_info{'exists_in_array'}    = \@exists_in_array;
+    
+    print Dumper (\%branch_info);
   }
 
-  return;
   
-
-  foreach my $info (@nuggit_branch_info)   #for each repo
-  {
-     my $repo_A_name = $info->{'name'};
-#     print "Repo Name " . $repo_A_name  . " \n";
-#     print "branches array: " . $info->{'branches_array'} . "\n";
-     
-     my $tmp = $info->{'branches_array'};
-
-#     print "printing tmp via dumper: \n";
-#     print Dumper($tmp);
-     
-     # test printing one individual element
-#     print "printing directly: $tmp->[0]\n";  
-          
-     # construct temporary array so we can walk through the items with the foreach loop
-     my @foo = @{ $tmp };
-     my $i = 0;
-     foreach(@foo)  # for each branch in the above repo.  we want to check this branch to see if it is in ALL other repos
-     {
-       my $repo_A_branch_name = $_;
-# to do - if $repo_A_branch_name is not already in the list of unique branches, add it.       
-#       print "TO DO - check this branch[$i]:  " . $repo_A_branch_name . " to see if it exists in all repos\n";
-       
-       my $cnt_of_repos_missing_branch = 0;
-       my $cnt_of_repos_contianing_branch = 0;
-       foreach(@nuggit_branch_info)  # loop over all repos again
-       {
-          my $repo_B_name =       $_->{'name'};
-          my @repo_B_branches = @{$_->{'branches_array'}};
-	  
-	  my $match = 0; 
-	  foreach my $repo_B_branch_name (@repo_B_branches)   # loop over all braches again
-	  {
-	    if($repo_A_branch_name eq $repo_B_branch_name)
-	    {
-#	      print "Match Found ($repo_A_name :: $repo_A_branch_name = $repo_B_name :: $repo_B_branch_name)\n";
-	      $match++;
-	      last;
-	    }
-#	    print "checking repo a $repo_A_name :: $repo_A_branch_name   =? $repo_B_name :: $repo_B_branch_name\n";
-	  }
-	  
-	  if($match == 0)
-	  {
-# TO DO
-#   to do - add repo to list of repos the branch is exists in	  
-	     $cnt_of_repos_missing_branch++;
-#	     print "orphan branch, no match for $repo_A_name :: $repo_A_branch_name in repo $repo_B_name\n";
-	  }
-	  else
-	  {
-# TO DO
-#   to do - add repo to list of repos the branch is missing from
-	    $cnt_of_repos_contianing_branch++;
-#	    print "branch ($repo_A_branch_name) in good standing with this repo $repo_B_name\n";
-	  }
-	  
-       }
-
-# =============================================================================================================
-# ========== this is not right... need to make a data structure to represent this and figure out how to add it
-       $info->{$repo_A_branch_name} = $repo_A_branch_name;  #this doesnt make any sense... just an experiment
-       $info->{'foo'} = $cnt_of_repos_contianing_branch;
-       $info->{'boo'} = $cnt_of_repos_missing_branch;
-       my %tmp_branch_info;
-       $tmp_branch_info{name} = $repo_A_branch_name;
-#       $tmp_branch_info{}
-# =============================================================================================================
-
-       
-       print "repos with branch    ($repo_A_branch_name): $cnt_of_repos_contianing_branch\n";
-       print "repos without branch ($repo_A_branch_name): $cnt_of_repos_missing_branch\n";
-       
-       $i = $i + 1;
-       
-     }
-     
-     
-#     print "printing array len: ", scalar @tmp, "\n";
-     
-#     print "\@tmp: ". $tmp[0]  . "\n";
-     
-#     foreach my $branch (@tmp)
-#     {
-#       print "branch:    " . $branch . "\n";
-#     }
-  }
-  
-  print Dumper(\@nuggit_branch_info);
   
   if($show_json)
   {
