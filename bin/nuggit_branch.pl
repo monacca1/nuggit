@@ -138,7 +138,7 @@ sub create_new_branch($);
 sub get_selected_branch_here();
 
 
-sub get_full_branch_list();
+sub get_full_branch_list($);
 sub is_item_in_array($$);
 sub get_branch_info();
 sub list_orphans();
@@ -554,21 +554,9 @@ sub is_item_in_array($$)
   return 0;
 }
 
-sub get_full_branch_list()
+sub get_full_branch_list($)
 {
-}
-
-sub list_orphans()
-{
-  # this should list all branches in any repo where the particular branch does not also exist in the root repo.
-
-  # get the list of root repo branches
-  
-  # for each submodule, get the list of all branches and only display the branches that do not exist in the parent. 
-
-  my @nuggit_branch_info = get_branch_info();
-  
-  # create an empty list/array of unique branches.  This will be the super set of all branches in all repos  
+  my @nuggit_branch_info = @{$_[0]};
   my @full_branch_list;
   foreach my $tmp_branch_info (@nuggit_branch_info)
   {
@@ -586,25 +574,51 @@ sub list_orphans()
      
      }
   }
+  return @full_branch_list;
+}
 
-print Dumper(\@full_branch_list);
+sub list_orphans()
+{
+  # this should list all branches in any repo where the particular branch does not also exist in the root repo.
+
+  # get the list of root repo branches
+  
+  # for each submodule, get the list of all branches and only display the branches that do not exist in the parent. 
+
+  # get a list of all branches in each repo... (repo by repo)
+  my @nuggit_branch_info = get_branch_info();
+  
+  # create an empty list/array of unique branches.  This will be the super set of all branches in all repos  
+  my @full_branch_list = get_full_branch_list(\@nuggit_branch_info);
+
+# print Dumper(\@full_branch_list);
 #  print Dumper(\@nuggit_branch_info);
 
-  # algorithm... find the root repo
-  # for each repo that is not the root repo
-  #    for each branch listed in the submodule... check if the branch is in the root repo
-  #        if the branch is not in the root repo, it is an orphan branch
-
-  # alternative algorithm..
-  #  for each repo
-  #     for each branch
-  #        check if the branch is in every other repo.  if not it is an orphan branch
-  #
-  
   # alternative algorithm 3
-  # create empty list of branches
-  # go though repos and branches... for each branch, check if it is in the unique list of branches, if not add it.
   # for each unique branch, go through all the repos and check if the branch is in the repo
+
+  foreach my $repo_info (@nuggit_branch_info)
+  {
+    my $repo_A_name    = $repo_info->{'name'};
+    my @branches_array = @{ $repo_info->{'branches_array'} };
+
+    print "$repo_A_name\n";
+#    print Dumper (@branches_array);
+    
+    foreach my $branch_name (@full_branch_list)
+    {
+      if(!is_item_in_array(\@branches_array, $branch_name))
+      {
+        print "    X branch $branch_name is not in this repo\n";
+      }
+      else
+      {
+        print "    branch $branch_name is in this repo\n";
+      }
+    }
+  }
+
+  return;
   
 
   foreach my $info (@nuggit_branch_info)   #for each repo
