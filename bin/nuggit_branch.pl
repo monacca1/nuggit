@@ -137,7 +137,7 @@ sub is_branch_selected_throughout($);
 sub create_new_branch($);
 sub get_selected_branch_here();
 
-
+sub get_orphan_branch_info($$);
 sub get_full_branch_list($);
 sub is_item_in_array($$);
 sub get_branch_info();
@@ -577,24 +577,20 @@ sub get_full_branch_list($)
   return @full_branch_list;
 }
 
-sub list_orphans()
+
+sub get_orphan_branch_info($$)
 {
-  # this should list all branches in any repo where the particular branch does not also exist in the root repo.
 
-  # get the list of root repo branches
-  
-  # for each submodule, get the list of all branches and only display the branches that do not exist in the parent. 
+   my @nuggit_branch_info;
+   my @full_branch_list;
+   
+   @nuggit_branch_info = @{$_[0]};
+   @full_branch_list    = @{$_[1]};
 
-  # get a list of all branches in each repo... (repo by repo)
-  my @nuggit_branch_info = get_branch_info();
-  
-  # create an empty list/array of unique branches.  This will be the super set of all branches in all repos  
-  my @full_branch_list = get_full_branch_list(\@nuggit_branch_info);
+   my @orphan_branch_info;   # build and return this
 
 # print Dumper(\@full_branch_list);
 #  print Dumper(\@nuggit_branch_info);
-
-# to do - put the following in a function... we will want to be able to re-use this too.
 
   # Algorithm 
   # for each unique branch, go through all the repos and check if the branch is in the repo
@@ -654,10 +650,53 @@ sub list_orphans()
     $branch_info{'exist_count'}        = @exists_in_array;
     $branch_info{'exists_in_array'}    = \@exists_in_array;
     
-    print Dumper (\%branch_info);
+    push(@orphan_branch_info, \%branch_info );
+    
+#    print Dumper (\%branch_info);
   }
-
   
+  #print "PRINTING ORPHAN BRANCH INFO\n\n\n";
+  #print Dumper(\@orphan_branch_info);
+  
+  return @orphan_branch_info;
+  
+}
+
+
+sub list_orphans()
+{
+  # this should list all branches in any repo where the particular branch does not also exist in the root repo.
+
+  # get the list of root repo branches
+  
+  # for each submodule, get the list of all branches and only display the branches that do not exist in the parent. 
+
+  # get a list of all branches in each repo... (repo by repo)
+  my @nuggit_branch_info = get_branch_info();  # this returns a basic data structure (array) that contains an entry 
+                                               # for each repo/submodule and an array for that repo containing a list 
+					       # of all the branches
+  
+  # print Dumper(@nuggit_branch_info);
+  
+  # create an empty list/array of unique branches.  This will be the super set of all branches in all repos  
+  my @full_branch_list = get_full_branch_list(\@nuggit_branch_info);
+
+  my @orphan_branch_info;
+  @orphan_branch_info  = get_orphan_branch_info(\@nuggit_branch_info, \@full_branch_list);    # this is an array
+                                                                # one entry for each branch, it contains a hash
+								# with the branch name, its orphan status
+								# number of repos where the branch was found
+								# number of repos where the branch was not found
+								# an array containing a list of repos where the branch
+								# was found, and an array containing a list of repos where
+								# the branch was not found.
+
+ 
+#  print "PRINTING ORPHAN BRANCH INFO FROM list_orphans()\n\n";
+#  print Dumper(\@orphan_branch_info);
+
+print "number of entries in the orphan_branch_info array: "  . @orphan_branch_info . "\n\n";
+print Dumper(\@orphan_branch_info);  
   
   if($show_json)
   {
