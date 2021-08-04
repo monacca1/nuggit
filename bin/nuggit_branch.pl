@@ -137,6 +137,9 @@ sub is_branch_selected_throughout($);
 sub create_new_branch($);
 sub get_selected_branch_here();
 
+
+sub get_full_branch_list();
+sub is_item_in_array($$);
 sub get_branch_info();
 sub list_orphans();
 sub list_nuggit_branches();
@@ -528,6 +531,33 @@ sub get_branch_info()
 }
 
 
+
+sub is_item_in_array($$)
+{
+  my @array_arg = @{$_[0]};
+  my $item_arg  = $_[1];
+
+  foreach my $item ( @array_arg )
+  {
+  
+#    print $item . " =? " . $item_arg . " \n";
+  
+    if($item eq $item_arg)
+    {
+#      print "item ($item_arg) already in array\n";
+      return 1;
+    }
+    
+  }
+  
+#  print "Item ($item_arg) not in array\n";
+  return 0;
+}
+
+sub get_full_branch_list()
+{
+}
+
 sub list_orphans()
 {
   # this should list all branches in any repo where the particular branch does not also exist in the root repo.
@@ -538,8 +568,26 @@ sub list_orphans()
 
   my @nuggit_branch_info = get_branch_info();
   
-# to do create an empty list/array of unique branches.  This will be the super set of all branches in all repos  
+  # create an empty list/array of unique branches.  This will be the super set of all branches in all repos  
+  my @full_branch_list;
+  foreach my $tmp_branch_info (@nuggit_branch_info)
+  {
+     my @branches_array = @{ $tmp_branch_info->{'branches_array'} };
+  
+     foreach my $tmp_branch (@branches_array)
+     {
+       #print "About to check if $tmp_branch is in the array\n";
+       if(!is_item_in_array(\@full_branch_list, $tmp_branch))
+       {
+         #print "branch $tmp_branch is new to the list\n";
+         push(@full_branch_list, $tmp_branch);
+         #print Dumper(\@full_branch_list);
+       }
+     
+     }
+  }
 
+print Dumper(\@full_branch_list);
 #  print Dumper(\@nuggit_branch_info);
 
   # algorithm... find the root repo
@@ -552,6 +600,12 @@ sub list_orphans()
   #     for each branch
   #        check if the branch is in every other repo.  if not it is an orphan branch
   #
+  
+  # alternative algorithm 3
+  # create empty list of branches
+  # go though repos and branches... for each branch, check if it is in the unique list of branches, if not add it.
+  # for each unique branch, go through all the repos and check if the branch is in the repo
+  
 
   foreach my $info (@nuggit_branch_info)   #for each repo
   {
