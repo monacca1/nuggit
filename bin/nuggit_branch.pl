@@ -537,6 +537,8 @@ sub list_orphans()
   # for each submodule, get the list of all branches and only display the branches that do not exist in the parent. 
 
   my @nuggit_branch_info = get_branch_info();
+  
+# to do create an empty list/array of unique branches.  This will be the super set of all branches in all repos  
 
 #  print Dumper(\@nuggit_branch_info);
 
@@ -549,6 +551,7 @@ sub list_orphans()
   #  for each repo
   #     for each branch
   #        check if the branch is in every other repo.  if not it is an orphan branch
+  #
 
   foreach my $info (@nuggit_branch_info)   #for each repo
   {
@@ -570,7 +573,8 @@ sub list_orphans()
      foreach(@foo)  # for each branch in the above repo.  we want to check this branch to see if it is in ALL other repos
      {
        my $repo_A_branch_name = $_;
-       print "TO DO - check this branch[$i]:  " . $repo_A_branch_name . " to see if it exists in all repos\n";
+# to do - if $repo_A_branch_name is not already in the list of unique branches, add it.       
+#       print "TO DO - check this branch[$i]:  " . $repo_A_branch_name . " to see if it exists in all repos\n";
        
        my $cnt_of_repos_missing_branch = 0;
        my $cnt_of_repos_contianing_branch = 0;
@@ -584,7 +588,7 @@ sub list_orphans()
 	  {
 	    if($repo_A_branch_name eq $repo_B_branch_name)
 	    {
-	      print "Match Found ($repo_A_name :: $repo_A_branch_name = $repo_B_name :: $repo_B_branch_name)\n";
+#	      print "Match Found ($repo_A_name :: $repo_A_branch_name = $repo_B_name :: $repo_B_branch_name)\n";
 	      $match++;
 	      last;
 	    }
@@ -593,16 +597,32 @@ sub list_orphans()
 	  
 	  if($match == 0)
 	  {
+# TO DO
+#   to do - add repo to list of repos the branch is exists in	  
 	     $cnt_of_repos_missing_branch++;
 #	     print "orphan branch, no match for $repo_A_name :: $repo_A_branch_name in repo $repo_B_name\n";
 	  }
 	  else
 	  {
+# TO DO
+#   to do - add repo to list of repos the branch is missing from
 	    $cnt_of_repos_contianing_branch++;
 #	    print "branch ($repo_A_branch_name) in good standing with this repo $repo_B_name\n";
 	  }
 	  
        }
+
+# =============================================================================================================
+# ========== this is not right... need to make a data structure to represent this and figure out how to add it
+       $info->{$repo_A_branch_name} = $repo_A_branch_name;  #this doesnt make any sense... just an experiment
+       $info->{'foo'} = $cnt_of_repos_contianing_branch;
+       $info->{'boo'} = $cnt_of_repos_missing_branch;
+       my %tmp_branch_info;
+       $tmp_branch_info{name} = $repo_A_branch_name;
+#       $tmp_branch_info{}
+# =============================================================================================================
+
+       
        print "repos with branch    ($repo_A_branch_name): $cnt_of_repos_contianing_branch\n";
        print "repos without branch ($repo_A_branch_name): $cnt_of_repos_missing_branch\n";
        
@@ -620,7 +640,9 @@ sub list_orphans()
 #       print "branch:    " . $branch . "\n";
 #     }
   }
-
+  
+  print Dumper(\@nuggit_branch_info);
+  
   if($show_json)
   {
      # output for machine
