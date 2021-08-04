@@ -34,7 +34,8 @@ use Cwd qw(getcwd);
 use Term::ANSIColor;
 use File::Spec;
 use Git::Nuggit;
-use JSON;
+#use JSON;
+use JSON::MaybeXS();
 use Data::Dumper;
 
 =head1 SYNOPSIS
@@ -103,7 +104,7 @@ NOTE: If the '--no-merged' option is specified, checks for submodule branches ma
 
 =item --orphans
 
-List all orphaned branches.  An orphaned branch is one that exists in a submodule but not in the root repository. 
+List all orphaned branches.  An orphaned branch is one that exists in a submodule but not in the root repository.  This will also accept the following flags:  --json, --all. 
 
 =item --orphan
 
@@ -491,9 +492,30 @@ sub check_branch_merged_all
 	  
 sub get_branch_info()
 {
-
-  print "GETTING BRANCH INFO\n\n\n";
   my @nuggit_branch_info;
+
+  my $git_cmd_flags = "";
+  if( $show_all_flag )
+  {
+    $git_cmd_flags = $git_cmd_flags . " --all ";
+  }
+  if(defined($show_merged_bool))
+  {
+    if ($show_merged_bool) 
+    {
+      print "Use of the --merged flag with the orphan flag is non-intuitive.  Bailing out\n";
+      exit();
+      $git_cmd_flags = $git_cmd_flags . " --merged ";
+    }
+    else
+    { 
+       print "Use of the --merged flag with the orphan flag is non-intuitive.  Bailing out\n";
+       exit();
+       $git_cmd_flags = $git_cmd_flags . " --no-merged ";
+    }
+  }
+
+#  print "git cmd flags: $git_cmd_flags\n";
 
   $ngt->foreach({'run_root' => 1, 'breadth_first' => sub {
                    my %branch_info;
@@ -504,7 +526,7 @@ sub get_branch_info()
 		   {
 		     $name = "Nuggit Root";
 		   }
-                   my $branches_string = `git branch`;
+                   my $branches_string = `git branch $git_cmd_flags`;
 		   
 		   $branch_info{'name'} = $name;
 	   
@@ -693,21 +715,49 @@ sub list_orphans()
 
  
 #  print "PRINTING ORPHAN BRANCH INFO FROM list_orphans()\n\n";
-#  print Dumper(\@orphan_branch_info);
-
-print "number of entries in the orphan_branch_info array: "  . @orphan_branch_info . "\n\n";
-print Dumper(\@orphan_branch_info);  
+#  print "number of entries in the orphan_branch_info array: "  . @orphan_branch_info . "\n\n";
+#  print Dumper(\@orphan_branch_info);  
   
   if($show_json)
   {
+     # for JSON output, output the full json.  let the receiver grab what they want
      # output for machine
-     print "to do - get orphan info\n";
-   
-     print "show json?: $show_json \n";
+
+#     print "show json?: $show_json \n";
+     my $json = JSON::MaybeXS->new(utf8 => 1, pretty => 1);
+     my $orphan_branch_json = $json->encode(\@orphan_branch_info);
+
+     #  print "\n";
+     #  print "Result of json encode of \$orphan_branch_json: \n";
+     print $orphan_branch_json;
   }
   else # output for human
   {
-    print "to do - get a list of branches that exist in all submodules\n";
+    print "List of orphan branches (that do not exist in all repos)\n";
+    foreach my $branch_info (@orphan_branch_info)
+    {
+      my $branch_name        = $branch_info->{'branch_name'};
+      my $status             = $branch_info->{'orphan_status'};
+      my $exists_count       = $branch_info->{'exist_count'};
+      my $missing_count      = $branch_info->{'missing_count'};
+      my @missing_from_array = $branch_info->{'missing_from_array'};
+      
+      my $total_repos = $exists_count + $missing_count;
+      
+      #print Dumper(\@missing_from_array);
+      
+      if($missing_count != 0)
+      {
+        my $pad_str_20 = "                    ";      # temporary string to pad the end of a string we want to print
+        my $tmp_str = sprintf("%s%s%s%s%s", $branch_name, 
+	                 $pad_str_20, $pad_str_20, 
+			 $pad_str_20, $pad_str_20);   # create the first colum we want to print that is padded out a lot at the end
+	my $col1    = substr($tmp_str, 0, 80);        # now just take the first 80 chars, so we can print the next column at a constant location
+        print "   $col1";
+	print "Missing from $missing_count of $total_repos repos\n";
+      }
+      
+    }
   }
   
 }
