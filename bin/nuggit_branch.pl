@@ -241,16 +241,15 @@ else
     $ngt->start(level=> 0, verbose => $verbose);
     if ($show_json) {
         verbose_display_branches();
-    } else 
-    {
+    } else {
         if($recurse_flag)
-	{
-	  display_branches_recursive_flag();
-	}
-	else
-	{
+        {
+          display_branches_recursive_flag();
+        }
+        else
+        {
           display_branches();
-	}
+        }
     }
 }
 
