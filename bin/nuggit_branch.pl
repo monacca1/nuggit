@@ -102,6 +102,10 @@ Filter branch listing by merged or not merged state.  If neither option is speci
 
 NOTE: If the '--no-merged' option is specified, checks for submodule branches matching root will be skipped.
 
+=item --recursive 
+
+Recurse through all the submodules.  When used with no other options, or --merged, or --no-merged, or --all, this will display matching branches across all repositories/submodules
+
 =item --orphans
 
 List all orphaned branches.  An orphaned branch is one that exists in a submodule but not in the root repository.  This will also accept the following flags:  --json, --all. 
@@ -138,6 +142,8 @@ sub is_branch_selected_throughout($);
 sub create_new_branch($);
 sub get_selected_branch_here();
 
+
+sub display_branches_recursive_flag();
 sub get_orphan_branch_info($$);
 sub get_full_branch_list($);
 sub is_item_in_array($$);
@@ -159,7 +165,9 @@ my $delete_branch_flag        = 0;
 my $delete_merged_flag        = 0;
 my $delete_remote_flag        = 0;
 my $delete_merged_remote_flag = 0;
-my $show_merged_bool          = undef; # undef = default, true=merged-only, false=unmerged-only
+my $show_merged_bool          = 0;
+my $show_unmerged_bool        = 0;
+my $recurse_flag              = 0;
 my $orphans_flag              = 0;
 my $exists_in_all_flag        = 0;
 my $orphan_branch             = "";
@@ -233,8 +241,16 @@ else
     $ngt->start(level=> 0, verbose => $verbose);
     if ($show_json) {
         verbose_display_branches();
-    } else {
-        display_branches();
+    } else 
+    {
+        if($recurse_flag)
+	{
+	  display_branches_recursive_flag();
+	}
+	else
+	{
+          display_branches();
+	}
     }
 }
 
@@ -254,22 +270,20 @@ sub verbose_display_branches
         all => $show_all_flag,
         merged => $show_merged_bool,
        });
-    say encode_json($branches);
+    say encode_json($branches);    #  TO DO ... NOT DEFINED??????????????????????????/   <<<<<<------------------------------------- to do -------
 }
 
 sub display_branches
 {
     my $flag = ($show_all_flag ? "-a" : "");
-    if (defined($show_merged_bool)) 
+
+    if ($show_merged_bool) 
     {
-        if ($show_merged_bool) 
-        {
-            $flag .= " --merged";
-        }
-        else
-        {
-            $flag .= " --no-merged";
-        }
+        $flag .= " --merged";
+    }
+    elsif($show_unmerged_bool)
+    {
+        $flag .= " --no-merged";
     }
 
     $root_repo_branches = `git branch $flag`;
@@ -281,17 +295,16 @@ sub display_branches
     {
         print color('bold');
         print "All " if $show_all_flag;
-        if (defined($show_merged_bool))
-	{
-            if ($show_merged_bool) 
-	    {
-                print "Merged ";
-            }
-	    else
-	    {
-                print "Unmerged ";
-            }
+
+        if ($show_merged_bool) 
+        {
+           print "Merged ";
         }
+        elsif($show_unmerged_bool)
+        {
+           print "Unmerged ";
+        }
+	
         say "Branches:";
         print color('reset');
         say $root_repo_branches;
@@ -316,10 +329,12 @@ sub ParseArgs()
         "delete-force|D!"   => \$delete_branch_flag,
         "remote|r"          => \$remote_flag,
         "merged!"           => \$show_merged_bool,
+	"no-merged"         => \$show_unmerged_bool,
         "all|a!"            => \$show_all_flag,
         "verbose|v!"        => \$verbose,
         "json!"             => \$show_json, # For branch listing command only
         "help"              => \$help,
+	"recursive"         => \$recurse_flag,
 	"orphans"           => \$orphans_flag,        # list orphan branches
 	"exists-in-all"     => \$exists_in_all_flag,  # get list of branches that exist in all submodules (that we have access to from the currently checked out branch)
 	"orphan=s"          => \$orphan_branch,       # specifies the specific orphan branch name. 
@@ -499,20 +514,16 @@ sub get_branch_info()
   {
     $git_cmd_flags = $git_cmd_flags . " --all ";
   }
-  if(defined($show_merged_bool))
+
+  if ($show_merged_bool) 
   {
-    if ($show_merged_bool) 
-    {
-      print "Use of the --merged flag with the orphan flag is non-intuitive.  Bailing out\n";
-      exit();
-      $git_cmd_flags = $git_cmd_flags . " --merged ";
-    }
-    else
-    { 
-       print "Use of the --merged flag with the orphan flag is non-intuitive.  Bailing out\n";
-       exit();
-       $git_cmd_flags = $git_cmd_flags . " --no-merged ";
-    }
+    print "Use of the --merged flag with the orphan flag is non-intuitive.  Bailing out\n";
+    $git_cmd_flags = $git_cmd_flags . " --merged ";
+  }
+  elsif($show_unmerged_bool)
+  { 
+     print "Use of the --no-merged flag with the orphan flag is non-intuitive.  Bailing out\n";
+     $git_cmd_flags = $git_cmd_flags . " --no-merged ";
   }
 
 #  print "git cmd flags: $git_cmd_flags\n";
@@ -684,6 +695,19 @@ sub get_orphan_branch_info($$)
   
 }
 
+sub display_branches_recursive_flag()
+{
+  my @nuggit_branch_info = get_branch_info();  # this returns a basic data structure (array) that contains an entry 
+                                               # for each repo/submodule and an array for that repo containing a list 
+					       # of all the branches
+  
+  print Dumper(@nuggit_branch_info);
+  
+  # create an empty list/array of unique branches.  This will be the super set of all branches in all repos  
+  my @full_branch_list = get_full_branch_list(\@nuggit_branch_info);
+
+  print "model this after list_orphans()\n";
+}
 
 sub list_orphans()
 {
