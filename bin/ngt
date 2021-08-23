@@ -282,6 +282,21 @@ sub run_alias {
         } else {
             exec(@ARGV); # Never returns
         }
+    } elsif (defined($ENV{NGT_ALIASES})) {
+        # Shell defined aliases are always of form: key="value", where value can be any valid shell command
+        my %aliases = $ENV{NGT_ALIASES} =~ /(\w+)[\s]*=[\s]*((?:[^"'\s]+)|'(?:[^']*)'|"(?:[^"]*)")/gx;
+
+        if (defined($aliases{$cmd})) {
+            # Enter working directory
+            chdir($ngt->root_dir()) || die("Can't enter root_dir\n");
+            my $cmd = $aliases{$cmd};
+            $cmd = substr $cmd, 1, -1 if $cmd =~ /^["'].+["']$/; # strip quotes
+            $cmd .= join(' ', @ARGV);
+
+            say colored("Running command from root: '$cmd'", 'info');
+            exec($cmd); # never returns
+        }
+        
     }
 
 }
