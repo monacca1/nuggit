@@ -188,7 +188,7 @@ if($delete_branch_flag)
 {
   $ngt->start(level=> 1, verbose => $verbose);
   say "Deleting merged branch across all submodules: " . $selected_branch;
-  delete_branch($selected_branch);
+  delete_branch($selected_branch, "-D");
 } 
 elsif ($delete_merged_flag) 
 {
@@ -416,9 +416,9 @@ sub delete_merged_branch
 {
     my $branch = shift;
     if (check_branch_merged_all($branch)) {
-        delete_branch($branch, "-D");
+        delete_branch($branch, "-d");
     } else {
-        die "This branch is not known, or has not been merged into HEAD.  Use '-D' to force deletion anyway.";
+        die "This branch is not known, or has not been merged into HEAD.  Use '-D' to force deletion anyway.\n";
     }
 }
 
@@ -430,15 +430,37 @@ sub delete_branch
 
   my $cmd = "git branch $flag $branch";
 
-  # Don't use native git submodule foreach, as it's error handling (aborting) is inconsistent
-  $ngt->run_foreach($cmd);
+  $ngt->run_die_on_error(0);
+  $ngt->foreach({
+      'depth_first' => sub {
+          my $in = shift;
+
+          my ($err, $stdout, $stderr) = $ngt->run($cmd);
+            if ($err) {
+                say colored("Deletion of $branch failed for ".($in->{'subname'} ? $in->{'subname'} : "/"), 'warn');
+            }
+      },
+      'run_root' => 1
+     });
 }
 
 # Delete a remote branch (unconditionally)
 sub delete_remote_branch
 {
     my $branch = shift;
-    $ngt->run_foreach("git push origin --delete $branch");
+    my $cmd = "git push origin --delete $branch";
+    
+    $ngt->run_die_on_error(0);
+    $ngt->foreach({
+        'depth_first' => sub {
+            my $in = shift;
+            my ($err, $stdout, $stderr) = $ngt->run($cmd);
+            if ($err) {
+                say colored("Deletion of branch $branch on remote failed for ".($in->{'subname'} ? $in->{'subname'} : "/"), 'warn');
+            }
+        },
+        'run_root' => 1
+       });
 }
 
 # Delete Remote branch, only if it is merged at all levels
@@ -462,27 +484,29 @@ sub check_branch_merged_all
     my $status = 1; # Consider it successful, unless we find a branch that is not merged
 
     # TODO: Replace remotes with origin for local detection?
-    my $check_cmd = "git branch -a --merged | grep $branch";
+    my $check_cmd = "git branch -a --merged";
     
     $ngt->foreach( {'depth_first' => sub {
                            my $state = `$check_cmd`;
                            if (!$state) {
                                $status = 0;
-                               say "Branch not merged/found at ".getcwd() if $verbose;
+                               say "Branch ($branch) not merged/found at ".getcwd() if $verbose;
                            } else {
                                my @lines = split('\n', $state);
                                my $linefound = 0;
                                foreach my $line (@lines) {
-                                   my ($lremote, $lbranch) = $line =~ /[\s\*]*(remotes\/(\w+)\/)?([\w\-\_\/]+)/;
-                                   if ($lbranch && $lremote && $branch eq $lbranch && $remote eq $lremote) {
-                                       # Match found
-                                       #  Note: If $remote is undef, then we only match when corresponding match is as well.
-                                       $linefound = 1;
+                                   $line =~ /(remotes\/(?<remote>\w+)\/)?(?<branch>[\w\d\-\_\/]+)/;
+                                   if ($remote && $+{remote} && $+{remote} eq $remote && $+{branch} eq $branch) {
+                                       $linefound = 1; # Match for remote branch
+                                       last;
+                                   } elsif (!$remote && !$+{remote} && $branch eq $+{branch}) {
+                                       $linefound = 1; # Match for local branch
+                                       last;
                                    }
                                }
                                if (!$linefound) {
                                    $status = 0;
-                                   say "Branch not merged/found at ".getcwd() if $verbose;
+                                   say "Branch (line not found) not merged/found at ".getcwd() if $verbose;
                                }
                            }
                        },
