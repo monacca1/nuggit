@@ -361,9 +361,8 @@ sub delete_branch
   $ngt->foreach({
       'depth_first' => sub {
           my $in = shift;
-          say "DBG1";
+
           my ($err, $stdout, $stderr) = $ngt->run($cmd);
-          say "\tDBG2";
             if ($err) {
                 say colored("Deletion of $branch failed for ".($in->{'subname'} ? $in->{'subname'} : "/"), 'warn');
             }
