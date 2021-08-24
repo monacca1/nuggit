@@ -514,15 +514,22 @@ sub get_branch_info()
     $git_cmd_flags = $git_cmd_flags . " --all ";
   }
 
+# I think you need to get rid of this and then once the orphan branches are all identified, THEN you need to check if they are merged or not.
   if ($show_merged_bool) 
   {
     print "Use of the --merged flag with the orphan flag is non-intuitive.  Bailing out\n";
+    print "Instead of combining these operations in one step, split them up.  \n";
+    print "First get list of orphans and then check particular branches if they are merged or vice versa.\n";
+    exit();
     $git_cmd_flags = $git_cmd_flags . " --merged ";
   }
   elsif($show_unmerged_bool)
   { 
-     print "Use of the --no-merged flag with the orphan flag is non-intuitive.  Bailing out\n";
-     $git_cmd_flags = $git_cmd_flags . " --no-merged ";
+    print "Use of the --no-merged flag with the orphan flag is non-intuitive.  Bailing out\n";
+    print "Instead of combining these operations in one step, split them up.  \n";
+    print "First get list of orphans and then check particular branches if they are merged or vice versa.\n";     
+    exit();
+    $git_cmd_flags = $git_cmd_flags . " --no-merged ";
   }
 
 #  print "git cmd flags: $git_cmd_flags\n";
