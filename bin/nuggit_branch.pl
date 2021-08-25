@@ -223,8 +223,67 @@ else
 {
     if(defined($selected_branch) && $do_branch_list == 1)
     {
-      # user included a branch name and listing flags that were not already handled?  not sure what is being requested.
-      print "Not sure what you want me to do. See nuggit branch --help\n"; 
+    
+#      print "Selected branch: $selected_branch \n";
+#      print "--all:           $show_all_flag\n";
+#      print "--recursive:     $recurse_flag\n";
+#      print "--no-merged:     $show_unmerged_bool\n";
+#      print "--merged:        $show_merged_bool\n";
+
+      my $checked_out_branch_head_commit = "";
+      my $branch_head_commit = "";
+      my $checked_out_branch_here = "FOOO";
+      
+      $ngt->foreach({'run_root' => 1, 'breadth_first' => sub {
+                          my $info = shift;
+			  my $parent = $info->{'parent'};
+			  my $name   = $info->{'name'};
+			  if($name eq "")
+			  {
+			     $name = "Nuggit Root";
+			  }
+
+			  $branch_head_commit = `git rev-parse --short $selected_branch`;           ### TO DO - FOR CORRECTNESS YOU WILL WANT TO ELIMINATE THE --short WHICH WILL INSTEAD GET THE FULL SHA
+			  chomp($branch_head_commit);
+			  $checked_out_branch_here = get_selected_branch_here();
+  			  $checked_out_branch_head_commit = `git rev-parse --short $checked_out_branch_here`;
+			  
+#			  print "Check if branch $selected_branch is merged into checked out branch in repo: $name\n";
+#			  print "   Does branch $selected_branch exist? TODO\n";
+#			  print "   Checked out branch in repo $name is $checked_out_branch_here\n";
+#			  print "   Head commit of branch $selected_branch is: $branch_head_commit\n";
+#			  print "   check if head commit $branch_head_commit is merged into checked out branch $checked_out_branch_here\n";
+			  my $exit_code = system("git merge-base --is-ancestor $branch_head_commit $checked_out_branch_head_commit");
+			  
+			  if($show_merged_bool)
+			  {
+                             if($exit_code == 0)
+                             {
+                                print "branch $selected_branch is merged into branch $checked_out_branch_here in repo $name\n";
+                             }
+			  }
+			  elsif($show_unmerged_bool)
+			  {
+			     if($exit_code != 0)
+			     {
+			        print "branch $selected_branch is NOT merged into branch $checked_out_branch_here in repo $name\n";
+			     }
+			  }
+			  else
+			  {
+			     if($exit_code == 0)
+			     {
+			        print "branch $selected_branch is merged into branch $checked_out_branch_here in repo $name\n";
+			     }
+			     else
+			     {
+			        print "branch $selected_branch is NOT merged into branch $checked_out_branch_here in repo $name\n";
+			     }
+			  }
+
+                       }
+                    });
+      
     }
     else
     {
