@@ -214,6 +214,7 @@ elsif( ($orphans_flag) or
 }
 elsif (defined($selected_branch) && $do_branch_list == 0) 
 {
+    # only want to create a flag if we do not believe we were requested to do a branch listing
     $ngt->start(level=> 1, verbose => $verbose);
     create_new_branch($selected_branch);
 }
@@ -221,6 +222,7 @@ else
 {
     if(defined($selected_branch) && $do_branch_list == 1)
     {
+      # user included a branch name and listing flags that were not already handled?  not sure what is being requested.
       print "Not sure what you want me to do. See nuggit branch --help\n"; 
     }
     else
@@ -773,22 +775,56 @@ sub display_branches_recursive_flag()
   
   # create an empty list/array of unique branches.  This will be the super set of all branches in all repos  
   my @full_branch_list = get_full_branch_list(\@nuggit_branch_info);
-
-  print "Superset of unique branches: \n";
-  print Dumper(@full_branch_list);    # this is the superset list of all branches
   
   # a few options exists
   #    (1) --merged or --no-merged flag was provided
-  #            In this case, we want to find
+  #            In this case, we want to find:
+  #               (a) --merged: the branches that are fully merged into the HEAD commit or
+  #               (b) --no-merged: the branches that have at least one repo/submodule where 
+  #                    the branch is not merged into the HEAD commi.t
   #    (2) neither --merged or --no-merged flags were provided
+  #            In this case, we want to list a superset of all the unique branches
+  #             that fit the description across all submodules
   
-  # to do - now need to process this information
-  # for each branch in the full branch list... check for each repo
-  #    does the branch exist and is the branch merged
+  if($show_merged_bool or $show_unmerged_bool)
+  {
+    print "CASE 1: show merged or unmerged branches\n";
+    
+    # at this point we have 
+    #      "@nuggit_branch_info" which is an array of each repository and a list of all the branches in that repository
+    #      and
+    #      "@full_branch_list" which is an array of the unique branches that exist across all submodules along with some additional information about the branch
 
-  # ======================================================
-  # to do - you are here
-  # ======================================================
+  print "Superset of unique branches: \n";
+  print Dumper(@full_branch_list);    # this is the superset list of all branches
+
+
+    # ======================================================
+    # to do - you are here
+    # ======================================================  
+  }
+  else
+  {
+#    print "CASE 2: show superset of unique branches recursively across all submodules\n";
+
+    # at this point we have 
+    #      "@nuggit_branch_info" which is an array of each repository and a list of all the branches in that repository
+    #      and
+    #      "@full_branch_list" which is an array of the unique branches that exist across all submodules along with some additional information about the branch    
+
+    # Sort the array for convenience
+    my @sorted_full_branch_list = sort @full_branch_list;
+
+    print "Superset of unique branches across all submodules: \n";
+   
+    foreach my $branch_info (@sorted_full_branch_list)
+    {
+    
+       print "  " . $branch_info . "\n";
+    }
+
+  }
+
 }
 
 
