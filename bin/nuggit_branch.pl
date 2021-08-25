@@ -243,17 +243,31 @@ else
 			     $name = "Nuggit Root";
 			  }
 
-			  $branch_head_commit = `git rev-parse --short $selected_branch`;           ### TO DO - FOR CORRECTNESS YOU WILL WANT TO ELIMINATE THE --short WHICH WILL INSTEAD GET THE FULL SHA
-			  chomp($branch_head_commit);
+
 			  $checked_out_branch_here = get_selected_branch_here();
   			  $checked_out_branch_head_commit = `git rev-parse --short $checked_out_branch_here`;
+			  
+			  # to do - check if the selected branch exists, if it does not exist then ????
+			  my $exit_code = system("git show-ref --verify --quiet refs/heads/$selected_branch");
+			  if($exit_code == 0)
+			  {
+			    #print "branch $selected_branch exists in repo $name\n";
+			  }
+			  else
+			  {
+			    print "branch $selected_branch does not exist in repo $name\n";
+			    return;
+			  }
+			  
+                          $branch_head_commit = `git rev-parse --short $selected_branch`;           ### TO DO - FOR CORRECTNESS YOU WILL WANT TO ELIMINATE THE --short WHICH WILL INSTEAD GET THE FULL SHA
+			  chomp($branch_head_commit);
 			  
 #			  print "Check if branch $selected_branch is merged into checked out branch in repo: $name\n";
 #			  print "   Does branch $selected_branch exist? TODO\n";
 #			  print "   Checked out branch in repo $name is $checked_out_branch_here\n";
 #			  print "   Head commit of branch $selected_branch is: $branch_head_commit\n";
 #			  print "   check if head commit $branch_head_commit is merged into checked out branch $checked_out_branch_here\n";
-			  my $exit_code = system("git merge-base --is-ancestor $branch_head_commit $checked_out_branch_head_commit");
+			  $exit_code = system("git merge-base --is-ancestor $branch_head_commit $checked_out_branch_head_commit");
 			  
 			  if($show_merged_bool)
 			  {
