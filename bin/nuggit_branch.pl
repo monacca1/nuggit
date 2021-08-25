@@ -172,6 +172,7 @@ my $missing_from_flag         = 0;
 my $verbose = 0;
 my $show_json = 0;
 my $selected_branch = undef;
+my $do_branch_list = 0;
 
 # print "nuggit_branch.pl\n";
 
@@ -211,25 +212,32 @@ elsif( ($orphans_flag) or
 {
   orphan_info();   # print the orphans (or the nuggit branches that exist in all repos)
 }
-elsif (defined($selected_branch)) 
+elsif (defined($selected_branch) && $do_branch_list == 0) 
 {
     $ngt->start(level=> 1, verbose => $verbose);
     create_new_branch($selected_branch);
 }
 else
 {
-    $ngt->start(level=> 0, verbose => $verbose);
-    if ($show_json) {
-        verbose_display_branches();
-    } else {
-        if($recurse_flag)
-        {
-          display_branches_recursive_flag();
-        }
-        else
-        {
-          display_branches();
-        }
+    if(defined($selected_branch) && $do_branch_list == 1)
+    {
+      print "Not sure what you want me to do. See nuggit branch --help\n"; 
+    }
+    else
+    {
+      $ngt->start(level=> 0, verbose => $verbose);
+      if ($show_json) {
+          verbose_display_branches();
+      } else {
+          if($recurse_flag)
+          {
+            display_branches_recursive_flag();
+          }
+          else
+          {
+            display_branches();
+          }
+      }
     }
 }
 
@@ -261,6 +269,7 @@ sub verbose_display_branches
           });
     }
     
+    print "Info from 'get_branches':\n";
     print Dumper($branches);
     
     my $json = JSON::MaybeXS->new(utf8 => 1, pretty => 1);
@@ -362,6 +371,13 @@ sub ParseArgs()
 
     if ( ($delete_branch_flag + $delete_merged_flag + $delete_remote_flag + $delete_merged_remote_flag) > 1) {
         die "ERROR: Please specify only one version of delete flags (-d -D -rd -rD) at a time.";
+    }
+
+    # try to differentiate between commands to list or show something and a command to create a branch.  We dont want to create a branch
+    # if the user executes 'nuggit branch foo --all'
+    if($recurse_flag or $show_merged_bool or $show_unmerged_bool or $show_json or $recurse_flag or $orphans_flag or $orphan_branch or $exists_in_flag or $missing_from_flag)
+    {
+      $do_branch_list = 1;
     }
 
     # If a single argument is specified, then it is a branch name. Otherwise user is requesting a listing.
@@ -744,6 +760,11 @@ sub get_orphan_branch_info($$)
 
 sub display_branches_recursive_flag()
 {
+  print "all flag:            $show_all_flag\n";
+  print "recurse flag:        $recurse_flag\n";
+  print "show merged bool:    $show_merged_bool\n";
+  print "show unmerged bool:  $show_unmerged_bool\n";
+
   my @nuggit_branch_info = get_branch_info();  # this returns a basic data structure (array) that contains an entry 
                                                # for each repo/submodule and an array for that repo containing a list 
 					       # of all the branches
@@ -753,7 +774,13 @@ sub display_branches_recursive_flag()
   # create an empty list/array of unique branches.  This will be the super set of all branches in all repos  
   my @full_branch_list = get_full_branch_list(\@nuggit_branch_info);
 
+  print "Superset of unique branches: \n";
   print Dumper(@full_branch_list);    # this is the superset list of all branches
+  
+  # a few options exists
+  #    (1) --merged or --no-merged flag was provided
+  #            In this case, we want to find
+  #    (2) neither --merged or --no-merged flags were provided
   
   # to do - now need to process this information
   # for each branch in the full branch list... check for each repo
@@ -855,7 +882,7 @@ sub orphan_info()
         my $pad_str_20 = "                    ";      # temporary string to pad the end of a string we want to print
         my $tmp_str = sprintf("%s%s%s%s%s", $branch_name, 
 	                 $pad_str_20, $pad_str_20, 
-			 $pad_str_20, $pad_str_20);   # create the first colum we want to print that is padded out a lot at the end
+			 $pad_str_20, $pad_str_20);   # create the first column we want to print that is padded out a lot at the end
 	my $col1    = substr($tmp_str, 0, 80);        # now just take the first 80 chars, so we can print the next column at a constant location
         print "   $col1";
 	print "Missing from $missing_count of $total_repos repos\n";
@@ -882,7 +909,7 @@ sub orphan_info()
         my $pad_str_20 = "                    ";      # temporary string to pad the end of a string we want to print
         my $tmp_str = sprintf("%s%s%s%s%s", $branch_name, 
 	                 $pad_str_20, $pad_str_20, 
-			 $pad_str_20, $pad_str_20);   # create the first colum we want to print that is padded out a lot at the end
+			 $pad_str_20, $pad_str_20);   # create the first column we want to print that is padded out a lot at the end
 	my $col1    = substr($tmp_str, 0, 80);        # now just take the first 80 chars, so we can print the next column at a constant location
         print "   $col1";
 	print "Missing from $missing_count of $total_repos repos\n";

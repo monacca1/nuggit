@@ -388,9 +388,9 @@ sub get_branches
     my %rtv;
     my @lines = split("\n", $raw);
 
-print $cmd;
-print $raw;
-print Dumper(\@lines);
+#print $cmd;
+#print $raw;
+#print Dumper(\@lines);
 
     foreach my $line (@lines) {
         if ($line =~ /HEAD detached at ([0-9a-fA-F]+)/) {
