@@ -245,11 +245,28 @@ sub verbose_display_branches
     #   - branches: Root branches object
     #   - submodules: Object where key is submodule path and value is branch listing
 
-    my $branches = get_branches({
-        all => $show_all_flag,
-        merged => $show_merged_bool,
-       });
-    say encode_json($branches);    #  TO DO ... NOT DEFINED??????????????????????????/   <<<<<<------------------------------------- to do -------
+    my $branches;
+    if($show_merged_bool)
+    {
+       $branches = get_branches({
+           all => $show_all_flag,
+           merged => $show_merged_bool,
+          });
+    }
+    elsif($show_unmerged_bool)
+    {
+       $branches = get_branches({
+           all => $show_all_flag,
+           no_merged => $show_unmerged_bool,
+          });
+    }
+    
+    print Dumper($branches);
+    
+    my $json = JSON::MaybeXS->new(utf8 => 1, pretty => 1);
+    my $branches_json = $json->encode($branches);
+    print $branches_json;
+    
 }
 
 sub display_branches
@@ -731,12 +748,20 @@ sub display_branches_recursive_flag()
                                                # for each repo/submodule and an array for that repo containing a list 
 					       # of all the branches
   
-  print Dumper(@nuggit_branch_info);
+#  print Dumper(@nuggit_branch_info);
   
   # create an empty list/array of unique branches.  This will be the super set of all branches in all repos  
   my @full_branch_list = get_full_branch_list(\@nuggit_branch_info);
 
-  print "model this after orphan_info()\n";
+  print Dumper(@full_branch_list);    # this is the superset list of all branches
+  
+  # to do - now need to process this information
+  # for each branch in the full branch list... check for each repo
+  #    does the branch exist and is the branch merged
+
+  # ======================================================
+  # to do - you are here
+  # ======================================================
 }
 
 
@@ -779,9 +804,6 @@ sub orphan_info()
 								# was found, and an array containing a list of repos where
 								# the branch was not found.
 
-
-
-# foo
 # figure out what the output.  A few possibilties exist
 #  $orphans_flag 
 #       or compliment: $exists_in_all_flag
@@ -795,10 +817,6 @@ sub orphan_info()
 #         and
 #         $missing_from_flag = 0
 #      
-
-
-
-
  
 #  print "PRINTING ORPHAN BRANCH INFO FROM orphan_info()\n\n";
 #  print "number of entries in the orphan_branch_info array: "  . @orphan_branch_info . "\n\n";
