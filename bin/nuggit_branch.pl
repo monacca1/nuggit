@@ -150,6 +150,7 @@ sub is_item_in_array($$);
 sub get_branch_info();
 sub orphan_info();
 sub list_nuggit_branches();
+sub list_unmerged_recursive();
 
 my $ngt = Git::Nuggit->new() || die("Not a nuggit!");
 
@@ -231,14 +232,14 @@ else
       if ($show_json) {
           verbose_display_branches();
       } else {
-          if($recurse_flag)
-          {
-            display_branches_recursive_flag();
-          }
-          else
-          {
-            display_branches();
-          }
+        if($recurse_flag)
+        {
+          display_branches_recursive_flag();
+        }
+        else
+        {
+          display_branches();
+        }
       }
     }
 }
@@ -784,28 +785,39 @@ sub display_branches_recursive_flag()
   
   if($show_merged_bool or $show_unmerged_bool)
   {
- 
-    print "CASE 1: show merged or unmerged branches\n";
-
-    print "  all flag:            $show_all_flag\n";
-    print "  recurse flag:        $recurse_flag\n";
-    print "  show merged bool:    $show_merged_bool\n";
-    print "  show unmerged bool:  $show_unmerged_bool\n";
-    print "\n";
-
-    
+ #     print "CASE 1: show merged or unmerged branches\n";
+     
     # at this point we have 
     #      "@nuggit_branch_info" which is an array of each repository and a list of all the branches in that repository
     #      and
     #      "@full_branch_list" which is an array of the unique branches that exist across all submodules along with some additional information about the branch
 
-  print "Superset of unique branches: \n";
-  print Dumper(@full_branch_list);    # this is the superset list of all branches
+    if($show_merged_bool)
+    {
 
+      print "  all flag:            $show_all_flag\n";
+      print "  recurse flag:        $recurse_flag\n";
+      print "  show merged bool:    $show_merged_bool\n";
+      print "  show unmerged bool:  $show_unmerged_bool\n";
+      print "\n";
 
-    # ======================================================
-    # to do - you are here
-    # ======================================================  
+      print "Superset of unique branches: \n";
+      print Dumper(@full_branch_list);    # this is the superset list of all branches
+
+      print "TO DO - make an array of FULLY merged branches (into HEAD) of each respective repo\n";
+
+      # ======================================================
+      # to do - you are here
+      # ====================================================== 
+      
+    }
+    elsif($show_unmerged_bool)
+    {
+      print "Branches that are not fully merged into checked out branch\n";
+     
+      list_unmerged_recursive();
+    }
+
   }
   else
   {
@@ -984,4 +996,64 @@ sub orphan_info()
   {
     print "Not sure what to do\n";
   }
+}
+
+
+
+
+sub list_unmerged_recursive()
+{
+
+   my $flags = "";
+   
+   if($show_all_flag)
+   {
+     $flags = $flags . " --all ";
+   }
+   $flags = $flags . " --no-merged ";   
+
+#   print "FLAGS: $flags\n";
+
+   # root repo
+   my $root_repo_branches  = `git branch $flags`;
+
+   # split this on new lines and add items to array
+   my @root_repo_lines = split('\n', $root_repo_branches);
+
+   my @full_branch_list;
+   foreach my $branch (@root_repo_lines)
+   {
+     if(!is_item_in_array(\@full_branch_list, $branch) )
+     {
+       push(@full_branch_list, $branch);
+     }
+   }
+
+   my $sub_module_branches = `git submodule foreach --recursive git branch $flags`;
+   my @submodule_repo_lines = split('\n', $sub_module_branches);
+   # for each entry if the entry does not start with "Entering" check if it is in the array, if not, add it
+
+   foreach my $branch (@submodule_repo_lines)
+   {
+     if($branch =~ /^Entering/ )  # make sure line does not start with "Entering <directory/submodule>"
+     {
+       #print "  Going into  $branch \n";
+     }
+     else
+     {
+       # print "$branch\n";
+       if(!is_item_in_array(\@full_branch_list, $branch))
+       {
+         push(@full_branch_list, $branch);
+       }
+     }
+   }
+
+   my @sorted_branch_array = sort( @full_branch_list );
+   print "Branches:\n";
+   foreach my $branch (@sorted_branch_array)
+   {
+     print "  $branch\n";
+   }
+
 }
