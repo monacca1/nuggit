@@ -762,10 +762,6 @@ sub get_orphan_branch_info($$)
 
 sub display_branches_recursive_flag()
 {
-  print "all flag:            $show_all_flag\n";
-  print "recurse flag:        $recurse_flag\n";
-  print "show merged bool:    $show_merged_bool\n";
-  print "show unmerged bool:  $show_unmerged_bool\n";
 
   my @nuggit_branch_info = get_branch_info();  # this returns a basic data structure (array) that contains an entry 
                                                # for each repo/submodule and an array for that repo containing a list 
@@ -788,7 +784,15 @@ sub display_branches_recursive_flag()
   
   if($show_merged_bool or $show_unmerged_bool)
   {
+ 
     print "CASE 1: show merged or unmerged branches\n";
+
+    print "  all flag:            $show_all_flag\n";
+    print "  recurse flag:        $recurse_flag\n";
+    print "  show merged bool:    $show_merged_bool\n";
+    print "  show unmerged bool:  $show_unmerged_bool\n";
+    print "\n";
+
     
     # at this point we have 
     #      "@nuggit_branch_info" which is an array of each repository and a list of all the branches in that repository
