@@ -254,6 +254,10 @@ sub verbose_display_branches
 
 sub display_branches
 {
+
+    $root_repo_branches = `git branch`;
+    $selected_branch    = get_selected_branch($root_repo_branches);
+
     my $flag = ($show_all_flag ? "-a" : "");
 
     if ($show_merged_bool) 
@@ -265,13 +269,13 @@ sub display_branches
         $flag .= " --no-merged";
     }
 
+    # get the list of root repo branches that match the flaga
     $root_repo_branches = `git branch $flag`;
-    $selected_branch    = get_selected_branch($root_repo_branches);
+
     
     # Note: If showing merged/no-merged, selected branch may be unknown
     say "Root repo is on branch: ".colored($selected_branch, 'bold') if $selected_branch;
-    if ($root_repo_branches) 
-    {
+
         print color('bold');
         print "All " if $show_all_flag;
 
@@ -285,9 +289,17 @@ sub display_branches
         }
 	
         say "Branches:";
-        print color('reset');
-        say $root_repo_branches;
-    }
+	print color('reset');
+	
+	if($root_repo_branches)
+	{
+           say $root_repo_branches;
+	}
+	else
+	{
+	  print "  none found\n";
+	}
+
 
   # --------------------------------------------------------------------------------------
   # now check each submodule to see if it is on the selected branch
@@ -525,24 +537,6 @@ sub get_branch_info()
   if( $show_all_flag )
   {
     $git_cmd_flags = $git_cmd_flags . " --all ";
-  }
-
-# I think you need to get rid of this and then once the orphan branches are all identified, THEN you need to check if they are merged or not.
-  if ($show_merged_bool) 
-  {
-    print "Use of the --merged flag with the orphan flag is non-intuitive.  Bailing out\n";
-    print "Instead of combining these operations in one step, split them up.  \n";
-    print "First get list of orphans and then check particular branches if they are merged or vice versa.\n";
-    exit();
-    $git_cmd_flags = $git_cmd_flags . " --merged ";
-  }
-  elsif($show_unmerged_bool)
-  { 
-    print "Use of the --no-merged flag with the orphan flag is non-intuitive.  Bailing out\n";
-    print "Instead of combining these operations in one step, split them up.  \n";
-    print "First get list of orphans and then check particular branches if they are merged or vice versa.\n";     
-    exit();
-    $git_cmd_flags = $git_cmd_flags . " --no-merged ";
   }
 
 #  print "git cmd flags: $git_cmd_flags\n";
