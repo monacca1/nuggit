@@ -185,13 +185,13 @@ chdir $root_dir;
 if($delete_branch_flag)
 {
   $ngt->start(level=> 1, verbose => $verbose);
-  say "Deleting merged branch across all submodules: " . $selected_branch;
+  say "Deleting branch across all submodules regardless of merge status: " . $selected_branch;
   delete_branch($selected_branch, "-D");
 } 
 elsif ($delete_merged_flag) 
 {
     $ngt->start(level=> 1, verbose => $verbose);
-    say "Deleting branch across all submodules: " . $selected_branch;
+    say "Deleting (merged) branch across all submodules: " . $selected_branch;
     delete_merged_branch($selected_branch);
 }
 elsif ($delete_remote_flag) 
@@ -774,8 +774,10 @@ sub get_orphan_branch_info($$)
       my $repo_A_name    = $repo_info->{'name'};
       my @branches_array = @{ $repo_info->{'branches_array'} };
 
+
 #      print "$repo_A_name\n";
-      #    print Dumper (@branches_array);
+#      print Dumper (@branches_array);
+
     
       if(!is_item_in_array(\@branches_array, $branch_name))
       {
@@ -789,7 +791,7 @@ sub get_orphan_branch_info($$)
       }
     }
 
-# to do - define a data structure for this particular branch
+#  define a data structure for this particular branch
 #{
 #    name: branch name
 #    exists_in_array:     [ @branch list ]
@@ -802,16 +804,17 @@ sub get_orphan_branch_info($$)
     
     if(@missing_from_array == 0)
     {
-#      print "    Branch exists in all repos\n";
+      #print "    Branch ($branch_name) exists in all repos\n";
       $branch_info{'orphan_status'} = "nuggit";
     }
     else
     {
        $branch_info{'orphan_status'} = "orphan";
-#       print "Missing from array: \n";
-#       foreach my $repo (@missing_from_array)  { print "    $repo\n"; }
-#       print "Exists in array: \n";
-#       foreach my $repo (@exists_in_array)     { print "    $repo\n"; }
+
+       #print "Missing from array for branch $branch_name: \n";
+       #foreach my $repo (@missing_from_array)  { print "    $repo\n"; }
+       #print "Exists in array: \n";
+       #foreach my $repo (@exists_in_array)     { print "    $repo\n"; }
     }
     
     
@@ -858,7 +861,7 @@ sub display_branches_recursive_flag()
   
   if($show_merged_bool or $show_unmerged_bool)
   {
- #     print "CASE 1: show merged or unmerged branches\n";
+    # print "CASE 1: show merged or unmerged branches\n";
      
     # at this point we have 
     #      "@nuggit_branch_info" which is an array of each repository and a list of all the branches in that repository
@@ -928,7 +931,7 @@ sub display_branches_recursive_flag()
 sub orphan_info()
 {
 
-  print "Value of exists in all flag: " .  $exists_in_all_flag . "\n";
+  #print "Value of exists in all flag: " .  $exists_in_all_flag . "\n";
 
   # this should list all branches in any repo where the particular branch does not also exist in the root repo.
 
