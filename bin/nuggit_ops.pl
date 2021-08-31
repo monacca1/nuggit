@@ -394,7 +394,7 @@ sub root_checkout_file
     my ($vol, $dir, $file) = File::Spec->splitpath( $fn );
     
     # Enter parent folder
-    chdir($dir);
+    chdir($dir) or die "Failed to cd $dir: $!";
     
     # Checkout file
     my $cmd;
@@ -502,8 +502,8 @@ sub do_root_checkout_breadth_first {
     # NOTE: This line is to provide a sense of progress.
     # TODO: Can we do this in a less verbose manner and/or speedup the process?
     say colored("Processing $in->{'subname'}", 'info');
-    
-    chdir("..");
+
+    chdir("..") or die "Failed to cd to parent of $subname: $!"; 
 
     if ($opts->{'ngtstrategy'} eq 'branch' ) { # branch-first strategy
         if ($in->{status} eq '-') {
@@ -517,7 +517,7 @@ sub do_root_checkout_breadth_first {
             }
         }
         
-        chdir($shortname);
+        chdir($shortname) or die "Failed to cd $shortname: $!";
 
         # Default flag handling
         if (!$branch) {
@@ -553,7 +553,7 @@ sub do_root_checkout_breadth_first {
             say colored("Error: Unable to follow reference for $subname", 'error');
             $opts->{results}->{$subname} = {branch => "ERROR - Unable to checkout", tracking => $in->{'tracking_branch'}};
         } else {
-            chdir($shortname);
+            chdir($shortname) or die "Failed to cd $shortname: $!";
             # Run a safe checkout to resolve any detached heads
             my $result = checkout_safe(branch => $branch,
                                        # Auto-create branch names in all submodules when safe to do so, unless user requested otherwise
@@ -859,13 +859,13 @@ sub do_root_operation_breadth_first {
 
     if ($in->{status} eq '-') {
         # This submodule is uninitialized.
-        chdir("..");
+        chdir("..") or die "Failed to cd to parent: $!";
         my ($err, $stdout, $stderr) = $ngt->run("git submodule update --init --$myop $shortname");
         if ($err) {
             $opts->{states}->{totals}->{'errors'}++;
             die "TODO: Error handling";
         } else {
-            chdir($shortname);
+            chdir($shortname) or die "Failed to cd $shortname: $!";
             checkout_safe(branch => $branch,
                           autocreate => (defined($opts->{'auto-create'}) ? $opts->{'auto-create'} : 1)
                           );
@@ -878,7 +878,7 @@ sub do_root_operation_breadth_first {
 
     } else {
         # Start in parent folder
-        chdir("..");
+        chdir("..") or die "Failed to cd to parent: $!";
 
         # Let git update single submodule with merge or rebase strategy as appropriate
         # Force no-edit by using nop shell command (valid for UNIX+Windows) since submodule update doesn't support flag
@@ -890,7 +890,7 @@ sub do_root_operation_breadth_first {
             # Git should always return non-zero error code on conflicts, or other errors
             if ($stdout =~ /Automatic merge failed/) { # TODO: phrasing for rebase
                 # Conflict found, now handle all conflicts listed
-                chdir($shortname);
+                chdir($shortname) or die "Failed to cd $shortname: $!";
                 $rtv = handle_submodule_conflicts($stdout, $in);
             } else {
                 # Non-conflict error. This may include server hangup or unpushed commits and requires user intervention
