@@ -746,7 +746,7 @@ sub foreach {
               'opts' => $user_opts,
               'subname' => File::Spec->catdir($parent,$name),
           };
-      if ($gitmodules && $gitmodules =~  m/submodule\.$name\.branch (.*)$/mg) {
+      if ($gitmodules && $gitmodules =~  m/submodule\.$name\.branch (.*)$/m) {
           $cb_args->{'tracking_branch'} = $1;
       }
       

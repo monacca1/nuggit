@@ -139,7 +139,8 @@ if ($opts->{continue}) {
 # Specific cases where we can (and may automatically) skip this check include:
 # - checkout --safe operations
 # - checkout -b   branch creation options.
-$opts->{'skip-status-check'} = 1 if $opts->{mode} eq "checkout" && ($opts->{safe} || $opts->{create});
+# - checkout of a known file (a file that exists on disk).  Checkout of an unknown (ie: deleted) file should be done via manual git commands for simplicity
+$opts->{'skip-status-check'} = 1 if $opts->{mode} eq "checkout" && ($opts->{safe} || $opts->{create} || ($opts->{branch} && $opts->{file}) || ($opts->{branch} && -f $opts->{branch}));
 if (!$opts->{'skip-status-check'}) {
     my $status = get_status({uno => 1});
 
@@ -169,11 +170,13 @@ if ($opts->{mode} eq "checkout") {
         if ($opts->{safe} || $opts->{create}) {
             die "ERROR: --safe and -b options are not valid in conjunction with a file or directory name.\n";
         }
-        if (-f $opts->{branch}) {
+        if (-f $opts->{branch} || $opts->{file}) {
             # Request to checkout a file
             root_checkout_file($opts->{branch});
         } elsif (-d $opts->{branch}) {
             # Request to checkout a directory, with submodule checks
+            # If directory is a submodule, then checkout the committed reference, and recurse appropriately
+            # Otherwise, perform git-checkout only
             #root_checkout_file($opts->{branch});
             die "TODO: Directory checkout not yet implemented";
         } else { # Symlink?
@@ -225,6 +228,7 @@ sub ParseArgs
                               "squash!",
                               "skip-status-check!",
                               "auto-create!",
+                              "file!", # Tell Nuggit that specified argument is a file, even if it doesn't currently exist
                               "rebase!",
                               "default!", # Only valid in conjunection with branch-first strategy
                               "branch=s", # Optional explicit alternative to namesless spec
@@ -317,9 +321,43 @@ sub root_checkout_create_branch
     }
 
     # Run safe checkout on all submodules with the autocreate flag set
-    $ngt->foreach(sub { my $in = shift;
-                        checkout_safe(branch => $branch, autocreate => 1, subname => $in->{'subname'});
-                    } );
+    my $warnings = {};
+    $ngt->foreach({'load_tracking' => 1,
+                  'breadth_first' => sub {
+                      my $in = shift;
+                      my $result = checkout_safe(branch => $branch, autocreate => 1, subname => $in->{'subname'});
+                      if (!defined($result) || $result ne $branch) {
+                          $warnings->{$in->{'subname'}} = {branch => $result, tracking => $in->{'tracking_branch'}};
+                      }
+                  }
+                 });
+                  
+    my @keys = keys %$warnings;
+    if (scalar @keys > 0) {
+        say colored("Failed to safely create or checkout $branch in one or more submodules:\n", 'warn');
+        printf "\t %-60s \t %-40s\n", "Submodule", "Current Branch";
+        printf "\t %-60s \t %-40s\n", "---------", "--------------";
+        foreach my $key (@keys) {
+            my $kbranch = $warnings->{$key}->{branch};
+            if ($kbranch && $warnings->{$key}->{tracking} && $kbranch eq $warnings->{$key}->{tracking}) {
+                $kbranch = colored($kbranch, 'green');
+            } elsif (!$kbranch) {
+                $kbranch = colored("Detached HEAD", 'error');
+            }
+
+            printf( "\t %-60s \t %-40s\n",
+                    $key,
+                    $kbranch
+                    );
+        }
+        say colored("Tip: A failure above generally indicates the desired branch already exists in the submodule at a different commit.  You may wish to resolve manually (git checkout and update submodule reference), or use a different branch name.  A",'info')
+        .colored('green','green')
+        .colored(" highlight indicates a match to the submodule's default tracking branch (if set).  To retrieve this information later, run 'ngt status -a'", 'info');
+    } elsif (defined($branch)) {
+        say colored("$branch has been successfully checked out.", 'success');
+    } else {
+        say colored("Automatic Detached HEAD resolution complete.", "success");
+    }
 }
 
 sub root_checkout_safe
@@ -358,7 +396,7 @@ sub root_checkout_safe
     if (scalar @keys > 0) {
         my $dbranch = ($branch) ? "checkout $branch" : "resolve detached HEADs";
         say colored("Failed to safely $dbranch in one or more submodules:\n", 'warn');
-        printf "\t %-40s \t %-40s\n", "Submodule", "Current Branch";# "\t Submodule \t Current Branch";
+        printf "\t %-40s \t %-40s\n", "Submodule", "Current Branch";
         printf "\t %-40s \t %-40s\n", "---------", "--------------";
         foreach my $key (@keys) {
             my $kbranch = $warnings->{$key}->{branch};
@@ -388,7 +426,7 @@ sub root_checkout_file
 {
     my $fn = shift;
     my $branch = shift;
-    my $cwd = getcwd();;
+    my $cwd = getcwd();
     
     # Split directory into components
     my ($vol, $dir, $file) = File::Spec->splitpath( $fn );
@@ -424,7 +462,7 @@ sub root_checkout_branch
 
     # TODO: Alternatively, use no-arguments as option to revert to matching commit (ie: non-safe?)
     die "checkout operation requires a branch, tag or SHA reference to proceed. Specify the '--safe' flag if you only want to resolve detached HEADs where possible" unless $branch;
-    my $cmd = "git checkout $branch";
+    my $cmd = "git checkout --no-recurse-submodules $branch";
     
     # Perform operation on root
     my ($err, $stdout, $stderr) = $ngt->run($cmd);
@@ -513,6 +551,19 @@ sub do_root_checkout_breadth_first {
                 say $stderr if $stderr;
                 say colored("Error: Unable to initialize $subname", 'error');
                 $opts->{results}->{$subname} = {branch => "ERROR - Unable to initialize", tracking => $in->{'tracking_branch'}};
+
+                if (!$opts->{ignore_errors}) {
+                    say colored("Do you wish to abort (q), ignore once (press enter), or ignore all subsequent errors (i)?", 'warn');
+                    my $input = <STDIN>; chomp($input);
+                    if ($input eq "i") {
+                        $opts->{ignore_errors} = 1;
+                    } elsif ($input eq "") {
+                        return;
+                    } else {
+                        die "Aborting operation. Checkout operation may not have completed for all submodules.\n";
+                    }
+                }
+
                 return;
             }
         }
@@ -538,7 +589,7 @@ sub do_root_checkout_breadth_first {
             }
         }
         
-        my ($err, $stdout, $stderr) = $ngt->run("git checkout $branch");
+        my ($err, $stdout, $stderr) = $ngt->run("git checkout --no-recurse-submodules $branch");
         if ($err) {
             say $stdout if $stdout;
             say $stderr if $stderr;
@@ -722,12 +773,12 @@ sub checkout_safe_remote {
     }
 
     # Safe to checkout existing
-    $ngt->run("git checkout $tgt_branch"); # TODO: Error handling
+    $ngt->run("git checkout --no-recurse-submodules $tgt_branch"); # TODO: Error handling
     return $tgt_branch;
 }
 sub checkout_local {
     my $branch = shift;
-    my ($err, $stdout, $stderr) = $ngt->run("git checkout $branch");
+    my ($err, $stdout, $stderr) = $ngt->run("git checkout --no-recurse-submodules $branch");
     if ($err) {
         # TODO: Error logging?
         return undef;
@@ -995,7 +1046,7 @@ sub do_operation_pre {
         }
 
     } elsif ($op eq "pull") {        
-        $cmd = "git pull";
+        $cmd = "git pull --no-recurse-submodules";
 
         $opts->{remote} = "origin" if $opts->{default} && !$opts->{remote};
         if ($opts->{remote}) {
@@ -1048,7 +1099,7 @@ sub handle_submodule_conflict {
         $cmd = "git add $conflicted";
     } else {
         # Resolve conflict in a manner that we can subsequently run submodule update --$op on
-        $cmd = "git checkout MERGE_HEAD $conflicted";
+        $cmd = "git checkout --no-recurse-submodules MERGE_HEAD $conflicted";
     }
     
     my ($err, $stdout, $stderr) = $ngt->run("$cmd");
