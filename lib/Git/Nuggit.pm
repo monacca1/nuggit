@@ -262,7 +262,11 @@ Initialize Nuggit Repository by creating a .nuggit file at current location.
 
 sub nuggit_init
 {
-    die("nuggit_init() must be run from the top level of a git repository") unless -e ".git";
+    if (-e ".not_a_nuggit") {
+        say read_file(".not_a_nuggit") if -f ".not_a_nuggit";
+        die("'.not_a_nuggit' detected, Nuggit will not be initialized for this folder. If you wish to use nuggit at this level anyway, remove this file and run 'ngt init'.\n");
+    }
+    die("nuggit_init() must be run from the top level of a git repository.\n") unless -e ".git";
     mkdir(".nuggit"); # This should fail silently if folder already exists
 
     # Git .git dir (this handles non-standard directories, including bare repos and submodules)
@@ -756,7 +760,7 @@ sub foreach {
               'opts' => $user_opts,
               'subname' => File::Spec->catdir($parent,$name),
           };
-      if ($gitmodules && $gitmodules =~  m/submodule\.$name\.branch (.*)$/mg) {
+      if ($gitmodules && $gitmodules =~  m/submodule\.$name\.branch (.*)$/m) {
           $cb_args->{'tracking_branch'} = $1;
       }
       

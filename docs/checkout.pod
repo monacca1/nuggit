@@ -76,5 +76,10 @@ The default branch is the remote tracking branch defined in the submodule defini
 
 If specified in place of a branch name, perform a checkout of the default branch at all levels.
 
+=item B<--file>
+
+This flag is intended to assist with restoring deleted or moved files.  For example, "ngt checkout foo/bar/file.txt" will result in ngt cd'ing to 'foo/bar' and performing a 'git checkout file.txt'.  
+
+This flag simulates the nominal check for file existence that would normally proceed this action.  Usage of this flag with a non-file argument may have indeterminate behavior.
 
 =back
