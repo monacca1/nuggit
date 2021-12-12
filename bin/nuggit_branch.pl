@@ -236,64 +236,64 @@ else
       
       $ngt->foreach({'run_root' => 1, 'breadth_first' => sub {
                           my $info = shift;
-			  my $parent = $info->{'parent'};
-			  my $name   = $info->{'name'};
-			  if($name eq "")
-			  {
-			     $name = "Nuggit Root";
-			  }
+                          my $parent = $info->{'parent'};
+                          my $name   = $info->{'name'};
+                          if($name eq "")
+                          {
+                             $name = "Nuggit Root";
+                          }
 
 
-			  $checked_out_branch_here = get_selected_branch_here();
-  			  $checked_out_branch_head_commit = `git rev-parse --short $checked_out_branch_here`;
-			  
-			  # to do - check if the selected branch exists, if it does not exist then ????
-			  my $exit_code = system("git show-ref --verify --quiet refs/heads/$selected_branch");
-			  if($exit_code == 0)
-			  {
-			    #print "branch $selected_branch exists in repo $name\n";
-			  }
-			  else
-			  {
-			    print "branch $selected_branch does not exist in repo $name\n";
-			    return;
-			  }
-			  
+                          $checked_out_branch_here = get_selected_branch_here();
+                          $checked_out_branch_head_commit = `git rev-parse --short $checked_out_branch_here`;
+                          
+                          # to do - check if the selected branch exists, if it does not exist then ????
+                          my $exit_code = system("git show-ref --verify --quiet refs/heads/$selected_branch");
+                          if($exit_code == 0)
+                          {
+                            #print "branch $selected_branch exists in repo $name\n";
+                          }
+                          else
+                          {
+                            print "branch $selected_branch does not exist in repo $name\n";
+                            return;
+                          }
+                          
                           $branch_head_commit = `git rev-parse --short $selected_branch`;           ### TO DO - FOR CORRECTNESS YOU WILL WANT TO ELIMINATE THE --short WHICH WILL INSTEAD GET THE FULL SHA
-			  chomp($branch_head_commit);
-			  
-#			  print "Check if branch $selected_branch is merged into checked out branch in repo: $name\n";
-#			  print "   Does branch $selected_branch exist? TODO\n";
-#			  print "   Checked out branch in repo $name is $checked_out_branch_here\n";
-#			  print "   Head commit of branch $selected_branch is: $branch_head_commit\n";
-#			  print "   check if head commit $branch_head_commit is merged into checked out branch $checked_out_branch_here\n";
-			  $exit_code = system("git merge-base --is-ancestor $branch_head_commit $checked_out_branch_head_commit");
-			  
-			  if($show_merged_bool)
-			  {
+                          chomp($branch_head_commit);
+                          
+#                         print "Check if branch $selected_branch is merged into checked out branch in repo: $name\n";
+#                         print "   Does branch $selected_branch exist? TODO\n";
+#                         print "   Checked out branch in repo $name is $checked_out_branch_here\n";
+#                         print "   Head commit of branch $selected_branch is: $branch_head_commit\n";
+#                         print "   check if head commit $branch_head_commit is merged into checked out branch $checked_out_branch_here\n";
+                          $exit_code = system("git merge-base --is-ancestor $branch_head_commit $checked_out_branch_head_commit");
+                          
+                          if($show_merged_bool)
+                          {
                              if($exit_code == 0)
                              {
                                 print "branch $selected_branch is merged into branch $checked_out_branch_here in repo $name\n";
                              }
-			  }
-			  elsif($show_unmerged_bool)
-			  {
-			     if($exit_code != 0)
-			     {
-			        print "branch $selected_branch is NOT merged into branch $checked_out_branch_here in repo $name\n";
-			     }
-			  }
-			  else
-			  {
-			     if($exit_code == 0)
-			     {
-			        print "branch $selected_branch is merged into branch $checked_out_branch_here in repo $name\n";
-			     }
-			     else
-			     {
-			        print "branch $selected_branch is NOT merged into branch $checked_out_branch_here in repo $name\n";
-			     }
-			  }
+                          }
+                          elsif($show_unmerged_bool)
+                          {
+                             if($exit_code != 0)
+                             {
+                                print "branch $selected_branch is NOT merged into branch $checked_out_branch_here in repo $name\n";
+                             }
+                          }
+                          else
+                          {
+                             if($exit_code == 0)
+                             {
+                                print "branch $selected_branch is merged into branch $checked_out_branch_here in repo $name\n";
+                             }
+                             else
+                             {
+                                print "branch $selected_branch is NOT merged into branch $checked_out_branch_here in repo $name\n";
+                             }
+                          }
 
                        }
                     });
@@ -389,18 +389,18 @@ sub display_branches
         {
            print "Unmerged ";
         }
-	
+        
         say "Branches:";
-	print color('reset');
-	
-	if($root_repo_branches)
-	{
+        print color('reset');
+        
+        if($root_repo_branches)
+        {
            say $root_repo_branches;
-	}
-	else
-	{
-	  print "  none found\n";
-	}
+        }
+        else
+        {
+          print "  none found\n";
+        }
 
 
   # --------------------------------------------------------------------------------------
@@ -422,18 +422,18 @@ sub ParseArgs()
         "delete-force|D!"   => \$delete_branch_flag,
         "remote|r"          => \$remote_flag,
         "merged!"           => \$show_merged_bool,
-	"no-merged"         => \$show_unmerged_bool,
+        "no-merged"         => \$show_unmerged_bool,
         "all|a!"            => \$show_all_flag,
         "verbose|v!"        => \$verbose,
         "json!"             => \$show_json, # For branch listing command only
         "help"              => \$help,
-	"recursive"         => \$recurse_flag,
-	"orphans"           => \$orphans_flag,        # list orphan branches
-	"exists-in-all"     => \$exists_in_all_flag,  # get list of branches that exist in all submodules (that we have access to from the currently checked out branch)
-	"orphan=s"          => \$orphan_branch,       # specifies the specific orphan branch name. 
-	                                              # If this is provided, then additional flags may be provided
+        "recursive"         => \$recurse_flag,
+        "orphans"           => \$orphans_flag,        # list orphan branches
+        "exists-in-all"     => \$exists_in_all_flag,  # get list of branches that exist in all submodules (that we have access to from the currently checked out branch)
+        "orphan=s"          => \$orphan_branch,       # specifies the specific orphan branch name. 
+                                                      # If this is provided, then additional flags may be provided
         "exists-in"         => \$exists_in_flag,      # when this and the orphan branch are passed in, this will list all the submodule repos where the branch exists
-	"missing-from"      => \$missing_from_flag,   # when this and the orphan branch are passed in, this will list all the submodule repos where the branch does not exist.
+        "missing-from"      => \$missing_from_flag,   # when this and the orphan branch are passed in, this will list all the submodule repos where the branch does not exist.
         "man"               => \$man,
       ) || pod2usage(1);
     pod2usage(1) if $help;
@@ -635,7 +635,7 @@ sub check_branch_merged_all
 #                    branch, 
 #                    branch, 
 #                    branch },
-# 	     },
+#              },
 #            ...
 #        ]
 sub get_branch_info()
@@ -655,30 +655,30 @@ sub get_branch_info()
                    my $info = shift;
                    my $parent = $info->{'parent'};
                    my $name = $info->{'name'};
-		   if($name eq "")
-		   {
-		     $name = "Nuggit Root";
-		   }
+                   if($name eq "")
+                   {
+                     $name = "Nuggit Root";
+                   }
                    my $branches_string = `git branch $git_cmd_flags`;
-		   
-		   $branch_info{'name'} = $name;
-	   
-		   # convert the branches string into a branches array
-		   my @branch_array = split("\n", $branches_string,);
-		   
-		   # remove the "*" for the selected branch
-		   foreach(@branch_array)
-		   {
-		     $_ =~ s/\*//;
-		     $_ =~ s/^\s+//; 
-		   }
-		   
-		   $branch_info{'branches_array'} = \@branch_array;
-		   
-		   push(@nuggit_branch_info, \%branch_info);
+                   
+                   $branch_info{'name'} = $name;
+           
+                   # convert the branches string into a branches array
+                   my @branch_array = split("\n", $branches_string,);
+                   
+                   # remove the "*" for the selected branch
+                   foreach(@branch_array)
+                   {
+                     $_ =~ s/\*//;
+                     $_ =~ s/^\s+//; 
+                   }
+                   
+                   $branch_info{'branches_array'} = \@branch_array;
+                   
+                   push(@nuggit_branch_info, \%branch_info);
 
                 }});
-		   
+                   
 #  print Dumper(\@nuggit_branch_info);
 
   return @nuggit_branch_info;
@@ -842,7 +842,7 @@ sub display_branches_recursive_flag()
 
   my @nuggit_branch_info = get_branch_info();  # this returns a basic data structure (array) that contains an entry 
                                                # for each repo/submodule and an array for that repo containing a list 
-					       # of all the branches
+                                               # of all the branches
   
 #  print Dumper(@nuggit_branch_info);
   
@@ -942,7 +942,7 @@ sub orphan_info()
   # get a list of all branches in each repo... (repo by repo)
   my @nuggit_branch_info = get_branch_info();  # this returns a basic data structure (array) that contains an entry 
                                                # for each repo/submodule and an array for that repo containing a list 
-					       # of all the branches
+                                               # of all the branches
   
   # print Dumper(@nuggit_branch_info);
   
@@ -952,12 +952,12 @@ sub orphan_info()
   my @orphan_branch_info;
   @orphan_branch_info  = get_orphan_branch_info(\@nuggit_branch_info, \@full_branch_list);    # this is an array
                                                                 # one entry for each branch, it contains a hash
-								# with the branch name, its orphan status
-								# number of repos where the branch was found
-								# number of repos where the branch was not found
-								# an array containing a list of repos where the branch
-								# was found, and an array containing a list of repos where
-								# the branch was not found.
+                                                                # with the branch name, its orphan status
+                                                                # number of repos where the branch was found
+                                                                # number of repos where the branch was not found
+                                                                # an array containing a list of repos where the branch
+                                                                # was found, and an array containing a list of repos where
+                                                                # the branch was not found.
 
 # figure out what the output.  A few possibilties exist
 #  $orphans_flag 
@@ -1009,11 +1009,11 @@ sub orphan_info()
       {
         my $pad_str_20 = "                    ";      # temporary string to pad the end of a string we want to print
         my $tmp_str = sprintf("%s%s%s%s%s", $branch_name, 
-	                 $pad_str_20, $pad_str_20, 
-			 $pad_str_20, $pad_str_20);   # create the first column we want to print that is padded out a lot at the end
-	my $col1    = substr($tmp_str, 0, 80);        # now just take the first 80 chars, so we can print the next column at a constant location
+                         $pad_str_20, $pad_str_20, 
+                         $pad_str_20, $pad_str_20);   # create the first column we want to print that is padded out a lot at the end
+        my $col1    = substr($tmp_str, 0, 80);        # now just take the first 80 chars, so we can print the next column at a constant location
         print "   $col1";
-	print "Missing from $missing_count of $total_repos repos\n";
+        print "Missing from $missing_count of $total_repos repos\n";
       }
     }
   }
@@ -1036,11 +1036,11 @@ sub orphan_info()
       {
         my $pad_str_20 = "                    ";      # temporary string to pad the end of a string we want to print
         my $tmp_str = sprintf("%s%s%s%s%s", $branch_name, 
-	                 $pad_str_20, $pad_str_20, 
-			 $pad_str_20, $pad_str_20);   # create the first column we want to print that is padded out a lot at the end
-	my $col1    = substr($tmp_str, 0, 80);        # now just take the first 80 chars, so we can print the next column at a constant location
+                         $pad_str_20, $pad_str_20, 
+                         $pad_str_20, $pad_str_20);   # create the first column we want to print that is padded out a lot at the end
+        my $col1    = substr($tmp_str, 0, 80);        # now just take the first 80 chars, so we can print the next column at a constant location
         print "   $col1";
-	print "Missing from $missing_count of $total_repos repos\n";
+        print "Missing from $missing_count of $total_repos repos\n";
       }
     }
   }
