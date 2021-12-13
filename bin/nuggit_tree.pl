@@ -74,14 +74,12 @@ my $active_branch = get_selected_branch_here();
 if($verbose)
 {
   print "==========================================================\n";
-  print "Repository location:\n";
-  print "    $root_dir \n";
-  print "On branch: \n";
-  print "    $active_branch \n";
-  print "Branch HEAD commit for root repo:\n";
+  print "Repository location:      $root_dir \n";
+  print "On branch:                $active_branch \n";
+  print "Branch HEAD commit:       ";
   $tmp_commit_str = `git log -n1 $active_branch | grep ^commit | sed 's/commit //'`;
   $tmp_commit_str = substr($tmp_commit_str, 0, 10);   # shorten to 10 chars
-  print "    commit: " . $tmp_commit_str . "\n";
+  print $tmp_commit_str . "\n";
   print "==========================================================\n";
 }
 
