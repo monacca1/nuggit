@@ -48,15 +48,16 @@ use Git::Nuggit;
 sub list_submodules( );
 sub p_indent($);
 sub submodule_tree($$$$);
-
+sub ParseArgs();
 
 my $ngt = Git::Nuggit->new();
-
+my $verbose      = 0;  #assume verbose is off unless command line args specify otherwise
+my $status_error = 0;
 
 my ($root_dir, $relative_path_to_root) = find_root_dir();
 die("Not a nuggit!\n") unless $root_dir;
 
-
+ParseArgs();
 
 my $cwd = getcwd();
 
@@ -67,25 +68,37 @@ my $submodules;
 
 chdir $root_dir;
 
-print "==========================================================\n";
-print "Repository location:\n";
-print "    $root_dir \n";
-
-# print $cwd . "\n";
-
 my $active_branch = get_selected_branch_here();
 
-# get branch of root repo
-
-print "On branch: \n";
-print "    $active_branch \n";
-
-print "Branch HEAD commit for root repo:\n";
-print "    " . `git log -n1 $active_branch | grep commit`;
-print "==========================================================\n";
-
+if($verbose)
+{
+  print "==========================================================\n";
+  print "Repository location:\n";
+  print "    $root_dir \n";
+  print "On branch: \n";
+  print "    $active_branch \n";
+  print "Branch HEAD commit for root repo:\n";
+  print "    " . `git log -n1 $active_branch | grep ^commit`;
+  print "==========================================================\n";
+}
 
 submodule_tree("root repo", $root_dir, "0000", 0);
+
+if( $status_error == 1)
+{
+    print "Nuggit Tree ERROR\n";
+}
+else
+{
+   print "Nuggit tree SUCCESS\n";
+}
+
+
+
+
+# functions
+
+
 
 
 
@@ -95,6 +108,8 @@ sub submodule_tree($$$$)
   my $dir      = $_[1];
   my $ref_hash = $_[2];
   my $indent   = $_[3];
+
+  my $submodule_branch = "";
   
   my $start_dir;
   my $result_dir;
@@ -121,30 +136,56 @@ sub submodule_tree($$$$)
   {
     if($result_dir eq $start_dir)
     {
-      print "Error recursing into:  $dir\n";
-      print " from directory: $start_dir\n";
-      print "Directory for submodule does not exist\n";
+      print "***********************************************\n";
+      print "** Error recursing into:  $dir\n";
+      print "*     from directory: $start_dir\n";
+      print "*     submodule $submodule\n";
+      print "** Directory for submodule does not exist\n";
+      print "***********************************************\n";
+      $status_error = 1;
       exit();
     }
   }
 
   $git_log_result       = `git log -n1 HEAD | grep commit`;
   @git_log_result_split = split(" ", $git_log_result);
-  $head_commit = $git_log_result_split[1];
-  print p_indent($indent) . "Branch HEAD commit: " . $head_commit . "\n";
+  $head_commit          = $git_log_result_split[1];
+  if($verbose)
+  {
+    print p_indent($indent) . "Branch HEAD commit: " . $head_commit . "\n";
+  }
 
   if($dir ne $start_dir)
-  {  
-    if($head_commit ne $ref_hash)
+  { 
+    $submodule_branch = get_selected_branch_here();
+
+    if(($submodule_branch ne $active_branch) || ($head_commit ne $ref_hash))
     {
-      print p_indent($indent) . "************************************************************\n";
-      print p_indent($indent) . "* Submodule $repo inconsistent with parent reference\n";
-      print p_indent($indent) . "* Parent points to commit: \n";
-      print p_indent($indent) . "*     $ref_hash\n";
-      print p_indent($indent) . "* HEAD of branch is commit: \n";
-      print p_indent($indent) . "*     $head_commit\n";
-      print p_indent($indent) . "************************************************************\n";
-    }  
+      $status_error = 1;
+      
+      print p_indent($indent) .    "************************************************************\n";
+      print p_indent($indent) .    "* Submodule ($repo) tree error\n";
+      print p_indent($indent) .    "*    At dir: $result_dir\n";
+
+      if($submodule_branch ne $active_branch)
+      {
+        print p_indent($indent) .  "*    Inconsistent branch: \n";
+        print p_indent($indent) .  "*       root repo on: $active_branch\n";
+        print p_indent($indent) .  "*       submodule on: $submodule_branch\n";
+      }
+      
+      if($head_commit ne $ref_hash)
+      {
+        print p_indent($indent) .  "*    Inconsistent submodule reference\n";
+        print p_indent($indent) .  "*       Parent repo points to commit: \n";
+        print p_indent($indent) .  "*          $ref_hash\n";
+        print p_indent($indent) .  "*       HEAD of branch ($submodule_branch) is commit: \n";
+        print p_indent($indent) .  "*          $head_commit\n";
+
+      }  
+      print p_indent($indent) .    "************************************************************\n";
+    }
+
   }
   
 #  print list_submodules();
@@ -176,17 +217,22 @@ sub submodule_tree($$$$)
        print p_indent($indent) . "*    $dir/$submodule\n";
        print p_indent($indent) . "* Bailing out\n";
        print p_indent($indent) . "************************************************************\n";
+       $status_error = 1;
        exit();
     }
 
 #    print p_indent($indent) . "Directory: " . getcwd() . "\n";
 #    print p_indent($indent) . "Executing command: git ls-tree -r $active_branch $submodule --abbrev=8\n";
-    print p_indent($indent) . "Submodule $submodule\n";
+
     $ls_tree_info = `git ls-tree -r $active_branch $submodule`;
     @ls_tree_info_split = split(" ", $ls_tree_info);
     $ref_hash = $ls_tree_info_split[2];
-    print p_indent($indent) . "  SM ref commit hash: " . $ref_hash . "\n";
 
+    if($verbose)
+    {
+      print p_indent($indent) . "Submodule $submodule\n";
+      print p_indent($indent) . "  Parents ref commit to SM hash: " . $ref_hash . "\n";
+    }
 
 #    print "Recursing into submodule: " . $_ . "\n";
     submodule_tree($submodule, $dir . "/" . $submodule,  $ref_hash,   $indent+1);
@@ -206,11 +252,19 @@ sub p_indent($)
 { 
   my $i;
   my $indent = $_[0];
+  my $indent_str = "";
+
+  if(!$verbose)
+  {
+    return $indent_str;
+  }
   
   for($i = 0; $i < $indent; $i = $i + 1)
   {
-    print "  ";
+    $indent_str .= "      ";
   }
+  
+  return $indent_str;
 }
 
 
@@ -227,3 +281,10 @@ sub list_submodules( )
 }
 
 
+
+sub ParseArgs()
+{
+    Getopt::Long::GetOptions(
+                           "verbose|v"   => \$verbose,
+                          );
+}
