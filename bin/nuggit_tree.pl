@@ -88,10 +88,12 @@ submodule_tree("root repo", $root_dir, "0000", 0);
 if( $status_error == 1)
 {
     print "Nuggit Tree ERROR\n";
+    eixt(-1);
 }
 else
 {
    print "Nuggit tree SUCCESS\n";
+   exit(0);
 }
 
 
@@ -141,7 +143,7 @@ sub submodule_tree($$$$)
       print "** Directory for submodule does not exist\n";
       print "***********************************************\n";
       $status_error = 1;
-      exit();
+      exit(-1);
     }
   }
 
@@ -222,7 +224,7 @@ sub submodule_tree($$$$)
        print p_indent($indent) . "* Bailing out\n";
        print p_indent($indent) . "************************************************************\n";
        $status_error = 1;
-       exit();
+       exit(-1);
     }
 
 #    print p_indent($indent) . "Directory: " . getcwd() . "\n";
