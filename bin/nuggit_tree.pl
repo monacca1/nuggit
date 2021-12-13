@@ -45,6 +45,7 @@ use lib $FindBin::Bin.'/../lib'; # Add local lib to path
 use Data::Dumper; # Debug and --dump option
 use Git::Nuggit;
 
+sub list_submodules( );
 sub p_indent($);
 sub submodule_tree($$$$);
 
@@ -146,10 +147,8 @@ sub submodule_tree($$$$)
     }  
   }
   
-#  print `list_submodules.sh`;
-  $submodules = `list_submodules.sh`;
-
-  #print `list_all_submodule.sh`;
+#  print list_submodules();
+  $submodules = list_submodules();
 
   my @submodules = split /\n/, $submodules;
 
@@ -212,6 +211,19 @@ sub p_indent($)
   {
     print "  ";
   }
+}
+
+
+
+sub list_submodules( )
+{
+ 
+  if (-e '.gitmodules')
+  {
+    return `grep path .gitmodules | sed 's/path//' | sed 's/\=//' | sed 's/ //g' | sed 's/\t//g' `
+  }
+  
+  return "";
 }
 
 
