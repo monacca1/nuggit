@@ -53,6 +53,7 @@ sub ParseArgs();
 my $ngt = Git::Nuggit->new();
 my $verbose      = 0;  #assume verbose is off unless command line args specify otherwise
 my $status_error = 0;
+my $tmp_commit_str = "";
 
 my ($root_dir, $relative_path_to_root) = find_root_dir();
 die("Not a nuggit!\n") unless $root_dir;
@@ -78,7 +79,9 @@ if($verbose)
   print "On branch: \n";
   print "    $active_branch \n";
   print "Branch HEAD commit for root repo:\n";
-  print "    " . `git log -n1 $active_branch | grep ^commit`;
+  $tmp_commit_str = `git log -n1 $active_branch | grep ^commit | sed 's/commit //'`;
+  $tmp_commit_str = substr($tmp_commit_str, 0, 10);   # shorten to 10 chars
+  print "    commit: " . $tmp_commit_str . "\n";
   print "==========================================================\n";
 }
 
@@ -95,12 +98,9 @@ else
 
 
 
-
+# ======================================================
 # functions
-
-
-
-
+# ======================================================
 
 sub submodule_tree($$$$)
 {
@@ -152,7 +152,8 @@ sub submodule_tree($$$$)
   $head_commit          = $git_log_result_split[1];
   if($verbose)
   {
-    print p_indent($indent) . "Branch HEAD commit: " . $head_commit . "\n";
+    $tmp_commit_str = substr($head_commit, 0, 10);   # shorten to 10 chars	
+    print p_indent($indent) . "Branch HEAD commit:            " . $tmp_commit_str . "\n";
   }
 
   if($dir ne $start_dir)
@@ -178,9 +179,14 @@ sub submodule_tree($$$$)
       {
         print p_indent($indent) .  "*    Inconsistent submodule reference\n";
         print p_indent($indent) .  "*       Parent repo points to commit: \n";
-        print p_indent($indent) .  "*          $ref_hash\n";
+
+        $tmp_commit_str = substr($ref_hash, 0, 10);   # shorten to 10 chars	
+        print p_indent($indent) .  "*          $tmp_commit_str\n";
+	
+
         print p_indent($indent) .  "*       HEAD of branch ($submodule_branch) is commit: \n";
-        print p_indent($indent) .  "*          $head_commit\n";
+        $tmp_commit_str = substr($head_commit, 0, 10);   # shorten to 10 chars	
+        print p_indent($indent) .  "*          $tmp_commit_str\n";	
 
       }  
       print p_indent($indent) .    "************************************************************\n";
@@ -231,7 +237,8 @@ sub submodule_tree($$$$)
     if($verbose)
     {
       print p_indent($indent) . "Submodule $submodule\n";
-      print p_indent($indent) . "  Parents ref commit to SM hash: " . $ref_hash . "\n";
+      $tmp_commit_str = substr($ref_hash, 0, 10);   # shorten to 10 chars	
+      print p_indent($indent+1) . "Parent's ref to SM is to hash: " . $tmp_commit_str . "\n";
     }
 
 #    print "Recursing into submodule: " . $_ . "\n";
