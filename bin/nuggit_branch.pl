@@ -34,8 +34,7 @@ use Cwd qw(getcwd);
 use Term::ANSIColor;
 use File::Spec;
 use Git::Nuggit;
-#use JSON;
-use JSON::MaybeXS();
+use JSON;
 use Data::Dumper;
 
 =head1 SYNOPSIS
@@ -162,8 +161,7 @@ my $delete_branch_flag        = 0;
 my $delete_merged_flag        = 0;
 my $delete_remote_flag        = 0;
 my $delete_merged_remote_flag = 0;
-my $show_merged_bool          = 0;
-my $show_unmerged_bool        = 0;
+my $show_merged_bool          = undef; # undef = default (no filter), true=merged-only, false=unmerged-only
 my $recurse_flag              = 0;
 my $orphans_flag              = 0;
 my $exists_in_all_flag        = 0;
@@ -211,7 +209,8 @@ elsif( ($orphans_flag) or
        ($orphan_branch ne "")
      )
 {
-  orphan_info();   # print the orphans (or the nuggit branches that exist in all repos)
+    $ngt->start(level=> 0, verbose => $verbose);
+    orphan_info();   # print the orphans (or the nuggit branches that exist in all repos)
 }
 elsif (defined($selected_branch) && $do_branch_list == 0) 
 {
@@ -221,14 +220,14 @@ elsif (defined($selected_branch) && $do_branch_list == 0)
 }
 else
 {
+    $ngt->start(level=> 0, verbose => $verbose);
     if(defined($selected_branch) && $do_branch_list == 1)
     {
     
 #      print "Selected branch: $selected_branch \n";
 #      print "--all:           $show_all_flag\n";
 #      print "--recursive:     $recurse_flag\n";
-#      print "--no-merged:     $show_unmerged_bool\n";
-#      print "--merged:        $show_merged_bool\n";
+#      print "--[no-]merged:        $show_merged_bool\n";
 
       my $checked_out_branch_head_commit = "";
       my $branch_head_commit = "";
@@ -269,19 +268,16 @@ else
 #                         print "   check if head commit $branch_head_commit is merged into checked out branch $checked_out_branch_here\n";
                           $exit_code = system("git merge-base --is-ancestor $branch_head_commit $checked_out_branch_head_commit");
                           
-                          if($show_merged_bool)
+                          if(defined($show_merged_bool))
                           {
-                             if($exit_code == 0)
-                             {
-                                print "branch $selected_branch is merged into branch $checked_out_branch_here in repo $name\n";
-                             }
-                          }
-                          elsif($show_unmerged_bool)
-                          {
-                             if($exit_code != 0)
-                             {
-                                print "branch $selected_branch is NOT merged into branch $checked_out_branch_here in repo $name\n";
-                             }
+                              if($show_merged_bool && $exit_code == 0)
+                              {
+                                  print "branch $selected_branch is merged into branch $checked_out_branch_here in repo $name\n";
+                              }
+                              elsif(!$show_merged_bool && $exit_code != 0)
+                              {
+                                  print "branch $selected_branch is NOT merged into branch $checked_out_branch_here in repo $name\n";
+                              }
                           }
                           else
                           {
@@ -301,7 +297,6 @@ else
     }
     else
     {
-      $ngt->start(level=> 0, verbose => $verbose);
       if ($show_json) {
           verbose_display_branches();
       } else {
@@ -328,29 +323,12 @@ sub verbose_display_branches
     #   - is_consistent: bool
     #   - branches: Root branches object
     #   - submodules: Object where key is submodule path and value is branch listing
-
-    my $branches;
-    if($show_merged_bool)
-    {
-       $branches = get_branches({
-           all => $show_all_flag,
-           merged => $show_merged_bool,
-          });
-    }
-    elsif($show_unmerged_bool)
-    {
-       $branches = get_branches({
-           all => $show_all_flag,
-           no_merged => $show_unmerged_bool,
-          });
-    }
     
-    print "Info from 'get_branches':\n";
-    print Dumper($branches);
-    
-    my $json = JSON::MaybeXS->new(utf8 => 1, pretty => 1);
-    my $branches_json = $json->encode($branches);
-    print $branches_json;
+    my $branches = get_branches({
+        all => $show_all_flag,
+        merged => $show_merged_bool,
+       });
+    say encode_json($branches);
     
 }
 
@@ -361,14 +339,16 @@ sub display_branches
     $selected_branch    = get_selected_branch($root_repo_branches);
 
     my $flag = ($show_all_flag ? "-a" : "");
-
-    if ($show_merged_bool) 
+    if (defined($show_merged_bool)) 
     {
-        $flag .= " --merged";
-    }
-    elsif($show_unmerged_bool)
-    {
-        $flag .= " --no-merged";
+        if ($show_merged_bool) 
+        {
+            $flag .= " --merged";
+        }
+        else
+        {
+            $flag .= " --no-merged";
+        }
     }
 
     # get the list of root repo branches that match the flaga
@@ -378,29 +358,31 @@ sub display_branches
     # Note: If showing merged/no-merged, selected branch may be unknown
     say "Root repo is on branch: ".colored($selected_branch, 'bold') if $selected_branch;
 
-        print color('bold');
-        print "All " if $show_all_flag;
+    print color('bold');
+    print "All " if $show_all_flag;
 
+    if (defined($show_merged_bool)) {
         if ($show_merged_bool) 
         {
            print "Merged ";
         }
-        elsif($show_unmerged_bool)
+        else # show_merged_bool == 0
         {
            print "Unmerged ";
         }
+    }
         
-        say "Branches:";
-        print color('reset');
-        
-        if($root_repo_branches)
-        {
-           say $root_repo_branches;
-        }
-        else
-        {
-          print "  none found\n";
-        }
+    say "Branches:";
+    print color('reset');
+    
+    if($root_repo_branches)
+    {
+        say $root_repo_branches;
+    }
+    else
+    {
+        print "  none found\n";
+    }
 
 
   # --------------------------------------------------------------------------------------
@@ -422,7 +404,6 @@ sub ParseArgs()
         "delete-force|D!"   => \$delete_branch_flag,
         "remote|r"          => \$remote_flag,
         "merged!"           => \$show_merged_bool,
-        "no-merged"         => \$show_unmerged_bool,
         "all|a!"            => \$show_all_flag,
         "verbose|v!"        => \$verbose,
         "json!"             => \$show_json, # For branch listing command only
@@ -451,7 +432,7 @@ sub ParseArgs()
 
     # try to differentiate between commands to list or show something and a command to create a branch.  We dont want to create a branch
     # if the user executes 'nuggit branch foo --all'
-    if($recurse_flag or $show_merged_bool or $show_unmerged_bool or $show_json or $recurse_flag or $orphans_flag or $orphan_branch or $exists_in_flag or $missing_from_flag)
+    if($recurse_flag or defined($show_merged_bool) or $show_json or $recurse_flag or $orphans_flag or $orphan_branch or $exists_in_flag or $missing_from_flag)
     {
       $do_branch_list = 1;
     }
@@ -679,7 +660,6 @@ sub get_branch_info()
 
                 }});
                    
-#  print Dumper(\@nuggit_branch_info);
 
   return @nuggit_branch_info;
 
@@ -731,7 +711,6 @@ sub get_full_branch_list($)
        {
          #print "branch $tmp_branch is new to the list\n";
          push(@full_branch_list, $tmp_branch);
-         #print Dumper(\@full_branch_list);
        }
      
      }
@@ -759,9 +738,6 @@ sub get_orphan_branch_info($$)
 
   my @orphan_branch_info;   # build and return this
 
-  #  print Dumper(\@full_branch_list);
-  #  print Dumper(\@nuggit_branch_info);
-
   # Algorithm 
   # for each unique branch, go through all the repos and check if the branch is in the repo
   foreach my $branch_name (@full_branch_list)
@@ -774,11 +750,6 @@ sub get_orphan_branch_info($$)
       my $repo_A_name    = $repo_info->{'name'};
       my @branches_array = @{ $repo_info->{'branches_array'} };
 
-
-#      print "$repo_A_name\n";
-#      print Dumper (@branches_array);
-
-    
       if(!is_item_in_array(\@branches_array, $branch_name))
       {
 #        print "    X branch $branch_name is not in this repo\n";
@@ -825,11 +796,7 @@ sub get_orphan_branch_info($$)
     
     push(@orphan_branch_info, \%branch_info );
     
-#    print Dumper (\%branch_info);
   }
-  
-  #print "PRINTING ORPHAN BRANCH INFO\n\n\n";
-  #print Dumper(\@orphan_branch_info);
   
   return @orphan_branch_info;
   
@@ -844,8 +811,6 @@ sub display_branches_recursive_flag()
                                                # for each repo/submodule and an array for that repo containing a list 
                                                # of all the branches
   
-#  print Dumper(@nuggit_branch_info);
-  
   # create an empty list/array of unique branches.  This will be the super set of all branches in all repos  
   my @full_branch_list = get_full_branch_list(\@nuggit_branch_info);
   
@@ -859,7 +824,7 @@ sub display_branches_recursive_flag()
   #            In this case, we want to list a superset of all the unique branches
   #             that fit the description across all submodules
   
-  if($show_merged_bool or $show_unmerged_bool)
+  if(defined($show_merged_bool))
   {
     # print "CASE 1: show merged or unmerged branches\n";
      
@@ -873,8 +838,7 @@ sub display_branches_recursive_flag()
 
       print "  all flag:            $show_all_flag\n";
       print "  recurse flag:        $recurse_flag\n";
-      print "  show merged bool:    $show_merged_bool\n";
-      print "  show unmerged bool:  $show_unmerged_bool\n";
+      print "  show merged bool:    true\n";
       print "\n";
 
       print "Superset of unique branches: \n";
@@ -887,7 +851,7 @@ sub display_branches_recursive_flag()
       # ====================================================== 
       
     }
-    elsif($show_unmerged_bool)
+    else
     {
       print "Branches that are not fully merged into checked out branch\n";
      
@@ -944,8 +908,6 @@ sub orphan_info()
                                                # for each repo/submodule and an array for that repo containing a list 
                                                # of all the branches
   
-  # print Dumper(@nuggit_branch_info);
-  
   # create an empty list/array of unique branches.  This will be the super set of all branches in all repos  
   my @full_branch_list = get_full_branch_list(\@nuggit_branch_info);
 
@@ -972,23 +934,12 @@ sub orphan_info()
 #         and
 #         $missing_from_flag = 0
 #      
- 
-#  print "PRINTING ORPHAN BRANCH INFO FROM orphan_info()\n\n";
-#  print "number of entries in the orphan_branch_info array: "  . @orphan_branch_info . "\n\n";
-#  print Dumper(\@orphan_branch_info);  
   
   if($show_json)
   {
      # for JSON output, output the full json.  let the receiver grab what they want
      # output for machine
-
-#     print "show json?: $show_json \n";
-     my $json = JSON::MaybeXS->new(utf8 => 1, pretty => 1);
-     my $orphan_branch_json = $json->encode(\@orphan_branch_info);
-
-     #  print "\n";
-     #  print "Result of json encode of \$orphan_branch_json: \n";
-     print $orphan_branch_json;
+      say to_json(\@orphan_branch_info, {utf8 => 1, pretty => 1});
   }
   elsif($exists_in_all_flag)
   {
@@ -1002,8 +953,6 @@ sub orphan_info()
       my @missing_from_array = $branch_info->{'missing_from_array'};
       
       my $total_repos = $exists_count + $missing_count;
-      
-      #print Dumper(\@missing_from_array);
       
       if($missing_count == 0)
       {
@@ -1029,8 +978,6 @@ sub orphan_info()
       my @missing_from_array = $branch_info->{'missing_from_array'};
       
       my $total_repos = $exists_count + $missing_count;
-      
-      #print Dumper(\@missing_from_array);
       
       if($missing_count != 0)
       {

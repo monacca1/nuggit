@@ -14,7 +14,7 @@ use IPC::Run3;
 use File::Spec;
 use JSON;
 use File::Slurp qw(read_file write_file);
-use Data::Dumper;
+
 our @ISA = qw(Exporter);
 our @EXPORT = qw(get_submodules list_submodules_here submodule_foreach find_root_dir nuggit_init get_remote_tracking_branch get_selected_branch_here get_selected_branch do_upcurse check_merge_conflict_state get_branches);
 
@@ -372,29 +372,16 @@ sub get_branches
     if (ref($opts)) {
         $cmd .= "-a " if $opts->{all};
         if (defined($opts->{merged})) {
-	    if( $opts->{merged} == 1)
-	    {
-               $cmd .= " --merged ";
-	    }
+            $cmd .= ($opts->{merged}) ? "--merged" : "--no-merged";
         }
-	elsif (defined($opts->{no_merged})){
-	    if( $opts->{no_merged} == 1 )
-	    {
-               $cmd .= " --no-merged ";
-	    }
-	}
     } elsif ($opts) {
         $cmd .= $opts; # String opts given
     }
-    
+        
     # execute git branch
     my $raw = `$cmd`;
     my %rtv;
     my @lines = split("\n", $raw);
-
-#print $cmd;
-#print $raw;
-#print Dumper(\@lines);
 
     foreach my $line (@lines) {
         if ($line =~ /HEAD detached at ([0-9a-fA-F]+)/) {
