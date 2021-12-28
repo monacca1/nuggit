@@ -740,7 +740,7 @@ sub checkout_safe
         #  Note; Assume Remaining List is ordered remote branches, local branches
         my $rtv = pop(@branches);
 
-        if ($rtv =~ /^origin\/(.+)/) {
+        if ($rtv =~ /^origin\/(.+)$/) {
             # Sanity check remote branch
             $rtv = $1;
             return checkout_safe_remote($rtv, $current_commit);
@@ -1041,6 +1041,8 @@ sub do_operation_pre {
         # Set message (does not apply to pull or rebase)
         if ($opts->{'message'}) {
             $cmd .= " -m \"$opts->{'message'}\"";
+        } elsif (defined($opts->{edit}) && !$opts->{edit}) {
+            $cmd .= " --no-edit";
         } else {
             $cmd .= " -m \"Nuggit Merged $branch into ".get_selected_branch_here()."\"";
         }
