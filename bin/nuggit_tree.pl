@@ -49,9 +49,13 @@ sub list_submodules( );
 sub p_indent($);
 sub submodule_tree($$$$);
 sub ParseArgs();
+sub PrintHelp();
+
+
 
 my $ngt = Git::Nuggit->new();
 my $verbose      = 0;  #assume verbose is off unless command line args specify otherwise
+my $help         = 0;
 my $status_error = 0;
 my $tmp_commit_str = "";
 
@@ -59,6 +63,12 @@ my ($root_dir, $relative_path_to_root) = find_root_dir();
 die("Not a nuggit!\n") unless $root_dir;
 
 ParseArgs();
+
+if($help == 1)
+{
+  PrintHelp();
+  exit(0);
+}
 
 my $cwd = getcwd();
 
@@ -88,7 +98,7 @@ submodule_tree("root repo", $root_dir, "0000", 0);
 if( $status_error == 1)
 {
     print "Nuggit Tree ERROR\n";
-    eixt(-1);
+    exit(-1);
 }
 else
 {
@@ -293,5 +303,34 @@ sub ParseArgs()
 {
     Getopt::Long::GetOptions(
                            "verbose|v"   => \$verbose,
+			   "help"        => \$help
                           );
+
+    # check for unparsed arguments
+    if (@ARGV > 0) 
+    {
+      $help = 1;
+    }
+
+}
+
+
+
+sub PrintHelp()
+{
+  print "Nuggit Tree\n";
+  print "  This command will display the tree consistency across the repo.  What that means is\n";
+  print "  that it will show whether, for he current state of the repo, if the submodule references\n";
+  print "  are consistent with the HEAD commit of the submodule.  Additionally, this will determine\n";
+  print "  if each submodule is on the same branch as the root repository branch.\n";
+  print "\n";
+  print "  This command can be used without any arguments and will output concise success or failure\n";
+  print "  or can be used with the verbose option to show the branches and commits.\n";
+  print "\n";
+  print "\n";
+  print "  Usage:\n";
+  print "     nuggit tree\n";
+  print "     nuggit tree --verbose\n";
+  print "     nuggit tree -v\n";
+  print "     nuggit tree --help\n";
 }

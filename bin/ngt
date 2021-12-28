@@ -78,6 +78,7 @@ my %files =
             },
  status    => {cmd => "nuggit_status.pl", completion_type => "file"},
  tag       => {cmd => "nuggit_foreach.pl", args => [ qw( --no-break-on-error git tag )]},
+ tree      => {cmd => "nuggit_tree.pl" },
  
  foreach => {cmd => "nuggit_foreach.pl", # Run without arguments to list submodule status
              completion_type => "system" # Use system default completion
