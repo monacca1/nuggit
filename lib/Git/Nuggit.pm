@@ -14,6 +14,7 @@ use IPC::Run3;
 use File::Spec;
 use JSON;
 use File::Slurp qw(read_file write_file);
+
 our @ISA = qw(Exporter);
 our @EXPORT = qw(get_submodules list_submodules_here submodule_foreach find_root_dir nuggit_init get_remote_tracking_branch get_selected_branch_here get_selected_branch do_upcurse check_merge_conflict_state get_branches);
 
@@ -376,7 +377,7 @@ sub get_branches
     } elsif ($opts) {
         $cmd .= $opts; # String opts given
     }
-    
+        
     # execute git branch
     my $raw = `$cmd`;
     my %rtv;
