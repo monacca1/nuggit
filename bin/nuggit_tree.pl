@@ -79,7 +79,10 @@ my $submodules;
 
 chdir $root_dir;
 
-my $active_branch = get_selected_branch_here();
+my $active_branch = "unknown";
+$active_branch = get_selected_branch_here();
+
+
 
 if($verbose)
 {
@@ -169,6 +172,13 @@ sub submodule_tree($$$$)
   if($dir ne $start_dir)
   { 
     $submodule_branch = get_selected_branch_here();
+    if(defined($submodule_branch))
+    {
+    }
+    else
+    {
+      $submodule_branch = "unknown";
+    }
 
     if(($submodule_branch ne $active_branch) || ($head_commit ne $ref_hash))
     {
