@@ -577,40 +577,40 @@ sub check_branch_merged_all
     my $check_branch_known_cmd = "git branch | grep $branch";
     
     $ngt->foreach( {'depth_first' => sub {
-	      # is the branch unknown
-	      my $branch_known = `$check_branch_known_cmd`;
-	      if( $branch_known eq "")
-	      {
-		#branch is not found in this repository... consider this merged and deleted... not an error.
-	      }
-	      else  
-	      {
-		# branch does exist in this repo, check if it is merged
-		my $state = `$check_cmd`;
-		if (!$state) {
-		    $status = 0;
-		    say "Branch ($branch) not merged/found at ".getcwd() if $verbose;
-		} else {
-		    #print $state . "\n";
-		    my @lines = split('\n', $state);
-		    my $linefound = 0;
-		    foreach my $line (@lines) {
-			$line =~ /(remotes\/(?<remote>\w+)\/)?(?<branch>[\w\d\-\_\/]+)/;
-			if ($remote && $+{remote} && $+{remote} eq $remote && $+{branch} eq $branch) {
-			    $linefound = 1; # Match for remote branch
-			    last;
-			} elsif (!$remote && !$+{remote} && $branch eq $+{branch}) {
-			    $linefound = 1; # Match for local branch
-			    last;
-			}
-		    }
-		    if (!$linefound) {
-			$status = 0;
-			say "Branch (line not found) not merged/found at ".getcwd() if $verbose;
-		    }
-		}
-	     }
-	  },
+              # is the branch unknown
+              my $branch_known = `$check_branch_known_cmd`;
+              if( $branch_known eq "")
+              {
+                #branch is not found in this repository... consider this merged and deleted... not an error.
+              }
+              else  
+              {
+                # branch does exist in this repo, check if it is merged
+                my $state = `$check_cmd`;
+                if (!$state) {
+                    $status = 0;
+                    say "Branch ($branch) not merged/found at ".getcwd() if $verbose;
+                } else {
+                    #print $state . "\n";
+                    my @lines = split('\n', $state);
+                    my $linefound = 0;
+                    foreach my $line (@lines) {
+                        $line =~ /(remotes\/(?<remote>\w+)\/)?(?<branch>[\w\d\-\_\/]+)/;
+                        if ($remote && $+{remote} && $+{remote} eq $remote && $+{branch} eq $branch) {
+                            $linefound = 1; # Match for remote branch
+                            last;
+                        } elsif (!$remote && !$+{remote} && $branch eq $+{branch}) {
+                            $linefound = 1; # Match for local branch
+                            last;
+                        }
+                    }
+                    if (!$linefound) {
+                        $status = 0;
+                        say "Branch (line not found) not merged/found at ".getcwd() if $verbose;
+                    }
+                }
+             }
+          },
        'run_root' => 1
       }
      );
