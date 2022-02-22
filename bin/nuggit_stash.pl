@@ -176,6 +176,7 @@ my $mode = shift @ARGV;
 pod2usage(1) if $help;
 pod2usage(-exitval => 0, -verbose => 2) if $man;
 $ngt->start(verbose => $verbose, level => 1);
+chdir($ngt->root_dir()) || die("Can't enter root_dir\n");
 
 # chdir($ngt->root_dir()) unless ?
 # TODO: If we don't chdir root, we can't recurse into submodules for some reason
@@ -251,14 +252,15 @@ sub git_stash_list
     my $rtv = {};
     for my $line (@lines) {
         my ($stashIdx, $branch, $ngtIdx, $msg) =
-            ($line =~ /^stash\@\{(\d+)\}\: On ([\w\/\_\-]+)\: NGT\-STASH\{(\d+)\}\s*(.+)?$/);
+        ($line =~ /^stash\@\{(\d+)\}\: On ((?:\(no\ branch\))|(?:[\w\/\_\-]+?))\: NGT\-STASH\{(\d+)\}\s*(.+)?$/);
+
         if (defined($ngtIdx)) {
             $rtv->{$ngtIdx} = {
                 "gitIdx" => $stashIdx,
                 "branch" => $branch,
                 "ngtIdx" => $ngtIdx,
                 "msg"    => $msg
-               };
+            };
         }
     }
     return $rtv;
