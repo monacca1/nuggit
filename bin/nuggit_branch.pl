@@ -577,7 +577,7 @@ sub check_branch_merged_all
     my $check_branch_known_cmd = "git branch | grep $branch";
     
     $ngt->foreach( {'depth_first' => sub {
-	      # is the branch unkown
+	      # is the branch unknown
 	      my $branch_known = `$check_branch_known_cmd`;
 	      if( $branch_known eq "")
 	      {
