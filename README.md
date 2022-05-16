@@ -37,7 +37,7 @@ tracker](http://github.com/monacca1/nuggit) or discussions section.
 Several installation options are documented below for convenience.
 
 Minimum requirements for Nuggit are:
-- Command-line Git tools, version 2.22 or later.
+- Command-line Git tools, version 2.24 or later.
 - Perl version 5.10 or later
 
 NOTE: The test step for nuggit will fail if git is not installed, or
