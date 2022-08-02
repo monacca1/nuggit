@@ -79,9 +79,13 @@ my $submodules;
 
 chdir $root_dir;
 
-my $active_branch = "unknown";
+my $active_branch;
 $active_branch = get_selected_branch_here();
 
+if(!defined($active_branch))
+{
+  $active_branch = "unknown";
+}
 
 
 if($verbose)
@@ -172,10 +176,7 @@ sub submodule_tree($$$$)
   if($dir ne $start_dir)
   { 
     $submodule_branch = get_selected_branch_here();
-    if(defined($submodule_branch))
-    {
-    }
-    else
+    if(!defined($submodule_branch))
     {
       $submodule_branch = "unknown";
     }
