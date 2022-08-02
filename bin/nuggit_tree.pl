@@ -79,8 +79,7 @@ my $submodules;
 
 chdir $root_dir;
 
-my $active_branch;
-$active_branch = get_selected_branch_here();
+my $active_branch = get_selected_branch_here();
 
 if(!defined($active_branch))
 {
