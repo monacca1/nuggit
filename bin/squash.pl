@@ -442,7 +442,11 @@ sub main()
   print "\n";
   print "    git branch -u origin/$feature_branch\n";
   print "    git push --force-with-lease       \n";
-  print "------\n";
+  print "\n";
+  print " or the single command\n";
+  print "\n";
+  print "git push --force-with-lease --set-upstream origin $feature_branch\n";
+    print "------\n";
 
 } # end of main program
 
