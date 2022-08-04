@@ -426,6 +426,15 @@ sub main()
     $tmp = `git branch -D $original_branch_deleteme`;
   }
 
+  #
+  # CHECK IF THERE IS AN UPSTREAM OF THE ORIGINAL BRANCH?  maybe need to do this at the beginning
+  # OR figure out a way to do the following operation and silence the output
+  #
+  # git branch -u origin/$feature_branch
+  #
+  #
+  # git push --force-with-lease --set-upstream origin IMAPX-03
+
   print "------\n";
   print "You will need to force push this to your remote server.\n";
   print "The final contents of your branch have not changed however\n";
@@ -460,6 +469,13 @@ sub ParseArgs()
                           );
 
 
+    # check for unparsed arguments
+    if( (@ARGV > 0) || ($help==1))
+    {
+      $help = 1;
+      return;
+    }
+
     if(defined($user_commit_msg_arg))
     {
       my $size = length $user_commit_msg_arg;
@@ -473,11 +489,7 @@ sub ParseArgs()
       die("A useful commit message is required. use -m to specify a commit message\n");
     }
     
-    # check for unparsed arguments
-    if (@ARGV > 0) 
-    {
-      $help = 1;
-    }
+
 
 }
 
