@@ -33,9 +33,10 @@
 # perl squash.pl -help
 # perl squash.pl -b=master
 # perl squash.pl -b master
-# perl squash.pl -b master -m "Commit Message"         <----  if you dont supply the commit message squash will aggregate all the squashed commit messages together.
-# perl squash.pl -b master --verbose
-# perl squash.pl -b master -v
+# perl squash.pl -b master -m "Commit Message"             <----  Commit message is required.
+# perl squash.pl -b master --verbose -m "Commit Message"
+# perl squash.pl -b master -v -m "Commit Message"
+
 # perl squash.pl -relative-branch=master
 # perl squash.pl -relative-branch master
 # perl squash.pl -merge-base-commit=42dfec83           <---- not yet implemented
@@ -74,10 +75,10 @@ my $halt_if_temp_branches_already_exist = 0;   # not implemented
 my $ahead;
 my $behind;
 
-my $date;
 my $tmp;
 my $merge_base;
 my $commit_msg;
+my $meld_commit_msg;
 
 my $help = 0;
 my $verbose = 0;
@@ -303,32 +304,24 @@ sub main()
   $tmp =  `git merge $feature_branch --squash`;
   #print $tmp;
 
-  # if the user supplied a commit message we will use it.
-  if(!defined($user_commit_msg_arg))
-  {
-    if($verbose==1)
-    {
-      print "VERBOSE: Get the concatenated commit log using the git log command.  this could be cleaned up a bit\n";
-    }
-    
-    # the following command will get all the (non-merge) commits that are on feature branch but not on $merge_base argument
-    # the $merge base argument may be a branch name or a commit sha.  In this case I use the commit sha because that is 
-    # the bound of the squash.
-    $commit_msg = `git log --no-merges $feature_branch ^$merge_base`;
-  }
-  else
-  {
-    $commit_msg = $user_commit_msg_arg;
-  }
 
-#  $date = `date +%Y-%m-%d:%H:%M:%S:%N`;
-#  chomp($date);
+  if($verbose==1)
+  {
+    print "VERBOSE: Get the concatenated commit log using the git log command.  this could be cleaned up a bit\n";
+  }
+    
+  # the following command will get all the (non-merge) commits that are on feature branch but not on $merge_base argument
+  # the $merge base argument may be a branch name or a commit sha.  In this case I use the commit sha because that is 
+  # the bound of the squash.
+  $meld_commit_msg = `git log --no-merges $feature_branch ^$merge_base`;
+
+  $commit_msg = "N:$feature_branch: $user_commit_msg_arg.\nNuggit Squash: ($feature_branch) relative to $base_branch and merge base of $merge_base\n$meld_commit_msg";
+
   if($verbose==1)
   {
     print "VERBOSE: Commit the squash merge of $feature_branch --> $squashed_branch_tmp_name\n";
   }
-  $tmp =  `git commit -m "N:Squash - ($feature_branch) relative to $base_branch and merge base of $merge_base\n$commit_msg"`;
-  #print $tmp;
+  $tmp =  `git commit -m "$commit_msg"`;
 
   if($verbose==1)
   {
@@ -433,6 +426,15 @@ sub main()
     $tmp = `git branch -D $original_branch_deleteme`;
   }
 
+  #
+  # CHECK IF THERE IS AN UPSTREAM OF THE ORIGINAL BRANCH?  maybe need to do this at the beginning
+  # OR figure out a way to do the following operation and silence the output
+  #
+  # git branch -u origin/$feature_branch
+  #
+  #
+  # git push --force-with-lease --set-upstream origin IMAPX-03
+
   print "------\n";
   print "You will need to force push this to your remote server.\n";
   print "The final contents of your branch have not changed however\n";
@@ -440,7 +442,11 @@ sub main()
   print "\n";
   print "    git branch -u origin/$feature_branch\n";
   print "    git push --force-with-lease       \n";
-  print "------\n";
+  print "\n";
+  print " or the single command\n";
+  print "\n";
+  print "git push --force-with-lease --set-upstream origin $feature_branch\n";
+    print "------\n";
 
 } # end of main program
 
@@ -457,7 +463,7 @@ sub main()
 sub ParseArgs()
 {
     Getopt::Long::GetOptions(
-                           "message|m=s"            => \$user_commit_msg_arg,
+                           "message|m=s"            => \$user_commit_msg_arg,        # required argument
                            "verbose|v"              => \$verbose,
 			   "help"                   => \$help,
 			   "relative-branch|b=s"    => \$base_branch_arg,
@@ -466,7 +472,15 @@ sub ParseArgs()
 			   
                           );
 
-    if(0)  # if you want to require a user supplied commit message and force its length to be > 4, enable this
+
+    # check for unparsed arguments
+    if( (@ARGV > 0) || ($help==1))
+    {
+      $help = 1;
+      return;
+    }
+
+    if(defined($user_commit_msg_arg))
     {
       my $size = length $user_commit_msg_arg;
       my $min_len = 4; # TODO: Make this configurable?
@@ -474,12 +488,12 @@ sub ParseArgs()
           die("A useful commit message of at least $min_len characters is required: You specified \"$user_commit_msg_arg\"");
       }
     }
-    
-    # check for unparsed arguments
-    if (@ARGV > 0) 
+    else
     {
-      $help = 1;
+      die("A useful commit message is required. use -m to specify a commit message\n");
     }
+    
+
 
 }
 
@@ -513,8 +527,7 @@ sub PrintHelp()
   print "      --help\n";
   print "            * Show this help information\n";
   print "       -m \"<commit message>\"\n";
-  print "            * if you do not provide a commit message from the command line, the\n";
-  print "              squash operation will concatenate all the relevant squashed commit messages\n";
+  print "            * Required argument\n";
   print "      --relative-branch=<branch-name>\n";
   print "      -b=<branch-name>\n";
   print "            * This argument allows you to specify the other branch that\n";
