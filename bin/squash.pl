@@ -154,11 +154,10 @@ sub main()
 
   if(defined($base_commit_arg))
   {
-    # TO DO
     #
     ### Make sure this commit is an ancestor of HEAD
     #
-  #  $tmp = `git rev-parse --verify $base_commit_arg`;   # either one of these should work... this should return the full sha of the merge base, which shold be equal to $base_commit_arg
+    #  $tmp = `git rev-parse --verify $base_commit_arg`;   # either one of these should work... this should return the full sha of the merge base, which shold be equal to $base_commit_arg
     $tmp = `git merge-base HEAD $base_commit_arg`;
     chomp($tmp);
     if($tmp =~ /^($base_commit_arg)/)
