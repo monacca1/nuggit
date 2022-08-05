@@ -346,6 +346,7 @@ sub main()
     exit(1);
   }
 
+
   if($verbose==1)
   {
     print "VERBOSE: Rename the branches so the squashed branch has the original name... multiple steps to follow:\n";
@@ -381,21 +382,12 @@ sub main()
     }
   }
 
-
-  if($verbose==1)
-  {
-    print "VERBOSE: Renaming original branch to: $original_branch_deleteme\n";
-  }
-  # rename the original dev branch to a temp name
-  $tmp = `git branch -m $feature_branch $original_branch_deleteme`;
-
-  if($verbose==1)
-  {
-    print "VERBOSE: Renaming squashed branch ($squashed_branch_tmp_name) to have original branch name: $feature_branch\n";
-  }
-  # rename the squashed branch to have the original feature branch dev name
-  $tmp = `git branch -m $squashed_branch_tmp_name $feature_branch`;
-
+  $tmp = `git checkout -q $feature_branch`;            # go back to feature branch
+  $tmp = `git branch $original_branch_deleteme`;       # create a save branch before doing the following
+  $tmp = `git reset --hard $squashed_branch_tmp_name`; # point the current branch at the squashed branch HEAD
+  $tmp = `git branch -D $squashed_branch_tmp_name`;    # now that we have a branch with the original name pointing 
+                                                       #   to the squased branch HEAD, we can delete the squashed 
+                                                       #   branch temporary name
 
   if($verbose==1)
   {
@@ -424,30 +416,17 @@ sub main()
       print "VERBOSE: Deleting original branch (now called $original_branch_deleteme)\n";
     }
     $tmp = `git branch -D $original_branch_deleteme`;
-  }
-
-  #
-  # CHECK IF THERE IS AN UPSTREAM OF THE ORIGINAL BRANCH?  maybe need to do this at the beginning
-  # OR figure out a way to do the following operation and silence the output
-  #
-  # git branch -u origin/$feature_branch
-  #
-  #
-  # git push --force-with-lease --set-upstream origin IMAPX-03
+  }  
 
   print "------\n";
   print "You will need to force push this to your remote server.\n";
   print "The final contents of your branch have not changed however\n";
   print "The commit history is completely different\n";
   print "\n";
-  print "    git branch -u origin/$feature_branch\n";
   print "    git push --force-with-lease       \n";
   print "\n";
-  print " or the single command\n";
-  print "\n";
-  print "git push --force-with-lease --set-upstream origin $feature_branch\n";
-    print "------\n";
-
+  print "------\n";
+  
 } # end of main program
 
 
@@ -469,7 +448,6 @@ sub ParseArgs()
 			   "relative-branch|b=s"    => \$base_branch_arg,
 			   "merge-base-commit|c=s"  => \$base_commit_arg,
 			   "retain-original"        => \$retain_original_arg
-			   
                           );
 
 
@@ -505,8 +483,8 @@ sub PrintHelp()
   print "  relative to the merge base.  This operation is intended to be performed in preparation\n";
   print "  of merging the feature branch into master.  This operation allows the final state of your\n";
   print "  feature branch to exist in a branch with a single end-state commit without all of the\n";
-  print "  intermediate commits.\n\n";
-  
+  print "  intermediate commits.\n";
+  print " \n";
   print "  This operation will replace your feature branch with an equivalent squashed feature branch\n";
   print "  with the same name.  An implication of this is that you will have to do a force push to the\n";
   print "  server.\n\n";
@@ -548,17 +526,17 @@ sub PrintHelp()
 print "  Before squashing feature branch:\n\n";
 print "  * master         \n";
 print "  |                \n";
-print "  |                \n";
+print "  *                \n";
 print "  |    * Z    HEAD of Feature Branch\n";
 print "  |    |           \n";
 print "  |    * Y         \n";
-print "  |    |           \n";
+print "  *    |           \n";
 print "  |    * X         \n";
 print "  |   /            \n";
-print "  |  /             \n";
+print "  *  /             \n";
 print "  | /              \n";
 print "  |/               \n";
-print "  *                \n";
+print "  *   <--- merge base of Feature Branch and master\n";
 print "  |                \n";
 print "  *                \n";
 print "\n";
@@ -567,11 +545,11 @@ print "nuggit squash -b=master\n";
 print "  After nuggit squash relative to master:\n\n";
 print "  * master         \n";
 print "  |                \n";
-print "  |                \n";
+print "  *                \n";
 print "  |    * Q    HEAD of Feature Branch\n";
-print "  |   /            \n";
+print "  *   /            \n";
 print "  |  /             \n";
-print "  | /              \n";
+print "  * /              \n";
 print "  |/               \n";
 print "  *                \n";
 print "  |                \n";
