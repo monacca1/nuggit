@@ -158,6 +158,24 @@ sub main()
     #
     ### Make sure this commit is an ancestor of HEAD
     #
+  #  $tmp = `git rev-parse --verify $base_commit_arg`;   # either one of these should work... this should return the full sha of the merge base, which shold be equal to $base_commit_arg
+    $tmp = `git merge-base HEAD $base_commit_arg`;
+    chomp($tmp);
+    if($tmp =~ /^($base_commit_arg)/)
+    {
+      if($verbose==1)
+      {
+        print "VERBOSE: The commit provided ($base_commit_arg) is an ancestor of HEAD\n";
+        print "VERBOSE: The verify operation match returned $1\n ";
+      }
+    }
+    else
+    {
+      say colored("The commit sha you provided $base_commit_arg, is not a direct ancestor of HEAD", 'bold red');
+      say colored(" You must provide a commit sha that is a direct ancestor in order to squash to a commit.", 'bold red');
+      exit(1);    
+    }
+
     
     $merge_base = $base_commit_arg;
     
