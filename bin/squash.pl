@@ -371,7 +371,7 @@ sub main()
   my $tmp_str = "";
   if(defined($base_branch))
   {
-    $tmp_str = "relative to $base_branch and"
+    $tmp_str = " relative to $base_branch and"
   }
   $commit_msg = "N:$feature_branch: $user_commit_msg_arg.\nNuggit Squash: ($feature_branch)$tmp_str merge base of $merge_base\n$meld_commit_msg";
 
