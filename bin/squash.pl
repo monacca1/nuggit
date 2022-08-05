@@ -564,8 +564,8 @@ sub PrintHelp()
   print "                    -m \"<commit message>\"\n";
   print "                   --relative-branch <base-branch-name>\n";
   print "                    -b <base-branch-name>\n";
-  print "                   --merge-base-commit <sha>         # Not implemented yet\n";
-  print "                    -c <sha>                         # Not implemented yet\n";
+  print "                   --merge-base-commit <sha>\n";
+  print "                    -c <sha>                \n";
   print "                   -m \"<commit message>\"\n";
   print "                   --retain-original\n";
   print "                   --verbose -v\n";
