@@ -33,14 +33,16 @@
 # perl squash.pl -help
 # perl squash.pl -b=master
 # perl squash.pl -b master
-# perl squash.pl -b master -m "Commit Message"             <----  Commit message is required.
-# perl squash.pl -b master --verbose -m "Commit Message"
-# perl squash.pl -b master -v -m "Commit Message"
+# perl squash.pl -b master -m "<commit msg>"             <----  Commit message is required.
+# perl squash.pl -b master --verbose -m "<commit msg>"
+# perl squash.pl -b master -v -m "<commit msg>"
+# perl squash.pl -c <commit-sha> -m "<commit msg>"       <---- -c specifies a commit hash of an ancestor.  this will squash all commits on the current branch, down to 
+#                                                          but excluding ancestor commit
 
 # perl squash.pl -relative-branch=master
 # perl squash.pl -relative-branch master
-# perl squash.pl -merge-base-commit=42dfec83           <---- not yet implemented
-# perl squash.pl -merge-base-commit 42dfec83           <---- not yet implemented
+# perl squash.pl -merge-base-commit=42dfec83
+# perl squash.pl -merge-base-commit 42dfec83
 #
 
 use strict;
@@ -73,7 +75,7 @@ my $delete_original_branch_after_squash = 1;
 my $halt_if_temp_branches_already_exist = 0;   # not implemented
 
 my $ahead;
-my $behind;
+#my $behind;
 
 my $tmp;
 my $merge_base;
@@ -94,7 +96,8 @@ main();
 
 sub main()
 {
-
+  my $active_branch;
+  
   # Argument handling
 
   ParseArgs();
@@ -107,6 +110,10 @@ sub main()
 
   if(defined($base_branch_arg))
   {
+    if($verbose==1)  
+    {
+      print "VERBOSE: base branch provided: $base_branch_arg\n";
+    }
     $base_branch = $base_branch_arg;  
   }
 
@@ -124,11 +131,13 @@ sub main()
   }
   else
   {
-    say "merge base commit specified as $base_commit_arg";
-    say "This option is not yet supported";
+    if($verbose == 1)
+    {
+      say "VERBOSE: merge base commit specified as $base_commit_arg";
+    }
   }
 
-  if (defined($retain_original_arg))
+  if(defined($retain_original_arg))
   {
     $delete_original_branch_after_squash = 0;
   }
@@ -137,39 +146,112 @@ sub main()
     $delete_original_branch_after_squash = 1;
   }
 
-
-
-  #
-  #  Make sure that the relative base branch is NOT the currently checked out branch
-  #
-  if($verbose==1)
+  if(defined($base_branch) && defined($base_commit_arg))
   {
-    print "VERBOSE: Make sure the relative (base) branch (as supplied by argument b) is not the checked out branch\n";
+    say colored("Cannot squash relative to a base branch AND a base commit... pick one", 'bold red');
+    exit(1);
   }
 
-  my $active_branch = get_selected_branch_here();
+  if(defined($base_commit_arg))
+  {
+    #
+    ### Make sure this commit is an ancestor of HEAD
+    #
+    #  $tmp = `git rev-parse --verify $base_commit_arg`;   # either one of these should work... this should return the full sha of the merge base, which shold be equal to $base_commit_arg
+    $tmp = `git merge-base HEAD $base_commit_arg`;
+    chomp($tmp);
+    if($tmp =~ /^($base_commit_arg)/)
+    {
+      if($verbose==1)
+      {
+        print "VERBOSE: The commit provided ($base_commit_arg) is an ancestor of HEAD\n";
+        print "VERBOSE: The verify operation match returned $1\n ";
+      }
+    }
+    else
+    {
+      say colored("The commit sha you provided $base_commit_arg, is not a direct ancestor of HEAD", 'bold red');
+      say colored(" You must provide a commit sha that is a direct ancestor in order to squash to a commit.", 'bold red');
+      exit(1);    
+    }
+
+    
+    $merge_base = $base_commit_arg;
+    
+#    print "EXITING\n  you specified a base commit arg... not yet implemented... getting there\n";
+#    exit(0);
+  }
+
+  $active_branch = get_selected_branch_here();
+  $feature_branch = $active_branch;
+  $squashed_branch_tmp_name = "$feature_branch-tmp-squashed";
+  $original_branch_deleteme = "$feature_branch-deleteme";
+
   if(!defined($active_branch))
   {
     say colored("Repo branch detection error", 'bold red');
     say "\t Current branch unknown.";
     exit(1);
   }
-  elsif ($active_branch eq $base_branch)
+
+  if(defined($base_branch))
   {
-    say colored("Repo is on base branch.  Cannot squash the base branch.  Need to squash relative to some OTHER branch.", 'bold red');
-    say "\t Currently on branch $active_branch, and you asked to squash this branch (not relative to some other branch)";
-    say "Note: It is not typical to be on the master branch and reference some feature branch with this command.";
-    say "      Instead, you should probably be on your feature branch and reference your master branch with this command";
-    say "See help menu using --help";
-    exit(1);
-  }
-  elsif ($active_branch ne $base_branch) 
-  {
+    #
+    #  Make sure that the relative base branch is NOT the currently checked out branch
+    #
     if($verbose==1)
     {
-      say colored("Repo is not on base branch... good", 'bold green');
-      say "\t Currently on branch: $active_branch. Attempting to squash $active_branch relative to $base_branch";
+      print "VERBOSE: Make sure the relative (base) branch (as supplied by argument b) is not the checked out branch\n";
     }
+    if ($active_branch eq $base_branch)
+    {
+      say colored("Repo is on base branch.  Cannot squash the base branch.  Need to squash relative to some OTHER branch.", 'bold red');
+      say "\t Currently on branch $active_branch, and you asked to squash this branch (not relative to some other branch)";
+      say "Note: It is not typical to be on the master branch and reference some feature branch with this command.";
+      say "      Instead, you should probably be on your feature branch and reference your master branch with this command";
+      say "See help menu using --help";
+      exit(1);
+    }
+    elsif ($active_branch ne $base_branch) 
+    {
+      if($verbose==1)
+      {
+        say colored("Repo is not on base branch... good", 'bold green');
+        say "\t Currently on branch: $active_branch. Attempting to squash $active_branch relative to $base_branch";
+      }
+    }
+
+    if($verbose==1)
+    {
+      print "VERBOSE: Find the commit that is the merge base between $active_branch and $base_branch\n";
+    }
+
+    #find the merge base... This is the common ancestor commit from which the two branches diverged.
+    $merge_base = `git merge-base $active_branch $base_branch`;
+    chomp($merge_base);
+
+    if($verbose==1)
+    {
+      print "VERBOSE: Merge base is $merge_base\n";
+      print "VERBOSE: Make sure temporary squashed branch name ($squashed_branch_tmp_name) does not already exist from prior operation\n";
+    }
+    
+    if($verbose==1)
+    {
+      print "VERBOSE: Make sure the relative branch exists\n";
+    }
+    $tmp = `git show-ref $base_branch`;
+    if($tmp ne "")
+    {
+      print "";
+    }
+    else
+    {
+      say colored("ERROR: $base_branch does not exist in this repo.", 'bold red');
+      say colored("       Cannot squash relative to a non-existent branch", 'bold red');
+      exit(1);
+    }
+
   }
 
   # =======================================================================================================
@@ -182,13 +264,14 @@ sub main()
      print "VERBOSE:     - do not squash if there is only one commit (or 0) to start with.\n";
   }
 
-  $tmp = `git rev-list --left-right --count $base_branch...$active_branch`;
+#  $tmp = `git rev-list --left-right --count $base_branch...$active_branch`;
+  $tmp = `git rev-list --left-right --count $merge_base...$active_branch`;
   chomp($tmp);
   
   #parse $tmp for behind and ahead here
   
   $tmp =~ /([0-9]*)\s+([0-9]*)/;
-  $behind = int($1);
+#  $behind = int($1);
   $ahead  = int($2);
   
   if($ahead == 0)
@@ -209,35 +292,20 @@ sub main()
      print "VERBOSE: This branch is ahead by more than one commit.  Start the squash operation\n";
   }
 
-  $feature_branch = $active_branch;
-  $squashed_branch_tmp_name = "$feature_branch-tmp-squashed";
-  $original_branch_deleteme = "$feature_branch-deleteme";
-
   if($verbose == 1)
   {
-    if(!defined($base_commit_arg))
+    if(defined($base_commit_arg))
     {
-      $base_commit_arg = "not supplied";
+      say "VERBOSE: Squashing $active_branch down to (but excluding) $base_commit_arg commit";
     }
-    say "VERBOSE: Squashing $active_branch relative $base_branch (or <$base_commit_arg> commit)";
+    if(defined($base_branch))
+    {
+      say "VERBOSE: Squashing $active_branch relative to $base_branch";
+    }
+
     say "VERBOSE: Delete original: $delete_original_branch_after_squash";
   }
 
-  if($verbose==1)
-  {
-    print "VERBOSE: Make sure the relative branch exists\n";
-  }
-  $tmp = `git show-ref $base_branch`;
-  if($tmp ne "")
-  {
-    print "";
-  }
-  else
-  {
-    say colored("ERROR: $base_branch does not exist in this repo.", 'bold red');
-    say colored("       Cannot squash relative to a non-existent branch", 'bold red');
-    exit(1);
-  }
 
 
   #
@@ -245,21 +313,6 @@ sub main()
   # Do the squash operation
   #
   #
-
-  if($verbose==1)
-  {
-    print "VERBOSE: Find the commit that is the merge base between $feature_branch and $base_branch\n";
-  }
-
-  #find the merge base... This is the common ancestor commit from which the two branches diverged.
-  $merge_base = `git merge-base $feature_branch $base_branch`;
-  chomp($merge_base);
-
-  if($verbose==1)
-  {
-    print "VERBOSE: Merge base is $merge_base\n";
-    print "VERBOSE: Make sure temporary squashed branch name ($squashed_branch_tmp_name) does not already exist from prior operation\n";
-  }
 
   $tmp = `git show-ref refs/heads/$squashed_branch_tmp_name`;  
   chomp($tmp);
@@ -315,7 +368,12 @@ sub main()
   # the bound of the squash.
   $meld_commit_msg = `git log --no-merges $feature_branch ^$merge_base`;
 
-  $commit_msg = "N:$feature_branch: $user_commit_msg_arg.\nNuggit Squash: ($feature_branch) relative to $base_branch and merge base of $merge_base\n$meld_commit_msg";
+  my $tmp_str = "";
+  if(defined($base_branch))
+  {
+    $tmp_str = " relative to $base_branch and"
+  }
+  $commit_msg = "N:$feature_branch: $user_commit_msg_arg.\nNuggit Squash: ($feature_branch)$tmp_str merge base of $merge_base\n$meld_commit_msg";
 
   if($verbose==1)
   {
@@ -330,7 +388,7 @@ sub main()
   # NOW we have a squashed branch
   # the squashed branch is the checked out branch
   #COMPARE the two branches... if they are OK, then rename
-  $tmp = `git diff $feature_branch`;    
+  $tmp = `git diff $feature_branch $squashed_branch_tmp_name`;    
   if($tmp eq "")
   {
     if($verbose==1)
@@ -342,9 +400,15 @@ sub main()
   {
     say colored("ERROR: Differences detected between the squashed branch and the original feature branch.", 'bold red');
     say colored("       Check $feature_branch and $squashed_branch_tmp_name", 'bold red');
-    say colored("Bailing out");
+    say colored("Bailing out", 'bold red');
+    
+    print "\n\n\n";
+    print "Differences detected here:\n";
+    print $tmp;
+    print "\n";
     exit(1);
   }
+
 
   if($verbose==1)
   {
@@ -381,21 +445,12 @@ sub main()
     }
   }
 
-
-  if($verbose==1)
-  {
-    print "VERBOSE: Renaming original branch to: $original_branch_deleteme\n";
-  }
-  # rename the original dev branch to a temp name
-  $tmp = `git branch -m $feature_branch $original_branch_deleteme`;
-
-  if($verbose==1)
-  {
-    print "VERBOSE: Renaming squashed branch ($squashed_branch_tmp_name) to have original branch name: $feature_branch\n";
-  }
-  # rename the squashed branch to have the original feature branch dev name
-  $tmp = `git branch -m $squashed_branch_tmp_name $feature_branch`;
-
+  $tmp = `git checkout -q $feature_branch`;            # go back to feature branch
+  $tmp = `git branch $original_branch_deleteme`;       # create a save branch before doing the following
+  $tmp = `git reset --hard $squashed_branch_tmp_name`; # point the current branch at the squashed branch HEAD
+  $tmp = `git branch -D $squashed_branch_tmp_name`;    # now that we have a branch with the original name pointing 
+                                                       #   to the squased branch HEAD, we can delete the squashed 
+                                                       #   branch temporary name
 
   if($verbose==1)
   {
@@ -403,7 +458,7 @@ sub main()
   }
   # Now the original branch name contains the squashed branch and we have renamed the original branch into a temporary branch
   #COMPARE the two branches... if they are OK.  If all is good, then delete the temporary branch (original branch under new name)
-  $tmp = `git diff $original_branch_deleteme`;    
+  $tmp = `git diff $feature_branch $original_branch_deleteme`;    
   if($tmp eq "")
   {
     if($verbose==1)
@@ -415,6 +470,13 @@ sub main()
   {
     say colored("ERROR: Differences detected between the squashed branch and the original feature branch.", 'bold red');
     say colored("       Check $feature_branch and $original_branch_deleteme", 'bold red');
+    say colored("Bailing out", 'bold red');    
+    
+    print "\n\n\n";
+    print "Differences detected here:\n";
+    print $tmp;
+    print "\n";
+    exit(1);    
   }
 
   if ($delete_original_branch_after_squash == 1)
@@ -424,30 +486,17 @@ sub main()
       print "VERBOSE: Deleting original branch (now called $original_branch_deleteme)\n";
     }
     $tmp = `git branch -D $original_branch_deleteme`;
-  }
-
-  #
-  # CHECK IF THERE IS AN UPSTREAM OF THE ORIGINAL BRANCH?  maybe need to do this at the beginning
-  # OR figure out a way to do the following operation and silence the output
-  #
-  # git branch -u origin/$feature_branch
-  #
-  #
-  # git push --force-with-lease --set-upstream origin IMAPX-03
+  }  
 
   print "------\n";
   print "You will need to force push this to your remote server.\n";
   print "The final contents of your branch have not changed however\n";
   print "The commit history is completely different\n";
   print "\n";
-  print "    git branch -u origin/$feature_branch\n";
   print "    git push --force-with-lease       \n";
   print "\n";
-  print " or the single command\n";
-  print "\n";
-  print "git push --force-with-lease --set-upstream origin $feature_branch\n";
-    print "------\n";
-
+  print "------\n";
+  
 } # end of main program
 
 
@@ -469,7 +518,6 @@ sub ParseArgs()
 			   "relative-branch|b=s"    => \$base_branch_arg,
 			   "merge-base-commit|c=s"  => \$base_commit_arg,
 			   "retain-original"        => \$retain_original_arg
-			   
                           );
 
 
@@ -505,8 +553,8 @@ sub PrintHelp()
   print "  relative to the merge base.  This operation is intended to be performed in preparation\n";
   print "  of merging the feature branch into master.  This operation allows the final state of your\n";
   print "  feature branch to exist in a branch with a single end-state commit without all of the\n";
-  print "  intermediate commits.\n\n";
-  
+  print "  intermediate commits.\n";
+  print " \n";
   print "  This operation will replace your feature branch with an equivalent squashed feature branch\n";
   print "  with the same name.  An implication of this is that you will have to do a force push to the\n";
   print "  server.\n\n";
@@ -516,8 +564,8 @@ sub PrintHelp()
   print "                    -m \"<commit message>\"\n";
   print "                   --relative-branch <base-branch-name>\n";
   print "                    -b <base-branch-name>\n";
-  print "                   --merge-base-commit <sha>         # Not implemented yet\n";
-  print "                    -c <sha>                         # Not implemented yet\n";
+  print "                   --merge-base-commit <sha>\n";
+  print "                    -c <sha>                \n";
   print "                   -m \"<commit message>\"\n";
   print "                   --retain-original\n";
   print "                   --verbose -v\n";
@@ -548,17 +596,17 @@ sub PrintHelp()
 print "  Before squashing feature branch:\n\n";
 print "  * master         \n";
 print "  |                \n";
-print "  |                \n";
+print "  *                \n";
 print "  |    * Z    HEAD of Feature Branch\n";
 print "  |    |           \n";
 print "  |    * Y         \n";
-print "  |    |           \n";
+print "  *    |           \n";
 print "  |    * X         \n";
 print "  |   /            \n";
-print "  |  /             \n";
+print "  *  /             \n";
 print "  | /              \n";
 print "  |/               \n";
-print "  *                \n";
+print "  *   <--- merge base of Feature Branch and master\n";
 print "  |                \n";
 print "  *                \n";
 print "\n";
@@ -567,11 +615,11 @@ print "nuggit squash -b=master\n";
 print "  After nuggit squash relative to master:\n\n";
 print "  * master         \n";
 print "  |                \n";
-print "  |                \n";
+print "  *                \n";
 print "  |    * Q    HEAD of Feature Branch\n";
-print "  |   /            \n";
+print "  *   /            \n";
 print "  |  /             \n";
-print "  | /              \n";
+print "  * /              \n";
 print "  |/               \n";
 print "  *                \n";
 print "  |                \n";
