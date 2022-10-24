@@ -795,6 +795,8 @@ sub cfg {
 
     $self->{cfg} = $self->load_config("config.json",{}) unless defined($self->{cfg});
 
+    return undef unless $self->{cfg};
+
     if (defined($val)) {
         $self->{cfg}{$key} = $val;
     } else {

@@ -218,6 +218,8 @@ sub run_alias {
     require Cwd;
 
     my $ngt = Git::Nuggit->new("run_die_on_error" => 0, "echo_always" => 0);
+
+    return if !$ngt;
     
     # Get Ngt Config 'aliases'
     my $aliases = $ngt->cfg("aliases");
