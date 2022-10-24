@@ -592,7 +592,6 @@ sub run {
     }
 
     if ($self->{run_echo_always} || $opts->{echo_always}) {
-        #say "SHOW ALWAYS";
         say $stdout if $stdout;
         say $stderr if $stderr;
     }

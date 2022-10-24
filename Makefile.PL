@@ -30,6 +30,7 @@ WriteMakefile(
                              'bin/nuggit_reset.pl',
                              'bin/nuggit_rm.pl',
                              'bin/nuggit_status.pl',
+                             'bin/nuggit_tools.pl',
                             ],
     MAN1PODS => {
         # All other man pages will be installed under the full nuggit name
@@ -57,7 +58,8 @@ WriteMakefile(
         'bin/nuggit_reset.pl'    => 'blib/man1/nuggit-reset.1',
         'bin/nuggit_rm.pl'       => 'blib/man1/nuggit-rm.1',
         'bin/nuggit_status.pl'   => 'blib/man1/nuggit-status.1',
-
+        'bin/nuggit_tools.pl'    => 'blib/man1/nuggit-tools.1',
+        
         # Other help pages
         'docs/intro.pod'         => 'blib/man1/nuggit-intro.1',
 
