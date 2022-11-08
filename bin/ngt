@@ -158,7 +158,8 @@ if (defined($ENV{'COMP_LINE'}) || defined($ENV{'COMMAND_LINE'}) ) {
         }
     }
 
-    say "Using Git::Nuggit version " . $Git::Nuggit::VERSION;
+    say "Using Git::Nuggit version " . $Git::Nuggit::VERSION
+       . " and Git::Nuggit::Status version " . $Git::Nuggit::Status::VERSION;
     
     my $nuggit_dir = $FindBin::Bin.'/';
     if (-d File::Spec->catdir($nuggit_dir, '../.git')) {

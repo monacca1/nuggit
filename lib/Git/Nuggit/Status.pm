@@ -1,6 +1,6 @@
 #!/usr/bin/env perl
 package Git::Nuggit::Status;
-our $VERSION = 0.03;
+our $VERSION = 0.04;
 
 use v5.10;
 use strict;
@@ -501,7 +501,7 @@ sub do_pretty_print_status {
             print colored(" Modified",'warn') if $obj->{sub_modified};
             print " Untracked-Content" if $obj->{sub_untracked};
 
-            if ($obj->{'status'} == STATE{'CONFLICT'}) {
+            if ($obj->{'status'} == STATE('CONFLICT')) {
                 print colored( ' Conflict ', 'warn'); # TODO: Extra handling may be needed in this case
             }
 
