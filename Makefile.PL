@@ -10,7 +10,7 @@ WriteMakefile(
               ( $ExtUtils::MakeMaker::VERSION >= 6.3002
         ? ( 'LICENSE' => 'perl' )
         : () ),
-              EXE_FILES  => [
+    EXE_FILES  => [
                              'bin/ngt',
                              'bin/list_all_submodules.pl',
                              'bin/nuggit_add.pl',
@@ -80,7 +80,17 @@ WriteMakefile(
         'Test::Compile'             => 0,
         'Test2::V0'                 => 0,
         'Test2::Plugin::BailOnFail' => 0,
-                      'File::pushd'     => 0,
-                     },
-              test => {TESTS => 'test/*.t'}
-             );
+        'File::pushd'     => 0,
+    },
+    test => {TESTS => 'test/*.t'},
+    META_MERGE        => {
+        "meta-spec" => { version => 2 },
+        resources => {
+            repository => {
+                type => 'git',
+                url => 'git://github.com/monacca1/nuggit.git',
+                web => 'https://github.com/monacca1/nuggit',
+            },
+        }
+    }
+   );
