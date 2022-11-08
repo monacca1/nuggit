@@ -1,6 +1,6 @@
 #!/usr/bin/env perl
 package Git::Nuggit;
-our $VERSION = 1.00;
+our $VERSION = 1.01;
 # TIP: To format documentation in the command line, run "perldoc nuggit.pm"
 
 use v5.10;
@@ -332,7 +332,7 @@ sub get_selected_branch_here()
 
 =cut
 
-sub get_selected_branch($)
+sub get_selected_branch
 {
   my $root_repo_branches = $_[0];
   my $selected_branch;

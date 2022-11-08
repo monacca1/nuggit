@@ -199,7 +199,8 @@ sub _get_status
             #  2 <XY> <sub> <mH> <mI> <mW> <hH> <hI> <X><score> <path><sep><origPath>
             ($xy, $sub, $mh, $mi, $mw, $hh, $h1, $xscore, $path, $oldPath) = @parts;
             $obj->{'staged_status'} = $STATE{'RENAMED'};
-            $obj->{'status'} = $STATE{'RENAMED'};
+            # Note: A rename can only be detected when staged, so unstaged status wil never be 'RENAMED'.
+            
             $obj->{'old_path'} = $oldPath;
         } elsif ($type eq "u") {
             # Unmerged:
@@ -454,7 +455,7 @@ Output details on all objects in this $status object and it's children (submodul
 
 Parameters:
 - status - Status object from get_status(), or a nested object state
-- relative_path - Relative path to repository root level. This will be concatenated with an object's path for display.  If omitted, path will be relative to the top directory of the repository that the provided status object represents.
+- relativ_path - Relative path to repository root level. This will be concatenated with an object's path for display.  If omitted, path will be relative to the top directory of the repository that the provided status object represents.
 - root_branch - If defined for applicable objects, output a warning if current branch does not match.
 - verbose - If set, always output additional information when known, for example commit hash.
 
